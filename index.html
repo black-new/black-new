@@ -4,146 +4,306 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BLACKCLUB POKER</title>
+<title>BLACKCLUB</title>
+
 <style>
 *{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
 body{
- margin:0;background:#090d0b;color:#fff;
+ background:#080d0a;color:white;
  font-family:Arial,sans-serif;
 }
+button,input{font:inherit}
+button{cursor:pointer}
+.screen{
+ width:100%;height:100dvh;
+ display:none;flex-direction:column;
+}
+.screen.active{display:flex}
+
+/* LOGIN */
+#login{
+ align-items:center;justify-content:center;
+ background:radial-gradient(circle,#203c2b,#080d0a 70%);
+ padding:20px;
+}
+.login-box{
+ width:min(360px,100%);
+ padding:30px 25px;
+ background:#111b14;border:1px solid #a88740;
+ border-radius:16px;text-align:center;
+ box-shadow:0 15px 50px #0009;
+}
+.logo{
+ color:#dfbd67;font-size:32px;
+ font-weight:900;letter-spacing:4px;
+ margin-bottom:8px;
+}
+.sub{color:#a9b5aa;font-size:12px;letter-spacing:3px}
+.login-box input{
+ width:100%;padding:14px;margin-top:18px;
+ background:#080e0a;color:white;
+ border:1px solid #536348;border-radius:8px;
+ outline:none;
+}
+.gold{
+ background:linear-gradient(135deg,#e5c873,#a47a2c);
+ color:#17140c;border:0;border-radius:8px;
+ padding:13px 20px;font-weight:bold;
+}
+.login-box button{width:100%;margin-top:16px}
+.note{font-size:11px;color:#829083;margin-top:18px}
+
+/* HEADER */
 header{
- background:#101813;border-bottom:1px solid #b89543;
- padding:17px 24px;display:flex;justify-content:space-between;
- align-items:center;gap:12px;flex-wrap:wrap
+ height:55px;flex-shrink:0;
+ display:flex;align-items:center;justify-content:space-between;
+ padding:0 18px;background:#111a13;
+ border-bottom:1px solid #715a2b;
 }
-.logo{font-size:26px;font-weight:900;color:#d9b65c;letter-spacing:3px}
-.logo span{color:white}
-.balance{color:#e5c66c;font-weight:bold}
-main{max-width:1150px;margin:auto;padding:22px 15px}
-.top{
- display:flex;justify-content:space-between;align-items:center;
- gap:12px;flex-wrap:wrap;margin-bottom:18px
+.brand{font-size:21px;font-weight:900;letter-spacing:2px;color:#dfbd67}
+.header-right{display:flex;align-items:center;gap:12px;font-size:13px}
+.small-btn{
+ background:#202c22;color:#e4c36e;
+ border:1px solid #67542e;border-radius:6px;
+ padding:7px 10px;font-size:12px;
 }
-select,button{
- border:1px solid #b89543;border-radius:8px;
- padding:12px 16px;font-size:14px;font-weight:bold;
+
+/* LOBBY */
+#lobby{align-items:center;justify-content:center;padding:20px}
+.lobby-title{font-size:clamp(25px,5vw,42px);color:#e3c16b;letter-spacing:4px}
+.lobby-sub{color:#9eaa9f;margin:10px 0 30px}
+.game-options{display:flex;gap:18px;width:min(650px,100%)}
+.game-option{
+ flex:1;min-width:0;background:#142119;
+ border:1px solid #94743b;border-radius:15px;
+ padding:28px 12px;text-align:center;
+ cursor:pointer;transition:.2s;
 }
-select{background:#17221a;color:white}
-button{background:#c5a04e;color:#10130e;cursor:pointer}
-button:hover{background:#e2c36f}
-button.secondary{background:#18231b;color:#e4c46c}
+.game-option:hover{background:#203b29;transform:translateY(-3px)}
+.game-option .symbol{font-size:40px;color:#e1bf65}
+.game-option h2{font-size:clamp(15px,3vw,22px);color:#e1bf65}
+.game-option p{font-size:12px;color:#aab5aa}
+
+/* GAME */
+#game{min-height:0}
+.gamebar{
+ height:43px;flex-shrink:0;
+ display:flex;align-items:center;justify-content:center;
+ color:#e3c16b;font-weight:bold;letter-spacing:2px;
+}
+.table-area{
+ flex:1;min-height:0;
+ display:flex;align-items:center;justify-content:center;
+ padding:5px 12px;
+}
 .table{
- position:relative;background:radial-gradient(ellipse,#17613d,#0a3928 65%,#102017);
- border:12px solid #533b20;border-radius:48%;
- min-height:390px;margin:25px auto;padding:45px 15px;
- display:flex;flex-direction:column;align-items:center;
- justify-content:center;box-shadow:0 15px 40px #000
+ position:relative;width:min(850px,100%);
+ height:100%;max-height:520px;
+ border:9px solid #523b20;border-radius:48%;
+ background:radial-gradient(ellipse,#17623d,#0c3928 70%,#102017);
+ box-shadow:inset 0 0 35px #0008,0 8px 25px #0008;
+ display:flex;flex-direction:column;
+ align-items:center;justify-content:center;
 }
-.table-title{color:#e4c46c;letter-spacing:3px;font-weight:bold}
-.pot{margin-top:12px;color:#ffe39b;font-size:19px;font-weight:bold}
-.board,.hand{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:14px 0}
+.table-name{font-size:clamp(12px,2vw,17px);letter-spacing:3px;color:#e5c875}
+.pot{font-size:clamp(13px,2vw,18px);color:#ffe6a1;margin-top:8px;font-weight:bold}
+.board{
+ display:flex;justify-content:center;gap:clamp(4px,1vw,10px);
+ margin:12px 0;
+}
 .card{
- width:49px;height:70px;background:#fff;color:#151515;
- border-radius:6px;display:flex;flex-direction:column;
- justify-content:space-between;padding:5px;font-size:19px;
- font-weight:bold;box-shadow:0 3px 7px #0008
+ width:clamp(39px,6.2vw,65px);
+ height:clamp(57px,9.2vw,91px);
+ border-radius:7px;background:#fff;color:#151515;
+ display:flex;flex-direction:column;justify-content:space-between;
+ padding:5px;font-weight:900;
+ box-shadow:0 3px 8px #0008;
 }
-.card small{font-size:12px}
-.red{color:#d21f36}
-.back{
- background:repeating-linear-gradient(45deg,#142d25,#142d25 5px,#b89543 6px,#142d25 8px);
- border:2px solid #e2c36f
+.card .rank{font-size:clamp(17px,3vw,27px);line-height:1}
+.card .suit{font-size:clamp(20px,3.8vw,34px);text-align:center}
+.card.red{color:#d21d36}
+.card.back{
+ background:repeating-linear-gradient(45deg,#173d2a,#173d2a 5px,#b18a3e 6px,#173d2a 9px);
+ border:2px solid #e2c36f;
 }
-.seats{
- display:grid;grid-template-columns:repeat(4,1fr);
- gap:12px;margin-top:22px
+.empty{background:#ffffff12;border:1px dashed #ffffff55;box-shadow:none}
+.community-label{font-size:10px;color:#c9d6c8}
+.player-area{
+ flex-shrink:0;display:flex;justify-content:center;
+ align-items:center;gap:12px;padding:5px 10px 3px;
 }
-.seat{
- background:#131c17;border:1px solid #344b39;
- border-radius:12px;padding:12px;text-align:center;min-height:115px
+.player{
+ min-width:125px;text-align:center;
+ background:#142019;border:1px solid #536348;
+ border-radius:9px;padding:7px 10px;
 }
-.seat.active{border-color:#d9b65c;box-shadow:0 0 12px #c6a04c44}
-.seat strong{display:block;margin-bottom:7px}
-.chips{color:#e4c46c;font-size:13px}
-.you{color:#e4c46c}
+.player.you{border-color:#d8b75e}
+.player-name{font-size:12px;font-weight:bold}
+.player-chips{font-size:11px;color:#e4c36e;margin-top:4px}
+.hand{display:flex;justify-content:center;gap:4px;margin-top:6px}
+.hand .card{
+ width:clamp(31px,4.7vw,47px);
+ height:clamp(45px,6.8vw,66px);
+}
+.hand .rank{font-size:clamp(14px,2.5vw,20px)}
+.hand .suit{font-size:clamp(16px,2.8vw,23px)}
 .controls{
- display:flex;justify-content:center;gap:10px;
- flex-wrap:wrap;margin:20px 0
+ flex-shrink:0;display:flex;justify-content:center;
+ align-items:center;gap:8px;padding:8px 10px 12px;
 }
-.status{text-align:center;color:#e8d7a7;min-height:25px;margin:10px}
-.rules{color:#a8b4aa;font-size:12px;text-align:center;margin:18px}
+.controls button{font-size:12px;padding:10px 16px}
+.status{
+ flex-shrink:0;text-align:center;color:#e7d6a5;
+ font-size:11px;min-height:17px;padding-bottom:3px;
+}
 @media(max-width:600px){
- header{padding:14px}.logo{font-size:21px}
- main{padding:14px 9px}
- .table{min-height:300px;border-width:7px;border-radius:35%;padding:30px 8px}
- .card{width:42px;height:61px;font-size:16px}
- .seats{grid-template-columns:repeat(2,1fr);gap:8px}
- .seat{padding:9px;min-height:105px}
- button{padding:11px 12px}
+ header{height:48px;padding:0 10px}
+ .brand{font-size:18px}
+ .header-right{gap:7px;font-size:11px}
+ .small-btn{padding:6px 7px}
+ .game-options{gap:9px}
+ .game-option{padding:22px 7px}
+ .game-option .symbol{font-size:32px}
+ .table-area{padding:4px 5px}
+ .table{border-width:6px;border-radius:38%}
+ .player-area{gap:6px}
+ .player{min-width:0;flex:1;padding:6px 3px}
+ .controls{gap:5px;padding:7px 4px}
+ .controls button{padding:10px 9px;font-size:10px}
+}
+@media(max-height:650px){
+ header{height:43px}
+ .gamebar{height:30px}
+ .table{max-height:390px}
+ .player-area{padding-top:2px}
+ .controls{padding-top:4px;padding-bottom:5px}
+ .card{height:clamp(48px,10vh,75px)}
+ .hand .card{height:clamp(39px,8vh,57px)}
 }
 </style>
 </head>
+
 <body>
 
-<header>
- <div class="logo">BLACK<span>CLUB</span></div>
- <div class="balance">MY CHIPS: <span id="balance">10,000</span></div>
-</header>
+<!-- LOGIN -->
+<section id="login" class="screen active">
+ <div class="login-box">
+  <div class="logo">BLACKCLUB</div>
+  <div class="sub">POKER ROOM</div>
+  <input id="username" placeholder="Хэрэглэгчийн нэр">
+  <input id="password" type="password" placeholder="Нууц үг">
+  <button class="gold" onclick="login()">НЭВТРЭХ</button>
+  <div class="note">ТУРШИЛТЫН ХУВИЛБАР · ВИРТУАЛ ЧИП</div>
+ </div>
+</section>
 
-<main>
- <div class="top">
-  <div>
-   <div style="font-weight:bold;color:#e4c46c;margin-bottom:7px">POKER TABLE</div>
-   <select id="game" onchange="newHand()">
-    <option value="holdem">TEXAS HOLD'EM</option>
-    <option value="omaha">OMAHA</option>
-   </select>
+<!-- LOBBY -->
+<section id="lobby" class="screen">
+ <header>
+  <div class="brand">BLACKCLUB</div>
+  <div class="header-right">
+   <span id="welcome"></span>
+   <button class="small-btn" onclick="logout()">ГАРАХ</button>
   </div>
-  <button class="secondary" onclick="newHand()">NEW GAME ↻</button>
+ </header>
+
+ <div class="lobby-title">POKER ROOM</div>
+ <div class="lobby-sub">ТОГЛООМЫН ТӨРЛӨӨ СОНГОНО УУ</div>
+
+ <div class="game-options">
+  <div class="game-option" onclick="startGame('holdem')">
+   <div class="symbol">♠</div>
+   <h2>TEXAS HOLD'EM</h2>
+   <p>2 ХУВИЙН КАРТ</p>
+  </div>
+  <div class="game-option" onclick="startGame('omaha')">
+   <div class="symbol">♦</div>
+   <h2>OMAHA</h2>
+   <p>4 ХУВИЙН КАРТ</p>
+  </div>
+ </div>
+</section>
+
+<!-- POKER TABLE -->
+<section id="game" class="screen">
+ <header>
+  <div class="brand">BLACKCLUB</div>
+  <div class="header-right">
+   <span id="gameBalance">10,000</span> CHIPS
+   <button class="small-btn" onclick="backLobby()">БУЦАХ</button>
+  </div>
+ </header>
+
+ <div class="gamebar" id="gameTitle">TEXAS HOLD'EM</div>
+
+ <div class="table-area">
+  <div class="table">
+   <div class="table-name">BLACKCLUB</div>
+   <div class="pot">POT: <span id="pot">0</span></div>
+   <div class="board" id="board"></div>
+   <div class="community-label">COMMUNITY CARDS</div>
+  </div>
  </div>
 
- <div class="table">
-  <div class="table-title">BLACKCLUB POKER</div>
-  <div class="pot">POT: <span id="pot">0</span></div>
-  <div class="board" id="board"></div>
-  <div style="font-size:12px;color:#d7d7b0">COMMUNITY CARDS</div>
- </div>
+ <div class="player-area" id="players"></div>
 
- <div class="seats" id="seats"></div>
-
- <div class="status" id="status">Тоглоом эхлэхэд бэлэн.</div>
+ <div class="status" id="status">Тоглоом эхэллээ.</div>
 
  <div class="controls">
-  <button onclick="nextStreet()">NEXT STREET</button>
-  <button onclick="showdown()">SHOWDOWN</button>
-  <button class="secondary" onclick="newHand()">NEW HAND</button>
+  <button class="gold" onclick="nextCards()">NEXT</button>
+  <button class="gold" onclick="revealCards()">SHOW CARDS</button>
+  <button class="small-btn" onclick="newHand()">NEW HAND</button>
  </div>
-
- <div class="rules">
-  VIRTUAL CHIPS ONLY · NO REAL MONEY · BLACKCLUB DEMO
- </div>
-</main>
+</section>
 
 <script>
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 
-let balance=10000;
-let pot=0;
-let deck=[];
-let board=[];
-let players=[];
-let stage=0;
-let finished=false;
-let game="holdem";
+let username="";
+let mode="holdem";
+let deck=[],board=[],players=[];
+let pot=0,stage=0,balance=10000,revealed=false;
 
-const suits=["♠","♥","♦","♣"];
-const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+function screen(id){
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ $(id).classList.add("active");
+}
+
+function login(){
+ let name=$("username").value.trim();
+ let pass=$("password").value.trim();
+ if(!name||!pass){
+  alert("Нэр болон нууц үгээ оруулна уу.");
+  return;
+ }
+ username=name;
+ $("welcome").textContent="Сайн уу, "+username;
+ screen("lobby");
+}
+
+function logout(){
+ screen("login");
+}
+
+function backLobby(){
+ screen("lobby");
+}
+
+function startGame(type){
+ mode=type;
+ $("gameTitle").textContent=type==="holdem"?"TEXAS HOLD'EM":"OMAHA";
+ screen("game");
+ newHand();
+}
 
 function shuffle(){
  deck=[];
+ const suits=["♠","♥","♦","♣"];
+ const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
  for(let s of suits){
-  for(let r=0;r<ranks.length;r++){
-   deck.push({rank:r+2,label:ranks[r],suit:s});
+  for(let i=0;i<ranks.length;i++){
+   deck.push({rank:ranks[i],value:i+2,suit:s});
   }
  }
  for(let i=deck.length-1;i>0;i--){
@@ -156,24 +316,27 @@ function draw(){return deck.pop()}
 
 function cardHTML(c,hidden=false){
  if(hidden)return '<div class="card back"></div>';
+ if(!c)return '<div class="card empty"></div>';
  let red=(c.suit==="♥"||c.suit==="♦")?"red":"";
- return `<div class="card ${red}"><small>${c.label}${c.suit}</small><span>${c.suit}</span><small>${c.label}</small></div>`;
+ return `<div class="card ${red}">
+  <span class="rank">${c.rank}</span>
+  <span class="suit">${c.suit}</span>
+  <span class="rank">${c.rank}</span>
+ </div>`;
 }
 
 function newHand(){
- game=$("game").value;
  shuffle();
  board=[];
  stage=0;
  pot=0;
- finished=false;
+ revealed=false;
 
- let count=game==="omaha"?4:2;
+ const count=mode==="omaha"?4:2;
  players=[
-  {name:"YOU",chips:balance,cards:[],human:true},
+  {name:username||"YOU",chips:balance,cards:[],you:true},
   {name:"PLAYER 2",chips:10000,cards:[]},
-  {name:"PLAYER 3",chips:10000,cards:[]},
-  {name:"PLAYER 4",chips:10000,cards:[]}
+  {name:"PLAYER 3",chips:10000,cards:[]}
  ];
 
  players.forEach(p=>{
@@ -184,157 +347,69 @@ function newHand(){
   p.chips-=100;
   pot+=100;
  });
-
  balance=players[0].chips;
- $("status").textContent="Карт тараагдлаа. NEXT STREET дарж үргэлжлүүлээрэй.";
+
+ $("status").textContent="Карт тараагдлаа. NEXT дарна уу.";
  render();
 }
 
-function nextStreet(){
- if(finished)return;
+function nextCards(){
+ if(revealed){
+  $("status").textContent="Шинэ тоглолт эхлүүлэхийн тулд NEW HAND дарна уу.";
+  return;
+ }
  if(stage===0){
   board.push(draw(),draw(),draw());
   stage=1;
+  $("status").textContent="FLOP — 3 карт нээгдлээ.";
  }else if(stage===1){
   board.push(draw());
   stage=2;
+  $("status").textContent="TURN — 4 дэх карт нээгдлээ.";
  }else if(stage===2){
   board.push(draw());
   stage=3;
+  $("status").textContent="RIVER — 5 дахь карт нээгдлээ.";
  }else{
-  $("status").textContent="Бүх карт нээгдсэн байна. SHOWDOWN дарна уу.";
-  return;
+  $("status").textContent="Бүх ширээний карт нээгдсэн байна.";
  }
  render();
- $("status").textContent=
-  stage===1?"FLOP — 3 карт нээгдлээ.":
-  stage===2?"TURN — 4 дэх карт нээгдлээ.":
-  "RIVER — Сүүлийн карт нээгдлээ.";
 }
 
-function combinations(arr,n){
- if(n===0)return [[]];
- if(arr.length<n)return [];
- let result=[];
- for(let i=0;i<=arr.length-n;i++){
-  for(let c of combinations(arr.slice(i+1),n-1)){
-   result.push([arr[i],...c]);
-  }
- }
- return result;
-}
-
-function evaluateFive(cards){
- let values=cards.map(c=>c.rank).sort((a,b)=>b-a);
- let counts={};
- values.forEach(v=>counts[v]=(counts[v]||0)+1);
- let groups=Object.entries(counts)
-  .map(([v,n])=>({v:Number(v),n}))
-  .sort((a,b)=>b.n-a.n||b.v-a.v);
-
- let flush=cards.every(c=>c.suit===cards[0].suit);
- let unique=[...new Set(values)].sort((a,b)=>b-a);
- let straight=0;
-
- if(unique.length===5){
-  if(unique[0]-unique[4]===4)straight=unique[0];
-  else if(unique.join(",")==="14,5,4,3,2")straight=5;
- }
-
- if(flush&&straight)return [8,straight];
- if(groups[0].n===4)return [7,groups[0].v,groups[1].v];
- if(groups[0].n===3&&groups[1].n===2)return [6,groups[0].v,groups[1].v];
- if(flush)return [5,...values];
- if(straight)return [4,straight];
- if(groups[0].n===3)
-  return [3,groups[0].v,...groups.slice(1).map(x=>x.v)];
- if(groups[0].n===2&&groups[1].n===2)
-  return [2,Math.max(groups[0].v,groups[1].v),
-   Math.min(groups[0].v,groups[1].v),groups[2].v];
- if(groups[0].n===2)
-  return [1,groups[0].v,...groups.slice(1).map(x=>x.v)];
- return [0,...values];
-}
-
-function compare(a,b){
- for(let i=0;i<Math.max(a.length,b.length);i++){
-  let x=a[i]||0,y=b[i]||0;
-  if(x>y)return 1;
-  if(x<y)return -1;
- }
- return 0;
-}
-
-function bestHand(player){
- let choices=[];
- if(game==="omaha"){
-  for(let h of combinations(player.cards,2)){
-   for(let b of combinations(board,3)){
-    choices.push(evaluateFive([...h,...b]));
-   }
-  }
- }else{
-  choices=combinations([...player.cards,...board],5).map(evaluateFive);
- }
- return choices.sort((a,b)=>compare(b,a))[0];
-}
-
-function handName(score){
- return ["High card","One pair","Two pair","Three of a kind",
- "Straight","Flush","Full house","Four of a kind",
- "Straight flush"][score[0]];
-}
-
-function showdown(){
- if(finished)return;
+function revealCards(){
  if(board.length!==5){
-  $("status").textContent="Эхлээд 5 ширээний картыг нээнэ үү.";
+  $("status").textContent="Эхлээд NEXT дарж 5 картыг нээнэ үү.";
   return;
  }
-
- let results=players.map(p=>({player:p,score:bestHand(p)}));
- results.sort((a,b)=>compare(b.score,a.score));
- let winners=results.filter(x=>compare(x.score,results[0].score)===0);
-
- let prize=Math.floor(pot/winners.length);
- winners.forEach(w=>{
-  w.player.chips+=prize;
- });
-
- balance=players[0].chips;
- finished=true;
-
- let names=winners.map(w=>w.player.name).join(", ");
- $("status").textContent=
-  names+" яллаа! "+handName(results[0].score)+
-  " — "+prize.toLocaleString()+" чип авлаа.";
- render(true);
+ revealed=true;
+ $("status").textContent="Бүх тоглогчийн карт нээгдлээ.";
+ render();
 }
 
-function render(reveal=false){
- $("balance").textContent=balance.toLocaleString();
+function render(){
+ $("gameBalance").textContent=balance.toLocaleString();
  $("pot").textContent=pot.toLocaleString();
 
- $("board").innerHTML=board.map(c=>cardHTML(c)).join("");
- for(let i=board.length;i<5;i++){
-  $("board").innerHTML+=cardHTML(null,true);
+ $("board").innerHTML="";
+ for(let i=0;i<5;i++){
+  $("board").innerHTML+=board[i]?cardHTML(board[i]):cardHTML(null);
  }
 
- $("seats").innerHTML=players.map((p,i)=>{
+ $("players").innerHTML=players.map(p=>{
   let cards=p.cards.map(c=>
-   cardHTML(c,reveal||p.human?false:true)
+   cardHTML(c,p.you?false:!revealed)
   ).join("");
-
-  return `<div class="seat ${p.human?"active":""}">
-   <strong class="${p.human?"you":""}">${p.name}</strong>
-   <div class="chips">CHIPS: ${p.chips.toLocaleString()}</div>
+  return `<div class="player ${p.you?"you":""}">
+   <div class="player-name">${p.name}</div>
+   <div class="player-chips">${p.chips.toLocaleString()} CHIPS</div>
    <div class="hand">${cards}</div>
-   ${p.human?'<small style="color:#e4c46c">YOUR CARDS</small>':''}
   </div>`;
  }).join("");
 }
 
 newHand();
+screen("login");
 </script>
+
 </body>
 </html>
