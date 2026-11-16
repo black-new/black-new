@@ -179,9 +179,14 @@ io.on("connection",socket=>{
     if(!r)return cb&&cb({success:false,message:"Ширээ олдсонгүй."});
     if(r.status==="playing")return cb&&cb({success:false,message:"Энэ ширээний тоглолт эхэлсэн байна. Дараагийн гар эхлэхэд сууна."});
     if(r.players.length>=r.maxPlayers)return cb&&cb({success:false,message:"Ширээ дүүрсэн байна."});
-    const seat=Number(data.seat);
-    if(!Number.isInteger(seat)||seat<0||seat>=r.maxPlayers||r.players.some(p=>p.seat===seat))return cb&&cb({success:false,message:"Энэ суудал эзэнтэй байна."});
-    const player={id:socket.id,name:String(data.name||"Player").slice(0,18),seat,chips:10000,bet:0,totalBet:0,cards:[],folded:false,allIn:false,acted:false};
+
+    // Server-side automatic seat assignment: first available seat from 0 to maxPlayers-1.
+    const occupied = new Set(r.players.map(p=>p.seat));
+    let seat = -1;
+    for(let i=0;i<r.maxPlayers;i++){if(!occupied.has(i)){seat=i;break;}}
+    if(seat===-1)return cb&&cb({success:false,message:"Сул суудал алга."});
+
+    const player={id:socket.id,name:String(data&&data.name||"Player").slice(0,18),seat,chips:10000,bet:0,totalBet:0,cards:[],folded:false,allIn:false,acted:false};
     r.players.push(player);r.players.sort((a,b)=>a.seat-b.seat);socket.join(r.id);socketRooms.set(socket.id,r.id);
     cb&&cb({success:true,table:publicRoom(r,socket.id)});sendRoom(r);broadcastLobby();
     if(r.players.length>=2&&r.status!=="playing")startHand(r);

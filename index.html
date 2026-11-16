@@ -1,32 +1,115 @@
 <!DOCTYPE html>
 <html lang="mn">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BLACKCLUB Poker</title>
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <style>
 :root{--gold:#e8bd62;--gold2:#9b7131;--bg:#080b0a;--panel:#111715;--muted:#a9aaa4;--green:#075b3e}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1a241f,#070908 65%);color:#f5f0e5;font-family:Arial,sans-serif;min-height:100vh}
-button,input{font:inherit}button{cursor:pointer;border:1px solid var(--gold2);background:linear-gradient(135deg,#d6ad57,#8f6526);color:#140f07;font-weight:bold;border-radius:9px;padding:11px 16px}button:disabled{opacity:.4;cursor:not-allowed}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#1a241f,#070908 65%);color:#f5f0e5;font-family:Arial,sans-serif;min-height:100vh}
+button,input{font:inherit}
+button{cursor:pointer;border:1px solid var(--gold2);background:linear-gradient(135deg,#d6ad57,#8f6526);color:#140f07;font-weight:bold;border-radius:9px;padding:11px 16px}
+button:disabled{opacity:.4;cursor:not-allowed}
 header{display:flex;justify-content:space-between;align-items:center;padding:16px 5%;border-bottom:1px solid #4b3b20;background:#080b0ae8;position:sticky;top:0;z-index:4}
-.logo{font-size:25px;letter-spacing:5px;color:var(--gold);font-weight:900;text-shadow:0 0 15px #a67b32}.status{font-size:12px;color:#9bd5a7}
-main{max-width:1200px;margin:auto;padding:24px 16px}.hero{text-align:center;padding:24px 0 12px}.hero h1{color:var(--gold);letter-spacing:5px;font-size:clamp(25px,5vw,44px);margin:8px}.hero p{color:var(--muted)}
+.logo{font-size:25px;letter-spacing:5px;color:var(--gold);font-weight:900;text-shadow:0 0 15px #a67b32}
+.status{font-size:12px;color:#9bd5a7}
+main{max-width:1200px;margin:auto;padding:24px 16px}
+.hero{text-align:center;padding:24px 0 12px}
+.hero h1{color:var(--gold);letter-spacing:5px;font-size:clamp(25px,5vw,44px);margin:8px}
+.hero p{color:var(--muted)}
 .panel{background:#101613;border:1px solid #70562b;border-radius:16px;padding:18px;margin:16px 0;box-shadow:0 12px 35px #0008}
-h2{color:var(--gold);margin:0 0 15px;font-size:20px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tabs button{background:#171d19;color:#e9d8b4}.tabs button.active{background:var(--gold);color:#171008}
+h2{color:var(--gold);margin:0 0 15px;font-size:20px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{background:#171d19;color:#e9d8b4}
+.tabs button.active{background:var(--gold);color:#171008}
 .table-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .table-card{background:linear-gradient(145deg,#1b241f,#0c100e);border:1px solid #4b422e;border-radius:13px;padding:15px}
-.table-card h3{margin:0 0 8px;color:var(--gold)}.meta{color:#c0c2b9;font-size:13px;line-height:1.8}.table-card button{width:100%;margin-top:12px}
-.hidden{display:none!important}.muted{color:var(--muted);font-size:13px}
+.table-card h3{margin:0 0 8px;color:var(--gold)}
+.meta{color:#c0c2b9;font-size:13px;line-height:1.8}
+.table-card button{width:100%;margin-top:12px}
+.hidden{display:none!important}
+.muted{color:var(--muted);font-size:13px}
 input{width:100%;padding:12px;background:#080c0a;color:white;border:1px solid #66502a;border-radius:8px;margin:7px 0}
-#tableView{display:none}.table-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.poker-table{position:relative;width:min(900px,100%);height:540px;margin:22px auto 10px;border-radius:50%;border:15px solid #573d1c;background:radial-gradient(ellipse,#14734d,#075037 65%,#063c2c);box-shadow:inset 0 0 0 5px #c39a4b,0 18px 45px #000b}
-.seat{position:absolute;width:132px;min-height:72px;transform:translate(-50%,-50%);background:#101613;border:1px solid #c49b4e;border-radius:12px;padding:8px;text-align:center;box-shadow:0 6px 14px #0009;font-size:12px}
-.seat .player-name{color:#f2d28b;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.seat .chips{color:#bce0bd;margin-top:4px}.seat .cards{font-size:19px;letter-spacing:2px;margin-top:3px}.seat.turn{outline:3px solid #f7d56c;box-shadow:0 0 22px #e8bd62}.seat.empty{background:#0b1712aa;border:1px dashed #d0ae6c;color:#e3c47f}
-.seat:nth-child(1){left:50%;top:-2%}.seat:nth-child(2){left:83%;top:17%}.seat:nth-child(3){left:91%;top:72%}.seat:nth-child(4){left:50%;top:103%}.seat:nth-child(5){left:9%;top:72%}.seat:nth-child(6){left:17%;top:17%}
-.center-info{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:62%}.pot{font-size:22px;color:#ffe19a;font-weight:bold}.board{display:flex;justify-content:center;gap:6px;margin:12px 0;flex-wrap:wrap}.card{width:42px;height:58px;border-radius:6px;background:#f8f5ed;color:#181818;display:grid;place-items:center;font-size:20px;font-weight:bold;box-shadow:0 2px 5px #0008}.card.red{color:#c32626}.card.back{background:repeating-linear-gradient(45deg,#172c50,#172c50 5px,#e2c06e 6px,#172c50 8px);border:2px solid #f0d58b}
-.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0}.actions button{min-width:90px}.actions .secondary{background:#202923;color:#f4dfb4}.actions input{max-width:150px}
-#notice{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#171d19;border:1px solid var(--gold);border-radius:9px;padding:12px 18px;display:none;z-index:10}
-@media(max-width:600px){header{padding:12px}.logo{font-size:20px}.poker-table{height:440px;border-width:9px}.seat{width:96px;min-height:62px;padding:5px;font-size:10px}.seat .cards{font-size:15px}.card{width:31px;height:46px;font-size:16px}.center-info{width:66%}.pot{font-size:17px}.panel{padding:13px}main{padding:12px 9px}}
+#tableView{display:none}
+.table-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* Responsive table: the table and everything inside it scale together */
+.poker-table{
+ position:relative;
+ width:min(100%,760px);
+ aspect-ratio:1.62 / 1;
+ height:auto;
+ margin:clamp(10px,2.5vw,22px) auto 10px;
+ border-radius:50%;
+ border:clamp(6px,1.6vw,13px) solid #573d1c;
+ background:radial-gradient(ellipse,#14734d,#075037 65%,#063c2c);
+ box-shadow:inset 0 0 0 clamp(2px,.55vw,5px) #c39a4b,0 18px 45px #000b;
+}
+.seat{
+ position:absolute;
+ width:clamp(76px,14%,126px);
+ min-height:clamp(48px,8vw,72px);
+ transform:translate(-50%,-50%);
+ background:#101613;
+ border:1px solid #c49b4e;
+ border-radius:clamp(7px,1.2vw,12px);
+ padding:clamp(4px,.9vw,8px);
+ text-align:center;
+ box-shadow:0 6px 14px #0009;
+ font-size:clamp(8px,1.35vw,12px);
+ overflow:hidden;
+}
+.seat .player-name{color:#f2d28b;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat .chips{color:#bce0bd;margin-top:4px;overflow-wrap:anywhere}
+.seat .cards{font-size:clamp(11px,2.1vw,19px);letter-spacing:clamp(0px,.25vw,2px);margin-top:3px;white-space:nowrap}
+.seat.turn{outline:2px solid #f7d56c;box-shadow:0 0 18px #e8bd62}
+.seat.empty{background:#0b1712aa;border:1px dashed #d0ae6c;color:#e3c47f}
+.seat:nth-child(1){left:50%;top:5%}
+.seat:nth-child(2){left:82%;top:23%}
+.seat:nth-child(3){left:82%;top:77%}
+.seat:nth-child(4){left:50%;top:95%}
+.seat:nth-child(5){left:18%;top:77%}
+.seat:nth-child(6){left:18%;top:23%}
+.center-info{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:58%;max-width:440px}
+.pot{font-size:clamp(13px,2.8vw,22px);color:#ffe19a;font-weight:bold}
+.board{display:flex;justify-content:center;gap:clamp(3px,.7vw,6px);margin:clamp(5px,1.4vw,12px) 0;flex-wrap:wrap}
+.card{width:clamp(23px,5.5vw,42px);height:clamp(33px,7.6vw,58px);border-radius:6px;background:#f8f5ed;color:#181818;display:grid;place-items:center;font-size:clamp(11px,2.6vw,20px);font-weight:bold;box-shadow:0 2px 5px #0008}
+.card.red{color:#c32626}
+.card.back{background:repeating-linear-gradient(45deg,#172c50,#172c50 5px,#e2c06e 6px,#172c50 8px);border:2px solid #f0d58b}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+.actions button{min-width:90px}
+.actions .secondary{background:#202923;color:#f4dfb4}
+.actions input{max-width:150px;width:150px}
+#notice{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#171d19;border:1px solid var(--gold);border-radius:9px;padding:12px 18px;display:none;z-index:10;max-width:calc(100vw - 24px);text-align:center}
+@media(max-width:600px){
+ header{padding:12px}
+ .logo{font-size:19px;letter-spacing:3px}
+ main{padding:12px 9px}
+ .panel{padding:12px;margin:12px 0}
+ .poker-table{width:100%;aspect-ratio:1.25 / 1;border-width:7px}
+ .seat{width:clamp(67px,19%,94px);min-height:clamp(43px,12vw,59px);font-size:clamp(8px,2.2vw,10px);padding:4px}
+ .seat:nth-child(1){left:50%;top:6%}
+ .seat:nth-child(2){left:83%;top:25%}
+ .seat:nth-child(3){left:83%;top:75%}
+ .seat:nth-child(4){left:50%;top:94%}
+ .seat:nth-child(5){left:17%;top:75%}
+ .seat:nth-child(6){left:17%;top:25%}
+ .center-info{width:54%}
+ .center-info .muted{font-size:clamp(8px,2vw,11px)}
+ .pot{font-size:clamp(12px,3.5vw,17px)}
+ .card{width:clamp(20px,6vw,31px);height:clamp(29px,8.5vw,43px);font-size:clamp(10px,3vw,15px)}
+ .actions{gap:6px}
+ .actions button{min-width:72px;padding:9px 10px;font-size:12px}
+ .actions input{width:120px;max-width:120px;padding:9px;font-size:12px}
+}
+@media(max-width:360px){
+ .poker-table{aspect-ratio:1.15 / 1}
+ .seat{width:66px}
+ .seat:nth-child(2),.seat:nth-child(3){left:84%}
+ .seat:nth-child(5),.seat:nth-child(6){left:16%}
+}
 </style>
 </head>
 <body>
@@ -66,19 +149,16 @@ function showNotice(msg){$("notice").textContent=msg;$("notice").style.display="
 document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));renderTables();});
 function renderTables(){
  const list=allTables.filter(t=>filter==="all"||t.game===filter);
- $("tables").innerHTML=list.map(t=>`<article class="table-card"><h3>${t.game==="texas"?"♠ TEXAS HOLD'EM":"♦ OMAHA"}</h3><div class="meta">${t.name}<br>Blind: ${t.smallBlind.toLocaleString()} / ${t.bigBlind.toLocaleString()}<br>Суусан: ${t.players} / ${t.maxPlayers}<br>Төлөв: ${t.status==="playing"?"Тоглолт явагдаж байна":"Суудал авч байна"}</div><button ${t.players>=t.maxPlayers||t.status==="playing"?"disabled":""} onclick="chooseSeat('${t.id}')">ШИРЭЭНД СУУХ</button></article>`).join("")||"<p>Ширээ алга.</p>";
+ $("tables").innerHTML=list.map(t=>`<article class="table-card"><h3>${t.game==="texas"?"♠ TEXAS HOLD'EM":"♦ OMAHA"}</h3><div class="meta">${t.name}<br>Blind: ${t.smallBlind.toLocaleString()} / ${t.bigBlind.toLocaleString()}<br>Суусан: ${t.players} / ${t.maxPlayers}<br>Төлөв: ${t.status==="playing"?"Тоглолт явагдаж байна":"Суудал авч байна"}</div><button ${t.players>=t.maxPlayers||t.status==="playing"?"disabled":""} onclick="joinTable('${t.id}')">ШИРЭЭНД СУУХ</button></article>`).join("")||"<p>Ширээ алга.</p>";
 }
-function chooseSeat(tableId){
+function joinTable(tableId){
  if(!socket.connected){showNotice("Сервертэй холбогдоогүй байна.");return;}
- const t=allTables.find(x=>x.id===tableId);if(!t)return;
- const occupied=t.occupiedSeats||[];const free=Array.from({length:t.maxPlayers},(_,i)=>i).filter(i=>!occupied.includes(i));
- if(!free.length){showNotice("Сул суудал алга.");return;}
- const choice=prompt("Сул суудлын дугаар: "+free.map(x=>x+1).join(", "));
- if(choice===null)return;const seat=Number(choice)-1;
- if(!free.includes(seat)){showNotice("Сул суудлын дугаараас сонгоно уу.");return;}
- socket.emit("table:join",{tableId,seat,name:$("playerName").value.trim()||"Player"},res=>{
+ socket.emit("table:join",{tableId,name:$("playerName").value.trim()||"Player"},res=>{
   if(!res||!res.success){showNotice(res?.message||"Ширээнд сууж чадсангүй.");return;}
-  currentTable=tableId;$("lobbyView").style.display="none";$("tableView").style.display="block";renderTable(res.table);
+  currentTable=tableId;
+  $("lobbyView").style.display="none";
+  $("tableView").style.display="block";
+  renderTable(res.table);
  });
 }
 function cardHtml(c){if(!c)return '<div class="card back"></div>';const red=c.suit==="♥"||c.suit==="♦";return `<div class="card ${red?"red":""}">${c.rank}${c.suit}</div>`;}
