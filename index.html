@@ -12,6 +12,7 @@
   .screen { display: none; width: 100vw; min-height: 100vh; }
   .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
   
+  /* === LOGIN === */
   #login { background: radial-gradient(circle at 50% 30%, #1a4d3a, #06120c); }
   .login-box { background: rgba(20,30,25,0.95); border: 2px solid var(--gold); border-radius: 12px; padding: 40px; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 0 30px rgba(212,160,23,0.2); }
   .logo { font-size: 36px; color: var(--gold); font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px rgba(212,160,23,0.5); }
@@ -19,12 +20,14 @@
   button { width: 100%; padding: 12px; background: linear-gradient(180deg, var(--gold), #a67c00); border: none; border-radius: 6px; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
   button:hover { filter: brightness(1.1); }
   
+  /* === LOBBY === */
   #lobby { background: linear-gradient(180deg, #0a1a12, #06120c); justify-content: flex-start; padding: 30px; }
   .header { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; padding: 20px; background: rgba(212,160,23,0.1); border: 1px solid var(--gold); border-radius: 8px; margin-bottom: 30px; }
   .tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; width: 100%; max-width: 1200px; }
   .table-card { background: var(--panel); border: 2px solid var(--green); padding: 20px; border-radius: 10px; cursor: pointer; transition: 0.3s; text-align: center; }
   .table-card:hover { border-color: var(--gold); transform: translateY(-5px); }
   
+  /* === GAME === */
   #game { background: radial-gradient(ellipse at center, var(--green) 0%, #052418 70%); position: relative; justify-content: flex-start; padding: 20px; }
   .game-top { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   
@@ -61,6 +64,7 @@
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login" class="screen active">
   <div class="login-box">
     <div class="logo">♠ MONGOL POKER ♥</div>
@@ -70,6 +74,7 @@
   </div>
 </div>
 
+<!-- LOBBY -->
 <div id="lobby" class="screen">
   <div class="header">
     <div style="font-size:24px; color:var(--gold); font-weight:900;">♠ Mongol Poker</div>
@@ -91,6 +96,7 @@
   </div>
 </div>
 
+<!-- GAME -->
 <div id="game" class="screen">
   <div class="game-top">
     <button style="width:auto; padding:10px 20px; background:#555;" onclick="leaveTable()">← Гарах</button>
