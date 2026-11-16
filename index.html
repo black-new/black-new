@@ -27,8 +27,8 @@ button,input{font:inherit}
 button{cursor:pointer}
 
 header{
-  height:72px;
-  padding:0 5%;
+  min-height:72px;
+  padding:0 4%;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -36,7 +36,7 @@ header{
   background:#090c0a;
   position:sticky;
   top:0;
-  z-index:10;
+  z-index:20;
 }
 .logo{
   color:var(--gold);
@@ -45,12 +45,17 @@ header{
   letter-spacing:3px;
 }
 .logo span{color:white}
+
 .header-right{
   display:flex;
   align-items:center;
-  gap:15px;
+  justify-content:flex-end;
+  gap:12px;
   color:var(--muted);
   font-size:13px;
+}
+.online-status{
+  white-space:nowrap;
 }
 .online-dot{
   display:inline-block;
@@ -58,8 +63,208 @@ header{
   height:8px;
   border-radius:50%;
   background:#36d887;
-  margin-right:6px;
+  margin-right:5px;
 }
+.header-chip{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 10px;
+  border:1px solid var(--gold);
+  border-radius:5px;
+  color:#f6d98e;
+  background:#211a0e;
+  font-size:12px;
+  font-weight:bold;
+  white-space:nowrap;
+}
+.header-chip-icon{
+  width:13px;
+  height:13px;
+  display:inline-block;
+  border:2px dashed #ffe3a0;
+  background:#b88635;
+  border-radius:50%;
+}
+.header-user{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#f5d58d;
+  font-weight:bold;
+  max-width:150px;
+}
+.header-user-name{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.header-avatar{
+  width:34px;
+  height:34px;
+  flex-shrink:0;
+  border-radius:50%;
+  border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 25%,#80602e,#241a0d 75%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffe4a3;
+  font-weight:900;
+  font-size:14px;
+}
+.menu-button{
+  width:38px;
+  height:38px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:5px;
+  border:1px solid #5b4728;
+  border-radius:7px;
+  background:#151914;
+  flex-shrink:0;
+}
+.menu-button span{
+  width:18px;
+  height:2px;
+  border-radius:2px;
+  background:var(--gold);
+}
+.menu-button:hover{border-color:var(--gold)}
+
+.account-menu{
+  display:none;
+  position:absolute;
+  top:62px;
+  right:4%;
+  width:min(310px,92vw);
+  padding:17px;
+  background:#111713;
+  border:1px solid #806333;
+  border-radius:12px;
+  box-shadow:0 12px 35px #000c;
+  z-index:50;
+}
+.account-menu.open{display:block}
+.account-menu-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding-bottom:14px;
+  border-bottom:1px solid #40331f;
+  margin-bottom:10px;
+}
+.account-menu-avatar{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  border:2px solid var(--gold);
+  background:#302512;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffe3a0;
+  font-weight:bold;
+  font-size:19px;
+}
+.account-menu-name{
+  color:#f5d58d;
+  font-weight:bold;
+  margin-bottom:5px;
+}
+.account-menu-balance{
+  color:var(--gold);
+  font-size:12px;
+}
+.menu-item{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  padding:12px 10px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#eee5d2;
+  text-align:left;
+  font-size:14px;
+}
+.menu-item:hover{
+  background:#282115;
+  color:var(--gold);
+}
+.menu-item-icon{
+  width:20px;
+  text-align:center;
+  color:var(--gold);
+}
+.menu-divider{
+  height:1px;
+  background:#40331f;
+  margin:8px 0;
+}
+.account-section{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:60;
+  background:#000b;
+  padding:20px;
+  align-items:center;
+  justify-content:center;
+}
+.account-section.open{display:flex}
+.account-box{
+  width:min(430px,100%);
+  max-height:85vh;
+  overflow:auto;
+  background:#111713;
+  border:1px solid #806333;
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 15px 45px #000;
+}
+.account-box-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px;
+}
+.account-box-head h2{
+  margin:0;
+  color:var(--gold);
+  font-size:19px;
+}
+.close-account{
+  border:1px solid #5b4728;
+  color:var(--gold);
+  background:#171b15;
+  border-radius:7px;
+  padding:7px 11px;
+}
+.account-info-row{
+  padding:12px 0;
+  border-bottom:1px solid #30291e;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:13px;
+}
+.account-info-row span:first-child{color:var(--muted)}
+.account-info-row strong{
+  color:#f5d58d;
+  text-align:right;
+  overflow-wrap:anywhere;
+}
+.history-empty{
+  padding:20px 10px;
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+}
+
 main{
   width:min(1200px,94%);
   margin:30px auto;
@@ -170,7 +375,6 @@ main{
 
 /* POKER TABLE */
 #tablePage{display:none}
-
 .poker-table{
   width:100%;
   height:490px;
@@ -271,8 +475,6 @@ main{
   color:#c7c7b9;
   display:block;
 }
-
-/* AVATAR */
 .avatar{
   width:38px;
   height:38px;
@@ -293,8 +495,6 @@ main{
   background:#18221b;
   color:#8c927f;
 }
-
-/* CHIP DISPLAY */
 .chip-display{
   display:inline-flex;
   align-items:center;
@@ -302,7 +502,7 @@ main{
   gap:5px;
   margin-top:4px;
   padding:3px 8px;
-  border-radius:20px;
+  border-radius:5px;
   background:#302512;
   border:1px solid #a9823d;
   color:#f6d98e;
@@ -317,8 +517,6 @@ main{
   background:#b88635;
   display:inline-block;
 }
-
-/* SIX SEATS */
 .seat-1{top:5%;left:18%}
 .seat-2{top:5%;right:18%}
 .seat-3{top:40%;right:2%}
@@ -405,30 +603,30 @@ main{
 /* MOBILE */
 @media(max-width:700px){
   header{
-    height:60px;
-    padding:0 4%;
+    min-height:60px;
+    padding:0 3%;
   }
-  .logo{font-size:20px}
-  main{
-    width:96%;
-    margin:15px auto;
-  }
+  .logo{font-size:18px;letter-spacing:2px}
+  .header-right{gap:7px}
+  .online-status{display:none}
+  .header-chip{font-size:10px;padding:6px 7px;gap:4px}
+  .header-user{gap:5px;max-width:95px;font-size:11px}
+  .header-avatar{width:29px;height:29px;font-size:12px}
+  .menu-button{width:33px;height:33px}
+  .menu-button span{width:16px}
+  .account-menu{top:54px;right:3%}
+  main{width:96%;margin:15px auto}
   .hero{padding:23px}
   .nav-grid{gap:7px}
-  .nav-card{
-    padding:15px 5px;
-    font-size:13px;
-  }
+  .nav-card{padding:15px 5px;font-size:13px}
   .panel{padding:14px}
   .table-list{grid-template-columns:1fr}
-
   .poker-table{
     height:430px;
     min-height:430px;
     border-width:8px;
   }
   .table-inner{inset:10px}
-
   .seat{
     width:88px;
     min-height:78px;
@@ -436,20 +634,9 @@ main{
     padding:5px 3px;
   }
   .seat strong{font-size:10px}
-  .avatar{
-    width:32px;
-    height:32px;
-    font-size:14px;
-  }
-  .chip-display{
-    font-size:9px;
-    padding:2px 5px;
-  }
-  .playing-card{
-    width:34px;
-    height:49px;
-    font-size:16px;
-  }
+  .avatar{width:32px;height:32px;font-size:14px}
+  .chip-display{font-size:9px;padding:2px 5px}
+  .playing-card{width:34px;height:49px;font-size:16px}
   .board{gap:4px}
   .seat-1{top:5%;left:15%}
   .seat-2{top:5%;right:15%}
@@ -477,12 +664,59 @@ main{
 
 <header>
   <div class="logo">BLACK<span>CLUB</span></div>
+
   <div class="header-right">
-    <span><i class="online-dot"></i>ONLINE</span>
-    <span id="userName"></span>
-    <button class="secondary-btn" onclick="logout()">ГАРАХ</button>
+    <span class="header-chip">
+      <i class="header-chip-icon"></i>
+      <span id="headerChips">0 CHIP</span>
+    </span>
+
+    <div class="header-user">
+      <span class="header-user-name" id="userName">Тоглогч</span>
+      <div class="header-avatar" id="headerAvatar">P</div>
+    </div>
+
+    <button class="menu-button" id="menuButton"
+      onclick="toggleAccountMenu()" aria-label="Цэс">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <div class="account-menu" id="accountMenu">
+    <div class="account-menu-head">
+      <div class="account-menu-avatar" id="menuAvatar">P</div>
+      <div>
+        <div class="account-menu-name" id="menuUserName">Тоглогч</div>
+        <div class="account-menu-balance" id="menuBalance">0 CHIP</div>
+      </div>
+    </div>
+
+    <button class="menu-item" onclick="openAccountSection('account')">
+      <span class="menu-item-icon">👤</span> Account мэдээлэл
+    </button>
+    <button class="menu-item" onclick="openAccountSection('balance')">
+      <span class="menu-item-icon">◉</span> CHIP-ийн үлдэгдэл
+    </button>
+    <button class="menu-item" onclick="openAccountSection('history')">
+      <span class="menu-item-icon">◷</span> Тоглоомын түүх
+    </button>
+    <div class="menu-divider"></div>
+    <button class="menu-item" onclick="logout()">
+      <span class="menu-item-icon">⇥</span> Гарах
+    </button>
   </div>
 </header>
+
+<div class="account-section" id="accountSection"
+  onclick="if(event.target===this)closeAccountSection()">
+  <div class="account-box">
+    <div class="account-box-head">
+      <h2 id="accountSectionTitle">ACCOUNT</h2>
+      <button class="close-account" onclick="closeAccountSection()">✕</button>
+    </div>
+    <div id="accountSectionContent"></div>
+  </div>
+</div>
 
 <main id="lobbyPage">
   <section class="hero">
@@ -585,6 +819,110 @@ async function api(path, data = {}) {
   return result;
 }
 
+function getUsername() {
+  return user?.username || user?.name || "Тоглогч";
+}
+
+function getBalance() {
+  return Number(
+    user?.chips ??
+    user?.balance ??
+    user?.chipBalance ??
+    user?.wallet ??
+    0
+  );
+}
+
+function updateHeader() {
+  const name = getUsername();
+  const initial = name.trim().charAt(0).toUpperCase() || "P";
+  const balance = getBalance().toLocaleString("en-US") + " CHIP";
+
+  $("userName").textContent = name;
+  $("headerAvatar").textContent = initial;
+  $("menuAvatar").textContent = initial;
+  $("menuUserName").textContent = name;
+  $("headerChips").textContent = balance;
+  $("menuBalance").textContent = balance;
+}
+
+function toggleAccountMenu() {
+  $("accountMenu").classList.toggle("open");
+}
+
+function closeAccountMenu() {
+  $("accountMenu").classList.remove("open");
+}
+
+document.addEventListener("click", event => {
+  const menu = $("accountMenu");
+  const button = $("menuButton");
+
+  if (
+    menu &&
+    !menu.contains(event.target) &&
+    !button.contains(event.target)
+  ) {
+    closeAccountMenu();
+  }
+});
+
+function openAccountSection(section) {
+  closeAccountMenu();
+
+  const content = $("accountSectionContent");
+  const title = $("accountSectionTitle");
+
+  if (section === "account") {
+    title.textContent = "ACCOUNT МЭДЭЭЛЭЛ";
+
+    content.innerHTML = `
+      <div class="account-info-row">
+        <span>Хэрэглэгчийн нэр</span>
+        <strong>${escapeHtml(getUsername())}</strong>
+      </div>
+      <div class="account-info-row">
+        <span>Эрх</span>
+        <strong>${escapeHtml(user?.role || "Хэрэглэгч")}</strong>
+      </div>
+      <div class="account-info-row">
+        <span>CHIP үлдэгдэл</span>
+        <strong>${getBalance().toLocaleString("en-US")} CHIP</strong>
+      </div>
+    `;
+  }
+
+  if (section === "balance") {
+    title.textContent = "CHIP ҮЛДЭГДЭЛ";
+
+    content.innerHTML = `
+      <div style="text-align:center;padding:20px 5px">
+        <div style="color:#aaa;font-size:13px">Таны одоогийн үлдэгдэл</div>
+        <div style="font-size:30px;color:#e8bd62;font-weight:bold;margin:15px 0">
+          ${getBalance().toLocaleString("en-US")}
+        </div>
+        <div style="color:#e8bd62;font-size:13px">CHIP</div>
+      </div>
+    `;
+  }
+
+  if (section === "history") {
+    title.textContent = "ТОГЛООМЫН ТҮҮХ";
+
+    content.innerHTML = `
+      <div class="history-empty">
+        Одоогоор тоглоомын түүхийн мэдээлэл алга байна.
+      </div>
+    `;
+  }
+
+  $("accountSection").classList.add("open");
+}
+
+function closeAccountSection() {
+  $("accountSection").classList.remove("open");
+}
+
 async function login() {
   const username = $("authUsername").value.trim();
   const password = $("authPassword").value;
@@ -632,8 +970,8 @@ function acceptLogin(result) {
 
   localStorage.setItem("blackclub_token", token);
   $("authScreen").style.display = "none";
-  $("userName").textContent = user.username || user.name || "Тоглогч";
 
+  updateHeader();
   connectSocket();
   showLobby();
 }
@@ -649,7 +987,7 @@ async function boot() {
     user = result.user || result;
 
     $("authScreen").style.display = "none";
-    $("userName").textContent = user.username || user.name || "Тоглогч";
+    updateHeader();
 
     connectSocket();
     showLobby();
@@ -668,9 +1006,13 @@ function logout() {
   user = null;
   currentTable = null;
 
+  closeAccountMenu();
+  closeAccountSection();
+
   $("authScreen").style.display = "flex";
   $("lobbyPage").style.display = "block";
   $("tablePage").style.display = "none";
+  $("authMessage").textContent = "";
 }
 
 function showLobby() {
@@ -817,6 +1159,7 @@ function cardHtml(card) {
 
   const rank = card.rank || card.value || "";
   const suit = card.suit || "";
+
   const red = ["♥", "♦", "hearts", "diamonds", "heart", "diamond"]
     .includes(String(suit).toLowerCase());
 
