@@ -111,7 +111,6 @@
     </div>
     
     <div class="action-bar" id="actions" style="display:none;">
-      <!-- ТОВЧНУУДЫГ ШУУД ФУНКЦ РУУ НЬ ХОЛБОСОН -->
       <button class="fold" onclick="doAction('fold')">Fold</button>
       <button class="check" onclick="doAction('check')">Check</button>
       <button class="call" onclick="doAction('call')">Call</button>
@@ -252,12 +251,13 @@ function doAction(type) {
   turn = 1;
   render();
   
+  // БОТУУДЫГ АВТОМАТААР ЭХЛҮҮЛЭХ
   if(type !== 'fold') {
     setTimeout(() => {
         document.getElementById('gameStatus').innerText = "Ботууд бодож байна...";
+        setTimeout(botTurn, 1500);
     }, 500);
   }
-  setTimeout(botTurn, 1500);
 }
 
 function botTurn() {
@@ -266,6 +266,7 @@ function botTurn() {
   let alivePlayers = players.filter(p => !p.folded);
   if(alivePlayers.length === 1) return showdown();
 
+  // Хэрэв бүх бот тоглож дууссан бол дараагийн шат руу шилжих
   if(turn >= players.length) {
     if(stage === 3) return showdown();
     stage++;
@@ -273,9 +274,9 @@ function botTurn() {
     if(stage === 2) board.push(deck.pop());
     if(stage === 3) board.push(deck.pop());
     
-    turn = 1;
+    turn = 1; // Дахин ботуудын ээлж
     render();
-    setTimeout(botTurn, 1500);
+    setTimeout(botTurn, 1500); // Ботууд дараагийн шатанд тоглоно
     return;
   }
   
@@ -291,7 +292,7 @@ function botTurn() {
     }
   }
   
-  turn++;
+  turn++; // Дараагийн бот руу шилжих
   render();
   setTimeout(botTurn, 1000);
 }
