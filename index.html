@@ -8,15 +8,18 @@
 
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden}
+html,body{
+ margin:0;width:100%;height:100%;
+ overflow:hidden;
+}
 body{
- background:#080d0a;color:white;
+ background:#080d0a;color:#fff;
  font-family:Arial,sans-serif;
 }
 button,input{font:inherit}
 button{cursor:pointer}
 .screen{
- width:100%;height:100dvh;
+ width:100%;height:100vh;height:100dvh;
  display:none;flex-direction:column;
 }
 .screen.active{display:flex}
@@ -30,14 +33,14 @@ button{cursor:pointer}
 .login-box{
  width:min(360px,100%);
  padding:30px 25px;
- background:#111b14;border:1px solid #a88740;
- border-radius:16px;text-align:center;
- box-shadow:0 15px 50px #0009;
+ background:#111b14;
+ border:1px solid #a88740;
+ border-radius:16px;
+ text-align:center;
 }
 .logo{
- color:#dfbd67;font-size:32px;
+ color:#dfbd67;font-size:30px;
  font-weight:900;letter-spacing:4px;
- margin-bottom:8px;
 }
 .sub{color:#a9b5aa;font-size:12px;letter-spacing:3px}
 .login-box input{
@@ -49,20 +52,26 @@ button{cursor:pointer}
 .gold{
  background:linear-gradient(135deg,#e5c873,#a47a2c);
  color:#17140c;border:0;border-radius:8px;
- padding:13px 20px;font-weight:bold;
+ padding:12px 18px;font-weight:bold;
 }
 .login-box button{width:100%;margin-top:16px}
 .note{font-size:11px;color:#829083;margin-top:18px}
 
 /* HEADER */
 header{
- height:55px;flex-shrink:0;
- display:flex;align-items:center;justify-content:space-between;
- padding:0 18px;background:#111a13;
+ height:52px;flex-shrink:0;
+ display:flex;align-items:center;
+ justify-content:space-between;
+ padding:0 16px;background:#111a13;
  border-bottom:1px solid #715a2b;
 }
-.brand{font-size:21px;font-weight:900;letter-spacing:2px;color:#dfbd67}
-.header-right{display:flex;align-items:center;gap:12px;font-size:13px}
+.brand{
+ font-size:21px;font-weight:900;
+ letter-spacing:2px;color:#dfbd67;
+}
+.header-right{
+ display:flex;align-items:center;gap:10px;font-size:13px;
+}
 .small-btn{
  background:#202c22;color:#e4c36e;
  border:1px solid #67542e;border-radius:6px;
@@ -71,16 +80,21 @@ header{
 
 /* LOBBY */
 #lobby{align-items:center;justify-content:center;padding:20px}
-.lobby-title{font-size:clamp(25px,5vw,42px);color:#e3c16b;letter-spacing:4px}
+.lobby-title{
+ font-size:clamp(25px,5vw,42px);
+ color:#e3c16b;letter-spacing:4px;
+}
 .lobby-sub{color:#9eaa9f;margin:10px 0 30px}
-.game-options{display:flex;gap:18px;width:min(650px,100%)}
+.game-options{
+ display:flex;gap:18px;width:min(650px,100%);
+}
 .game-option{
  flex:1;min-width:0;background:#142119;
  border:1px solid #94743b;border-radius:15px;
- padding:28px 12px;text-align:center;
- cursor:pointer;transition:.2s;
+ padding:25px 12px;text-align:center;
+ cursor:pointer;
 }
-.game-option:hover{background:#203b29;transform:translateY(-3px)}
+.game-option:hover{background:#203b29}
 .game-option .symbol{font-size:40px;color:#e1bf65}
 .game-option h2{font-size:clamp(15px,3vw,22px);color:#e1bf65}
 .game-option p{font-size:12px;color:#aab5aa}
@@ -88,105 +102,167 @@ header{
 /* GAME */
 #game{min-height:0}
 .gamebar{
- height:43px;flex-shrink:0;
+ height:35px;flex-shrink:0;
  display:flex;align-items:center;justify-content:center;
  color:#e3c16b;font-weight:bold;letter-spacing:2px;
 }
 .table-area{
  flex:1;min-height:0;
  display:flex;align-items:center;justify-content:center;
- padding:5px 12px;
+ padding:4px 10px;
 }
 .table{
- position:relative;width:min(850px,100%);
- height:100%;max-height:520px;
- border:9px solid #523b20;border-radius:48%;
+ width:min(850px,100%);
+ height:100%;max-height:500px;
+ border:8px solid #523b20;
+ border-radius:46%;
  background:radial-gradient(ellipse,#17623d,#0c3928 70%,#102017);
  box-shadow:inset 0 0 35px #0008,0 8px 25px #0008;
  display:flex;flex-direction:column;
  align-items:center;justify-content:center;
 }
-.table-name{font-size:clamp(12px,2vw,17px);letter-spacing:3px;color:#e5c875}
-.pot{font-size:clamp(13px,2vw,18px);color:#ffe6a1;margin-top:8px;font-weight:bold}
+.table-name{
+ font-size:clamp(12px,2vw,17px);
+ letter-spacing:3px;color:#e5c875;
+}
+.pot{
+ font-size:clamp(13px,2vw,18px);
+ color:#ffe6a1;margin-top:7px;font-weight:bold;
+}
+
+/* CARDS */
 .board{
- display:flex;justify-content:center;gap:clamp(4px,1vw,10px);
+ display:flex;justify-content:center;
+ align-items:center;gap:clamp(3px,1vw,9px);
  margin:12px 0;
 }
 .card{
- width:clamp(39px,6.2vw,65px);
- height:clamp(57px,9.2vw,91px);
- border-radius:7px;background:#fff;color:#151515;
- display:flex;flex-direction:column;justify-content:space-between;
- padding:5px;font-weight:900;
- box-shadow:0 3px 8px #0008;
+ position:relative;
+ flex:0 0 auto;
+ width:clamp(34px,5.8vw,60px);
+ aspect-ratio:0.69;
+ background:#fff;color:#151515;
+ border-radius:6px;
+ box-shadow:0 2px 7px #0008;
+ overflow:hidden;
 }
-.card .rank{font-size:clamp(17px,3vw,27px);line-height:1}
-.card .suit{font-size:clamp(20px,3.8vw,34px);text-align:center}
 .card.red{color:#d21d36}
+.card .rank-top{
+ position:absolute;top:5%;left:8%;
+ font-size:clamp(12px,2.3vw,22px);
+ line-height:1;font-weight:900;
+}
+.card .suit-center{
+ position:absolute;left:0;right:0;top:50%;
+ transform:translateY(-50%);
+ text-align:center;
+ font-size:clamp(18px,3.3vw,34px);
+ line-height:1;
+}
+.card .rank-bottom{
+ position:absolute;bottom:5%;right:8%;
+ font-size:clamp(12px,2.3vw,22px);
+ line-height:1;font-weight:900;
+ transform:rotate(180deg);
+}
 .card.back{
- background:repeating-linear-gradient(45deg,#173d2a,#173d2a 5px,#b18a3e 6px,#173d2a 9px);
+ background:repeating-linear-gradient(
+  45deg,#173d2a,#173d2a 5px,
+  #b18a3e 6px,#173d2a 9px
+ );
  border:2px solid #e2c36f;
 }
-.empty{background:#ffffff12;border:1px dashed #ffffff55;box-shadow:none}
+.card.empty{
+ background:#ffffff12;
+ border:1px dashed #ffffff55;
+ box-shadow:none;
+}
 .community-label{font-size:10px;color:#c9d6c8}
+
+/* PLAYERS */
 .player-area{
- flex-shrink:0;display:flex;justify-content:center;
- align-items:center;gap:12px;padding:5px 10px 3px;
+ flex-shrink:0;
+ display:flex;justify-content:center;
+ align-items:center;gap:10px;
+ padding:5px 10px 3px;
 }
 .player{
- min-width:125px;text-align:center;
- background:#142019;border:1px solid #536348;
- border-radius:9px;padding:7px 10px;
+ min-width:0;flex:1;max-width:190px;
+ text-align:center;
+ background:#142019;
+ border:1px solid #536348;
+ border-radius:9px;padding:7px 5px;
 }
 .player.you{border-color:#d8b75e}
-.player-name{font-size:12px;font-weight:bold}
-.player-chips{font-size:11px;color:#e4c36e;margin-top:4px}
-.hand{display:flex;justify-content:center;gap:4px;margin-top:6px}
-.hand .card{
- width:clamp(31px,4.7vw,47px);
- height:clamp(45px,6.8vw,66px);
+.player-name{
+ font-size:clamp(10px,1.5vw,13px);
+ font-weight:bold;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;
 }
-.hand .rank{font-size:clamp(14px,2.5vw,20px)}
-.hand .suit{font-size:clamp(16px,2.8vw,23px)}
+.player-chips{
+ font-size:11px;color:#e4c36e;margin-top:4px;
+}
+.hand{
+ display:flex;justify-content:center;
+ align-items:center;gap:3px;
+ margin-top:6px;min-width:0;
+}
+.hand .card{
+ width:clamp(22px,3.8vw,39px);
+ border-radius:4px;
+}
+.hand .rank-top,.hand .rank-bottom{
+ font-size:clamp(9px,1.6vw,15px);
+}
+.hand .suit-center{
+ font-size:clamp(13px,2.4vw,23px);
+}
+
+/* BUTTONS */
 .controls{
- flex-shrink:0;display:flex;justify-content:center;
- align-items:center;gap:8px;padding:8px 10px 12px;
+ flex-shrink:0;
+ display:flex;justify-content:center;
+ align-items:center;gap:8px;
+ padding:7px 10px 10px;
 }
 .controls button{font-size:12px;padding:10px 16px}
 .status{
- flex-shrink:0;text-align:center;color:#e7d6a5;
- font-size:11px;min-height:17px;padding-bottom:3px;
+ flex-shrink:0;text-align:center;
+ color:#e7d6a5;font-size:11px;
+ min-height:17px;padding-bottom:3px;
 }
+
+/* MOBILE */
 @media(max-width:600px){
- header{height:48px;padding:0 10px}
+ header{height:45px;padding:0 9px}
  .brand{font-size:18px}
- .header-right{gap:7px;font-size:11px}
+ .header-right{gap:6px;font-size:11px}
  .small-btn{padding:6px 7px}
  .game-options{gap:9px}
- .game-option{padding:22px 7px}
+ .game-option{padding:20px 6px}
  .game-option .symbol{font-size:32px}
- .table-area{padding:4px 5px}
+ .table-area{padding:3px 4px}
  .table{border-width:6px;border-radius:38%}
- .player-area{gap:6px}
- .player{min-width:0;flex:1;padding:6px 3px}
- .controls{gap:5px;padding:7px 4px}
- .controls button{padding:10px 9px;font-size:10px}
+ .board{gap:4px;margin:9px 0}
+ .player-area{gap:5px;padding:4px 5px}
+ .player{padding:6px 2px}
+ .hand{gap:2px}
+ .controls{gap:5px;padding:6px 3px}
+ .controls button{padding:9px 10px;font-size:10px}
 }
 @media(max-height:650px){
- header{height:43px}
- .gamebar{height:30px}
- .table{max-height:390px}
+ header{height:40px}
+ .gamebar{height:27px}
+ .table{max-height:370px}
+ .board{margin:6px 0}
  .player-area{padding-top:2px}
- .controls{padding-top:4px;padding-bottom:5px}
- .card{height:clamp(48px,10vh,75px)}
- .hand .card{height:clamp(39px,8vh,57px)}
+ .controls{padding-top:3px;padding-bottom:4px}
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <section id="login" class="screen active">
  <div class="login-box">
   <div class="logo">BLACKCLUB</div>
@@ -198,7 +274,6 @@ header{
  </div>
 </section>
 
-<!-- LOBBY -->
 <section id="lobby" class="screen">
  <header>
   <div class="brand">BLACKCLUB</div>
@@ -225,7 +300,6 @@ header{
  </div>
 </section>
 
-<!-- POKER TABLE -->
 <section id="game" class="screen">
  <header>
   <div class="brand">BLACKCLUB</div>
@@ -282,17 +356,13 @@ function login(){
  screen("lobby");
 }
 
-function logout(){
- screen("login");
-}
-
-function backLobby(){
- screen("lobby");
-}
+function logout(){screen("login")}
+function backLobby(){screen("lobby")}
 
 function startGame(type){
  mode=type;
- $("gameTitle").textContent=type==="holdem"?"TEXAS HOLD'EM":"OMAHA";
+ $("gameTitle").textContent=
+  type==="holdem"?"TEXAS HOLD'EM":"OMAHA";
  screen("game");
  newHand();
 }
@@ -315,13 +385,17 @@ function shuffle(){
 function draw(){return deck.pop()}
 
 function cardHTML(c,hidden=false){
- if(hidden)return '<div class="card back"></div>';
- if(!c)return '<div class="card empty"></div>';
+ if(hidden){
+  return '<div class="card back"></div>';
+ }
+ if(!c){
+  return '<div class="card empty"></div>';
+ }
  let red=(c.suit==="♥"||c.suit==="♦")?"red":"";
  return `<div class="card ${red}">
-  <span class="rank">${c.rank}</span>
-  <span class="suit">${c.suit}</span>
-  <span class="rank">${c.rank}</span>
+  <span class="rank-top">${c.rank}</span>
+  <span class="suit-center">${c.suit}</span>
+  <span class="rank-bottom">${c.rank}</span>
  </div>`;
 }
 
@@ -347,8 +421,8 @@ function newHand(){
   p.chips-=100;
   pot+=100;
  });
- balance=players[0].chips;
 
+ balance=players[0].chips;
  $("status").textContent="Карт тараагдлаа. NEXT дарна уу.";
  render();
 }
@@ -358,6 +432,7 @@ function nextCards(){
   $("status").textContent="Шинэ тоглолт эхлүүлэхийн тулд NEW HAND дарна уу.";
   return;
  }
+
  if(stage===0){
   board.push(draw(),draw(),draw());
   stage=1;
@@ -392,13 +467,15 @@ function render(){
 
  $("board").innerHTML="";
  for(let i=0;i<5;i++){
-  $("board").innerHTML+=board[i]?cardHTML(board[i]):cardHTML(null);
+  $("board").innerHTML+=board[i]?
+   cardHTML(board[i]):cardHTML(null);
  }
 
  $("players").innerHTML=players.map(p=>{
   let cards=p.cards.map(c=>
    cardHTML(c,p.you?false:!revealed)
   ).join("");
+
   return `<div class="player ${p.you?"you":""}">
    <div class="player-name">${p.name}</div>
    <div class="player-chips">${p.chips.toLocaleString()} CHIPS</div>
