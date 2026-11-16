@@ -4,305 +4,236 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MONGOL POKER</title>
+<title>BLACKCLUB POKER</title>
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;background:#080d0b;color:#fff;
+ margin:0;background:#090d0b;color:#fff;
  font-family:Arial,sans-serif;
 }
 header{
- height:70px;background:#101a15;border-bottom:1px solid #294735;
- display:flex;align-items:center;justify-content:space-between;
- padding:0 25px;position:sticky;top:0;z-index:5
+ background:#101813;border-bottom:1px solid #b89543;
+ padding:17px 24px;display:flex;justify-content:space-between;
+ align-items:center;gap:12px;flex-wrap:wrap
 }
-.logo{font-size:22px;font-weight:900;letter-spacing:2px}
-.logo span{color:#d5ad5b}
-.balance{color:#e8c46e;font-weight:bold}
-main{max-width:1200px;margin:auto;padding:22px}
-.top{text-align:center;margin:20px 0 30px}
-.top h1{font-size:38px;margin:8px}
-.top p{color:#a6b5aa}
-.modes{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
-button,select{
- cursor:pointer;border:1px solid #a98743;
- border-radius:8px;padding:12px 20px;
- font-weight:bold;background:#17251d;color:#eacb82
+.logo{font-size:26px;font-weight:900;color:#d9b65c;letter-spacing:3px}
+.logo span{color:white}
+.balance{color:#e5c66c;font-weight:bold}
+main{max-width:1150px;margin:auto;padding:22px 15px}
+.top{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:12px;flex-wrap:wrap;margin-bottom:18px
 }
-button.active,button.primary{
- background:#bd984c;color:#10140f
+select,button{
+ border:1px solid #b89543;border-radius:8px;
+ padding:12px 16px;font-size:14px;font-weight:bold;
 }
-button:disabled{opacity:.35;cursor:not-allowed}
+select{background:#17221a;color:white}
+button{background:#c5a04e;color:#10130e;cursor:pointer}
+button:hover{background:#e2c36f}
+button.secondary{background:#18231b;color:#e4c46c}
 .table{
- position:relative;max-width:900px;height:480px;
- margin:35px auto;background:radial-gradient(#176c46,#064029 70%);
- border:13px solid #684a2b;border-radius:50%;
- box-shadow:0 20px 55px #000, inset 0 0 35px #001c10;
- display:flex;align-items:center;justify-content:center
+ position:relative;background:radial-gradient(ellipse,#17613d,#0a3928 65%,#102017);
+ border:12px solid #533b20;border-radius:48%;
+ min-height:390px;margin:25px auto;padding:45px 15px;
+ display:flex;flex-direction:column;align-items:center;
+ justify-content:center;box-shadow:0 15px 40px #000
 }
-.center{text-align:center}
-.pot-label{color:#e9c46e;letter-spacing:3px;font-size:12px}
-#pot{font-size:30px;font-weight:900;margin:7px}
-.board,.hand{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+.table-title{color:#e4c46c;letter-spacing:3px;font-weight:bold}
+.pot{margin-top:12px;color:#ffe39b;font-size:19px;font-weight:bold}
+.board,.hand{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:14px 0}
 .card{
- width:49px;height:69px;background:#fff;color:#151515;
+ width:49px;height:70px;background:#fff;color:#151515;
  border-radius:6px;display:flex;flex-direction:column;
- justify-content:space-between;padding:5px;
- font-weight:bold;box-shadow:0 3px 6px #0008;
- font-size:17px;text-align:left
+ justify-content:space-between;padding:5px;font-size:19px;
+ font-weight:bold;box-shadow:0 3px 7px #0008
 }
-.card.red{color:#d32929}
-.card.back{
- background:repeating-linear-gradient(45deg,#183e32,#183e32 5px,#c09a4e 6px,#183e32 8px);
- color:#fff;border:2px solid #e3c37c
+.card small{font-size:12px}
+.red{color:#d21f36}
+.back{
+ background:repeating-linear-gradient(45deg,#142d25,#142d25 5px,#b89543 6px,#142d25 8px);
+ border:2px solid #e2c36f
 }
-.card .bottom{text-align:right;transform:rotate(180deg)}
+.seats{
+ display:grid;grid-template-columns:repeat(4,1fr);
+ gap:12px;margin-top:22px
+}
 .seat{
- position:absolute;background:#101a15;border:1px solid #bd984c;
- border-radius:12px;padding:9px 12px;min-width:115px;
- text-align:center;box-shadow:0 4px 12px #0009
+ background:#131c17;border:1px solid #344b39;
+ border-radius:12px;padding:12px;text-align:center;min-height:115px
 }
-.seat strong{display:block;font-size:13px}
-.seat small{color:#d7b568}
-.seat .hand{margin-top:6px;gap:3px}
-.seat .card{width:28px;height:39px;font-size:12px;padding:3px}
-.seat.topseat{top:-38px;left:50%;transform:translateX(-50%)}
-.seat.leftseat{left:-65px;top:43%;transform:translateY(-50%)}
-.seat.rightseat{right:-65px;top:43%;transform:translateY(-50%)}
-.seat.bottomseat{bottom:-38px;left:50%;transform:translateX(-50%)}
-.seat.you{border:2px solid #e5c16b}
-.seat.folded{opacity:.4}
-.seat .status{font-size:10px;color:#e9c46e}
+.seat.active{border-color:#d9b65c;box-shadow:0 0 12px #c6a04c44}
+.seat strong{display:block;margin-bottom:7px}
+.chips{color:#e4c46c;font-size:13px}
+.you{color:#e4c46c}
 .controls{
  display:flex;justify-content:center;gap:10px;
- flex-wrap:wrap;margin:65px 0 15px
+ flex-wrap:wrap;margin:20px 0
 }
-#message{text-align:center;color:#e6c16e;min-height:24px}
-.info{
- display:flex;justify-content:center;gap:25px;
- color:#aab9ad;flex-wrap:wrap;font-size:13px
-}
-.rules{
- max-width:750px;margin:35px auto;background:#111b15;
- padding:20px;border:1px solid #2c4935;border-radius:12px;
- color:#bac9be;line-height:1.7
-}
-.rules h3{color:#e6c16e}
-@media(max-width:650px){
- header{padding:0 12px;height:60px}
- .logo{font-size:17px}
- main{padding:12px}
- .table{height:390px;border-width:7px;margin:45px 35px}
- .seat{min-width:85px;padding:7px 5px}
- .seat.leftseat{left:-45px}
- .seat.rightseat{right:-45px}
- .card{width:39px;height:57px;font-size:14px}
- .seat .card{width:23px;height:33px}
- .top h1{font-size:30px}
- button{padding:11px 13px;font-size:12px}
+.status{text-align:center;color:#e8d7a7;min-height:25px;margin:10px}
+.rules{color:#a8b4aa;font-size:12px;text-align:center;margin:18px}
+@media(max-width:600px){
+ header{padding:14px}.logo{font-size:21px}
+ main{padding:14px 9px}
+ .table{min-height:300px;border-width:7px;border-radius:35%;padding:30px 8px}
+ .card{width:42px;height:61px;font-size:16px}
+ .seats{grid-template-columns:repeat(2,1fr);gap:8px}
+ .seat{padding:9px;min-height:105px}
+ button{padding:11px 12px}
 }
 </style>
 </head>
 <body>
 
 <header>
- <div class="logo">MONGOL <span>POKER</span></div>
- <div class="balance">CHIPS: <span id="balance">10000</span></div>
+ <div class="logo">BLACK<span>CLUB</span></div>
+ <div class="balance">MY CHIPS: <span id="balance">10,000</span></div>
 </header>
 
 <main>
- <section class="top">
-  <div style="color:#d5ad5b;letter-spacing:4px;font-size:11px">
-   ONLINE POKER ROOM
+ <div class="top">
+  <div>
+   <div style="font-weight:bold;color:#e4c46c;margin-bottom:7px">POKER TABLE</div>
+   <select id="game" onchange="newHand()">
+    <option value="holdem">TEXAS HOLD'EM</option>
+    <option value="omaha">OMAHA</option>
+   </select>
   </div>
-  <h1>POKER TABLE</h1>
-  <p>Choose your game and take your seat</p>
-  <div class="modes">
-   <button id="holdem" class="active" onclick="setMode('holdem')">
-    TEXAS HOLD'EM
-   </button>
-   <button id="omaha" onclick="setMode('omaha')">
-    OMAHA
-   </button>
-  </div>
- </section>
-
- <div class="info">
-  <span id="gameMode">Texas Hold'em</span>
-  <span>4 PLAYERS</span>
-  <span>VIRTUAL CHIPS</span>
+  <button class="secondary" onclick="newHand()">NEW GAME ↻</button>
  </div>
 
- <section class="table">
-  <div class="seat topseat" id="seat1"></div>
-  <div class="seat leftseat" id="seat2"></div>
-  <div class="seat rightseat" id="seat3"></div>
-  <div class="seat bottomseat you" id="seat0"></div>
+ <div class="table">
+  <div class="table-title">BLACKCLUB POKER</div>
+  <div class="pot">POT: <span id="pot">0</span></div>
+  <div class="board" id="board"></div>
+  <div style="font-size:12px;color:#d7d7b0">COMMUNITY CARDS</div>
+ </div>
 
-  <div class="center">
-   <div class="pot-label">TOTAL POT</div>
-   <div id="pot">0</div>
-   <div class="board" id="board"></div>
-   <div style="font-size:11px;color:#e8d29b;margin-top:12px"
-    id="street">WAITING FOR GAME</div>
-  </div>
- </section>
+ <div class="seats" id="seats"></div>
+
+ <div class="status" id="status">Тоглоом эхлэхэд бэлэн.</div>
 
  <div class="controls">
-  <button class="primary" id="deal" onclick="newGame()">DEAL CARDS</button>
-  <button id="next" onclick="nextStreet()" disabled>NEXT STREET</button>
-  <button id="show" onclick="showdown()" disabled>SHOWDOWN</button>
-  <button onclick="resetGame()">RESET</button>
+  <button onclick="nextStreet()">NEXT STREET</button>
+  <button onclick="showdown()">SHOWDOWN</button>
+  <button class="secondary" onclick="newHand()">NEW HAND</button>
  </div>
 
- <div id="message">Тоглоом эхлүүлэхэд бэлэн.</div>
-
- <section class="rules">
-  <h3>♠ TEXAS HOLD'EM</h3>
-  Тоглогч бүр 2 карт авна. Ширээн дээр 5 нийтлэг карт гарна.
-  Өөрийн 2 карт болон ширээний 5 картаас хамгийн сайн 5-ыг сонгоно.
-
-  <h3>♣ OMAHA</h3>
-  Тоглогч бүр 4 карт авна. Ширээний 5 картаас яг 3,
-  өөрийн 4 картаас яг 2 картыг сонгон хамгийн сайн гараа бүрдүүлнэ.
-
-  <h3>🏆 HAND RANKINGS</h3>
-  Royal Flush → Straight Flush → Four of a Kind →
-  Full House → Flush → Straight → Three of a Kind →
-  Two Pair → One Pair → High Card.
- </section>
+ <div class="rules">
+  VIRTUAL CHIPS ONLY · NO REAL MONEY · BLACKCLUB DEMO
+ </div>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
 
-let mode = "holdem";
-let balance = 10000;
-let pot = 0;
-let deck = [];
-let players = [];
-let board = [];
-let streetIndex = 0;
-let playing = false;
+let balance=10000;
+let pot=0;
+let deck=[];
+let board=[];
+let players=[];
+let stage=0;
+let finished=false;
+let game="holdem";
 
-const names = ["YOU","BAT","BOLD","TENGIS"];
-const suits = ["♠","♥","♦","♣"];
-const ranks = [2,3,4,5,6,7,8,9,10,11,12,13,14];
+const suits=["♠","♥","♦","♣"];
+const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
 
-function makeDeck(){
- let d=[];
- for(let s of suits) for(let r of ranks)
-  d.push({r,s});
- return d.sort(()=>Math.random()-.5);
+function shuffle(){
+ deck=[];
+ for(let s of suits){
+  for(let r=0;r<ranks.length;r++){
+   deck.push({rank:r+2,label:ranks[r],suit:s});
+  }
+ }
+ for(let i=deck.length-1;i>0;i--){
+  let j=Math.floor(Math.random()*(i+1));
+  [deck[i],deck[j]]=[deck[j],deck[i]];
+ }
 }
 
-function cardName(c){
- return c.r<=10?String(c.r):
- ({11:"J",12:"Q",13:"K",14:"A"}[c.r]);
-}
+function draw(){return deck.pop()}
 
 function cardHTML(c,hidden=false){
- if(hidden) return '<div class="card back">♠</div>';
- let red=c.s==="♥"||c.s==="♦";
- let n=cardName(c);
- return `<div class="card ${red?"red":""}">
- <div>${n}${c.s}</div><div class="bottom">${n}${c.s}</div>
- </div>`;
+ if(hidden)return '<div class="card back"></div>';
+ let red=(c.suit==="♥"||c.suit==="♦")?"red":"";
+ return `<div class="card ${red}"><small>${c.label}${c.suit}</small><span>${c.suit}</span><small>${c.label}</small></div>`;
 }
 
-function setMode(m){
- if(playing){
-  $("message").textContent="Эхлээд одоогийн тоглоомыг дуусгана уу.";
-  return;
- }
- mode=m;
- $("holdem").classList.toggle("active",m==="holdem");
- $("omaha").classList.toggle("active",m==="omaha");
- $("gameMode").textContent=m==="holdem"?"Texas Hold'em":"Omaha";
- render();
-}
-
-function newGame(){
- if(playing) return;
- if(balance<100){
-  $("message").textContent="Чип хүрэлцэхгүй байна. RESET дарж эхлүүлнэ үү.";
-  return;
- }
-
- deck=makeDeck();
+function newHand(){
+ game=$("game").value;
+ shuffle();
  board=[];
+ stage=0;
  pot=0;
- streetIndex=0;
- let count=mode==="holdem"?2:4;
+ finished=false;
 
- players=names.map((name,i)=>({
-  name,
-  cards:deck.splice(0,count),
-  chips:i===0?balance-100:9900,
-  contribution:100,
-  folded:false
- }));
+ let count=game==="omaha"?4:2;
+ players=[
+  {name:"YOU",chips:balance,cards:[],human:true},
+  {name:"PLAYER 2",chips:10000,cards:[]},
+  {name:"PLAYER 3",chips:10000,cards:[]},
+  {name:"PLAYER 4",chips:10000,cards:[]}
+ ];
 
- balance-=100;
- pot=400;
- playing=true;
+ players.forEach(p=>{
+  for(let i=0;i<count;i++)p.cards.push(draw());
+ });
 
- $("message").textContent="Карт тараагдлаа. Флоп нээхэд бэлэн.";
- $("street").textContent="PRE-FLOP";
- $("deal").disabled=true;
- $("next").disabled=false;
- $("show").disabled=true;
+ players.forEach(p=>{
+  p.chips-=100;
+  pot+=100;
+ });
+
+ balance=players[0].chips;
+ $("status").textContent="Карт тараагдлаа. NEXT STREET дарж үргэлжлүүлээрэй.";
  render();
 }
 
 function nextStreet(){
- if(!playing)return;
-
- if(streetIndex===0){
-  deck.splice(0,1);
-  board.push(...deck.splice(0,3));
-  $("street").textContent="FLOP";
- }else if(streetIndex===1){
-  deck.splice(0,1);
-  board.push(deck.splice(0,1)[0]);
-  $("street").textContent="TURN";
- }else if(streetIndex===2){
-  deck.splice(0,1);
-  board.push(deck.splice(0,1)[0]);
-  $("street").textContent="RIVER";
+ if(finished)return;
+ if(stage===0){
+  board.push(draw(),draw(),draw());
+  stage=1;
+ }else if(stage===1){
+  board.push(draw());
+  stage=2;
+ }else if(stage===2){
+  board.push(draw());
+  stage=3;
  }else{
-  showdown();
+  $("status").textContent="Бүх карт нээгдсэн байна. SHOWDOWN дарна уу.";
   return;
  }
-
- streetIndex++;
- $("message").textContent="Нийтлэг карт нээгдлээ.";
- $("next").disabled=streetIndex>=3;
- $("show").disabled=false;
  render();
+ $("status").textContent=
+  stage===1?"FLOP — 3 карт нээгдлээ.":
+  stage===2?"TURN — 4 дэх карт нээгдлээ.":
+  "RIVER — Сүүлийн карт нээгдлээ.";
 }
 
-function combinations(arr,k){
- if(k===0)return [[]];
- if(arr.length<k)return [];
- let out=[];
- for(let i=0;i<=arr.length-k;i++){
-  for(let rest of combinations(arr.slice(i+1),k-1))
-   out.push([arr[i],...rest]);
+function combinations(arr,n){
+ if(n===0)return [[]];
+ if(arr.length<n)return [];
+ let result=[];
+ for(let i=0;i<=arr.length-n;i++){
+  for(let c of combinations(arr.slice(i+1),n-1)){
+   result.push([arr[i],...c]);
+  }
  }
- return out;
+ return result;
 }
 
-function score5(cards){
- let vals=cards.map(c=>c.r).sort((a,b)=>b-a);
+function evaluateFive(cards){
+ let values=cards.map(c=>c.rank).sort((a,b)=>b-a);
  let counts={};
- vals.forEach(v=>counts[v]=(counts[v]||0)+1);
+ values.forEach(v=>counts[v]=(counts[v]||0)+1);
  let groups=Object.entries(counts)
-  .map(([r,n])=>({r:+r,n}))
-  .sort((a,b)=>b.n-a.n||b.r-a.r);
+  .map(([v,n])=>({v:Number(v),n}))
+  .sort((a,b)=>b.n-a.n||b.v-a.v);
 
- let flush=cards.every(c=>c.s===cards[0].s);
- let unique=[...new Set(vals)];
+ let flush=cards.every(c=>c.suit===cards[0].suit);
+ let unique=[...new Set(values)].sort((a,b)=>b-a);
  let straight=0;
 
  if(unique.length===5){
@@ -310,85 +241,73 @@ function score5(cards){
   else if(unique.join(",")==="14,5,4,3,2")straight=5;
  }
 
- let result;
- if(flush&&straight)result=[8,straight];
- else if(groups[0].n===4)result=[7,groups[0].r,groups[1].r];
- else if(groups[0].n===3&&groups[1].n===2)
-  result=[6,groups[0].r,groups[1].r];
- else if(flush)result=[5,...vals];
- else if(straight)result=[4,straight];
- else if(groups[0].n===3)
-  result=[3,groups[0].r,...groups.slice(1).map(x=>x.r)];
- else if(groups[0].n===2&&groups[1].n===2)
-  result=[2,Math.max(groups[0].r,groups[1].r),
-   Math.min(groups[0].r,groups[1].r),groups[2].r];
- else if(groups[0].n===2)
-  result=[1,groups[0].r,...groups.slice(1).map(x=>x.r)];
- else result=[0,...vals];
-
- return result;
+ if(flush&&straight)return [8,straight];
+ if(groups[0].n===4)return [7,groups[0].v,groups[1].v];
+ if(groups[0].n===3&&groups[1].n===2)return [6,groups[0].v,groups[1].v];
+ if(flush)return [5,...values];
+ if(straight)return [4,straight];
+ if(groups[0].n===3)
+  return [3,groups[0].v,...groups.slice(1).map(x=>x.v)];
+ if(groups[0].n===2&&groups[1].n===2)
+  return [2,Math.max(groups[0].v,groups[1].v),
+   Math.min(groups[0].v,groups[1].v),groups[2].v];
+ if(groups[0].n===2)
+  return [1,groups[0].v,...groups.slice(1).map(x=>x.v)];
+ return [0,...values];
 }
 
 function compare(a,b){
  for(let i=0;i<Math.max(a.length,b.length);i++){
   let x=a[i]||0,y=b[i]||0;
-  if(x!==y)return x-y;
+  if(x>y)return 1;
+  if(x<y)return -1;
  }
  return 0;
 }
 
-function evaluate(p){
- let hands=[];
- if(mode==="holdem"){
-  hands=combinations([...p.cards,...board],5);
+function bestHand(player){
+ let choices=[];
+ if(game==="omaha"){
+  for(let h of combinations(player.cards,2)){
+   for(let b of combinations(board,3)){
+    choices.push(evaluateFive([...h,...b]));
+   }
+  }
  }else{
-  let own=combinations(p.cards,2);
-  let common=combinations(board,3);
-  for(let a of own)for(let b of common)
-   hands.push([...a,...b]);
+  choices=combinations([...player.cards,...board],5).map(evaluateFive);
  }
- let best=null;
- for(let h of hands){
-  let sc=score5(h);
-  if(!best||compare(sc,best)>0)best=sc;
- }
- return best;
+ return choices.sort((a,b)=>compare(b,a))[0];
 }
 
-const rankNames=[
- "High Card","One Pair","Two Pair","Three of a Kind",
- "Straight","Flush","Full House","Four of a Kind",
- "Straight Flush"
-];
+function handName(score){
+ return ["High card","One pair","Two pair","Three of a kind",
+ "Straight","Flush","Full house","Four of a kind",
+ "Straight flush"][score[0]];
+}
 
 function showdown(){
- if(!playing||board.length!==5){
-  $("message").textContent="Showdown хийхийн тулд 5 нийтлэг карт нээ.";
+ if(finished)return;
+ if(board.length!==5){
+  $("status").textContent="Эхлээд 5 ширээний картыг нээнэ үү.";
   return;
  }
 
- let ranked=players.map(p=>({
-  player:p,
-  score:evaluate(p)
- })).sort((a,b)=>compare(b.score,a.score));
+ let results=players.map(p=>({player:p,score:bestHand(p)}));
+ results.sort((a,b)=>compare(b.score,a.score));
+ let winners=results.filter(x=>compare(x.score,results[0].score)===0);
 
- let best=ranked[0].score;
- let winners=ranked.filter(x=>compare(x.score,best)===0);
- let share=Math.floor(pot/winners.length);
-
+ let prize=Math.floor(pot/winners.length);
  winners.forEach(w=>{
-  if(w.player.name==="YOU")balance+=share;
+  w.player.chips+=prize;
  });
 
- $("message").textContent=
-  winners.map(w=>w.player.name).join(", ")+
-  " яллаа! "+rankNames[best[0]]+" — "+share+" CHIP.";
+ balance=players[0].chips;
+ finished=true;
 
- playing=false;
- $("street").textContent="SHOWDOWN COMPLETE";
- $("deal").disabled=false;
- $("next").disabled=true;
- $("show").disabled=true;
+ let names=winners.map(w=>w.player.name).join(", ");
+ $("status").textContent=
+  names+" яллаа! "+handName(results[0].score)+
+  " — "+prize.toLocaleString()+" чип авлаа.";
  render(true);
 }
 
@@ -397,54 +316,25 @@ function render(reveal=false){
  $("pot").textContent=pot.toLocaleString();
 
  $("board").innerHTML=board.map(c=>cardHTML(c)).join("");
- while(board.length<5)
-  $("board").innerHTML+=cardHTML(null,true),
-  board.length; // Empty board spaces are drawn below.
-
- $("board").innerHTML=board.map(c=>cardHTML(c)).join("");
- if(board.length<5){
-  for(let i=board.length;i<5;i++)
-   $("board").innerHTML+=cardHTML(null,true);
+ for(let i=board.length;i<5;i++){
+  $("board").innerHTML+=cardHTML(null,true);
  }
 
- players.forEach((p,i)=>{
-  let hidden=i!==0&&!reveal;
-  let el=$("seat"+i);
-  el.className="seat "+["bottomseat you","topseat","leftseat","rightseat"][i];
-  if(p.folded)el.classList.add("folded");
-  el.innerHTML=`
-   <strong>${p.name}</strong>
-   <small>${i===0?balance.toLocaleString():p.chips.toLocaleString()} CHIP</small>
-   <div class="hand">
-    ${p.cards.map(c=>cardHTML(c,hidden)).join("")}
-   </div>
-   ${reveal?'<div class="status">SHOWDOWN</div>':""}
-  `;
- });
+ $("seats").innerHTML=players.map((p,i)=>{
+  let cards=p.cards.map(c=>
+   cardHTML(c,reveal||p.human?false:true)
+  ).join("");
 
- if(!players.length){
-  ["seat0","seat1","seat2","seat3"].forEach((id,i)=>{
-   $(id).innerHTML=`<strong>${names[i]}</strong><small>WAITING</small>`;
-  });
- }
+  return `<div class="seat ${p.human?"active":""}">
+   <strong class="${p.human?"you":""}">${p.name}</strong>
+   <div class="chips">CHIPS: ${p.chips.toLocaleString()}</div>
+   <div class="hand">${cards}</div>
+   ${p.human?'<small style="color:#e4c46c">YOUR CARDS</small>':''}
+  </div>`;
+ }).join("");
 }
 
-function resetGame(){
- playing=false;
- balance=10000;
- pot=0;
- board=[];
- players=[];
- streetIndex=0;
- $("deal").disabled=false;
- $("next").disabled=true;
- $("show").disabled=true;
- $("street").textContent="WAITING FOR GAME";
- $("message").textContent="Шинэ тоглоом эхлүүлэхэд бэлэн.";
- render();
-}
-
-render();
+newHand();
 </script>
 </body>
 </html>
