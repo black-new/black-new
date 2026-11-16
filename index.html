@@ -1,317 +1,450 @@
+
 <!DOCTYPE html>
 <html lang="mn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mongol Poker</title>
+<title>MONGOL POKER</title>
 <style>
-  :root { --gold: #d4a017; --green: #0d5c3a; --dark: #0a0e0c; --panel: #1a3a2a; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--dark); color: #fff; min-height: 100vh; }
-  
-  .screen { display: none; width: 100vw; min-height: 100vh; }
-  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  
-  /* === LOGIN === */
-  #login { background: radial-gradient(circle at 50% 30%, #1a4d3a, #06120c); }
-  .login-box { background: rgba(20,30,25,0.95); border: 2px solid var(--gold); border-radius: 12px; padding: 40px; text-align: center; width: 90%; max-width: 400px; box-shadow: 0 0 30px rgba(212,160,23,0.2); }
-  .logo { font-size: 36px; color: var(--gold); font-weight: 900; margin-bottom: 20px; text-shadow: 0 0 10px rgba(212,160,23,0.5); }
-  input { width: 100%; padding: 12px; margin: 10px 0; background: #0a1a12; border: 1px solid var(--green); color: #fff; border-radius: 6px; font-size: 16px; outline: none; }
-  button { width: 100%; padding: 12px; background: linear-gradient(180deg, var(--gold), #a67c00); border: none; border-radius: 6px; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-  button:hover { filter: brightness(1.1); }
-  
-  /* === LOBBY === */
-  #lobby { background: linear-gradient(180deg, #0a1a12, #06120c); justify-content: flex-start; padding: 30px; }
-  .header { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; padding: 20px; background: rgba(212,160,23,0.1); border: 1px solid var(--gold); border-radius: 8px; margin-bottom: 30px; }
-  .tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; width: 100%; max-width: 1200px; }
-  .table-card { background: var(--panel); border: 2px solid var(--green); padding: 20px; border-radius: 10px; cursor: pointer; transition: 0.3s; text-align: center; }
-  .table-card:hover { border-color: var(--gold); transform: translateY(-5px); }
-  
-  /* === GAME === */
-  #game { background: radial-gradient(ellipse at center, var(--green) 0%, #052418 70%); position: relative; justify-content: flex-start; padding: 20px; }
-  .game-top { width: 100%; max-width: 1200px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  
-  .poker-table { width: 100%; max-width: 1000px; height: 60vh; min-height: 500px; background: radial-gradient(ellipse at center, #14955b 0%, #087342 60%, #061a10 90%); border: 10px solid #42494d; border-radius: 50% / 35%; position: relative; box-shadow: inset 0 0 60px #000, 0 20px 40px rgba(0,0,0,0.5); margin: 0 auto; }
-  
-  .seat { position: absolute; width: 120px; text-align: center; transition: 0.3s; }
-  .seat.s0 { bottom: -30px; left: 50%; transform: translateX(-50%); }
-  .seat.s1 { bottom: 20%; left: 2%; }
-  .seat.s2 { top: 20%; left: 2%; }
-  .seat.s3 { top: -30px; left: 50%; transform: translateX(-50%); }
-  
-  .seat .avatar { width: 60px; height: 60px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px; font-size: 28px; border: 3px solid var(--gold); box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-  .seat.active .avatar { border-color: #00ff88; box-shadow: 0 0 20px #00ff88; }
-  .seat.folded { opacity: 0.5; }
-  .seat .name { font-size: 14px; font-weight: bold; text-shadow: 0 1px 2px #000; }
-  .seat .chips { font-size: 12px; color: var(--gold); background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 3px; }
-  .seat .cards { display: flex; gap: 2px; justify-content: center; margin-top: 5px; }
-  .seat .card { width: 30px; height: 42px; font-size: 16px; }
-  
-  .center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; }
-  .pot { font-size: 32px; color: var(--gold); font-weight: bold; margin-bottom: 20px; text-shadow: 0 2px 4px #000; }
-  .board { display: flex; gap: 10px; justify-content: center; }
-  .card { width: 70px; height: 100px; background: #fff; color: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
-  .card.red { color: #d32f2f; }
-  .card.blank { background: rgba(255,255,255,0.1); border: 2px dashed rgba(255,255,255,0.3); color: transparent; box-shadow: none; }
-  
-  .action-bar { position: absolute; bottom: 20px; display: flex; gap: 15px; justify-content: center; width: 100%; }
-  .action-bar button { width: auto; padding: 15px 40px; font-size: 16px; }
-  .fold { background: #8b2e2e; color: #fff; }
-  .check { background: #2e7d32; color: #fff; }
-  .call { background: #1565c0; color: #fff; }
-  .raise { background: #d4a017; color: #000; }
+*{box-sizing:border-box}
+body{
+ margin:0;background:#080d0b;color:#fff;
+ font-family:Arial,sans-serif;
+}
+header{
+ height:70px;background:#101a15;border-bottom:1px solid #294735;
+ display:flex;align-items:center;justify-content:space-between;
+ padding:0 25px;position:sticky;top:0;z-index:5
+}
+.logo{font-size:22px;font-weight:900;letter-spacing:2px}
+.logo span{color:#d5ad5b}
+.balance{color:#e8c46e;font-weight:bold}
+main{max-width:1200px;margin:auto;padding:22px}
+.top{text-align:center;margin:20px 0 30px}
+.top h1{font-size:38px;margin:8px}
+.top p{color:#a6b5aa}
+.modes{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+button,select{
+ cursor:pointer;border:1px solid #a98743;
+ border-radius:8px;padding:12px 20px;
+ font-weight:bold;background:#17251d;color:#eacb82
+}
+button.active,button.primary{
+ background:#bd984c;color:#10140f
+}
+button:disabled{opacity:.35;cursor:not-allowed}
+.table{
+ position:relative;max-width:900px;height:480px;
+ margin:35px auto;background:radial-gradient(#176c46,#064029 70%);
+ border:13px solid #684a2b;border-radius:50%;
+ box-shadow:0 20px 55px #000, inset 0 0 35px #001c10;
+ display:flex;align-items:center;justify-content:center
+}
+.center{text-align:center}
+.pot-label{color:#e9c46e;letter-spacing:3px;font-size:12px}
+#pot{font-size:30px;font-weight:900;margin:7px}
+.board,.hand{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+.card{
+ width:49px;height:69px;background:#fff;color:#151515;
+ border-radius:6px;display:flex;flex-direction:column;
+ justify-content:space-between;padding:5px;
+ font-weight:bold;box-shadow:0 3px 6px #0008;
+ font-size:17px;text-align:left
+}
+.card.red{color:#d32929}
+.card.back{
+ background:repeating-linear-gradient(45deg,#183e32,#183e32 5px,#c09a4e 6px,#183e32 8px);
+ color:#fff;border:2px solid #e3c37c
+}
+.card .bottom{text-align:right;transform:rotate(180deg)}
+.seat{
+ position:absolute;background:#101a15;border:1px solid #bd984c;
+ border-radius:12px;padding:9px 12px;min-width:115px;
+ text-align:center;box-shadow:0 4px 12px #0009
+}
+.seat strong{display:block;font-size:13px}
+.seat small{color:#d7b568}
+.seat .hand{margin-top:6px;gap:3px}
+.seat .card{width:28px;height:39px;font-size:12px;padding:3px}
+.seat.topseat{top:-38px;left:50%;transform:translateX(-50%)}
+.seat.leftseat{left:-65px;top:43%;transform:translateY(-50%)}
+.seat.rightseat{right:-65px;top:43%;transform:translateY(-50%)}
+.seat.bottomseat{bottom:-38px;left:50%;transform:translateX(-50%)}
+.seat.you{border:2px solid #e5c16b}
+.seat.folded{opacity:.4}
+.seat .status{font-size:10px;color:#e9c46e}
+.controls{
+ display:flex;justify-content:center;gap:10px;
+ flex-wrap:wrap;margin:65px 0 15px
+}
+#message{text-align:center;color:#e6c16e;min-height:24px}
+.info{
+ display:flex;justify-content:center;gap:25px;
+ color:#aab9ad;flex-wrap:wrap;font-size:13px
+}
+.rules{
+ max-width:750px;margin:35px auto;background:#111b15;
+ padding:20px;border:1px solid #2c4935;border-radius:12px;
+ color:#bac9be;line-height:1.7
+}
+.rules h3{color:#e6c16e}
+@media(max-width:650px){
+ header{padding:0 12px;height:60px}
+ .logo{font-size:17px}
+ main{padding:12px}
+ .table{height:390px;border-width:7px;margin:45px 35px}
+ .seat{min-width:85px;padding:7px 5px}
+ .seat.leftseat{left:-45px}
+ .seat.rightseat{right:-45px}
+ .card{width:39px;height:57px;font-size:14px}
+ .seat .card{width:23px;height:33px}
+ .top h1{font-size:30px}
+ button{padding:11px 13px;font-size:12px}
+}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="screen active">
-  <div class="login-box">
-    <div class="logo">♠ MONGOL POKER ♥</div>
-    <input id="username" type="text" placeholder="Нэр (admin)" value="admin">
-    <input id="password" type="password" placeholder="Нууц үг (1234)" value="1234">
-    <button onclick="login()">Нэвтрэх</button>
-  </div>
-</div>
+<header>
+ <div class="logo">MONGOL <span>POKER</span></div>
+ <div class="balance">CHIPS: <span id="balance">10000</span></div>
+</header>
 
-<!-- LOBBY -->
-<div id="lobby" class="screen">
-  <div class="header">
-    <div style="font-size:24px; color:var(--gold); font-weight:900;">♠ Mongol Poker</div>
-    <div style="font-size:20px;">💰 Чип: <span id="userChips">10,000</span></div>
+<main>
+ <section class="top">
+  <div style="color:#d5ad5b;letter-spacing:4px;font-size:11px">
+   ONLINE POKER ROOM
   </div>
-  <div class="tables">
-    <div class="table-card" onclick="joinTable('Texas Hold\'em 1')">
-      <h3 style="color:var(--gold); margin-bottom:10px; font-size:20px;">Texas Hold'em 1</h3>
-      <p style="margin:5px 0; color:#aaa;">Blinds: 50/100</p>
-      <p style="margin:5px 0; color:#aaa;">Ботуудтай тоглох</p>
-      <button style="margin-top:15px;">Нэгдэх</button>
-    </div>
-    <div class="table-card" onclick="joinTable('Omaha 1')">
-      <h3 style="color:var(--gold); margin-bottom:10px; font-size:20px;">Omaha 1</h3>
-      <p style="margin:5px 0; color:#aaa;">Blinds: 100/200</p>
-      <p style="margin:5px 0; color:#aaa;">Ботуудтай тоглох</p>
-      <button style="margin-top:15px;">Нэгдэх</button>
-    </div>
+  <h1>POKER TABLE</h1>
+  <p>Choose your game and take your seat</p>
+  <div class="modes">
+   <button id="holdem" class="active" onclick="setMode('holdem')">
+    TEXAS HOLD'EM
+   </button>
+   <button id="omaha" onclick="setMode('omaha')">
+    OMAHA
+   </button>
   </div>
-</div>
+ </section>
 
-<!-- GAME -->
-<div id="game" class="screen">
-  <div class="game-top">
-    <button style="width:auto; padding:10px 20px; background:#555;" onclick="leaveTable()">← Гарах</button>
-    <div style="font-size:20px; color:var(--gold);" id="gameStatus">Тоглоом эхэлж байна...</div>
-    <div style="width: 100px;"></div>
+ <div class="info">
+  <span id="gameMode">Texas Hold'em</span>
+  <span>4 PLAYERS</span>
+  <span>VIRTUAL CHIPS</span>
+ </div>
+
+ <section class="table">
+  <div class="seat topseat" id="seat1"></div>
+  <div class="seat leftseat" id="seat2"></div>
+  <div class="seat rightseat" id="seat3"></div>
+  <div class="seat bottomseat you" id="seat0"></div>
+
+  <div class="center">
+   <div class="pot-label">TOTAL POT</div>
+   <div id="pot">0</div>
+   <div class="board" id="board"></div>
+   <div style="font-size:11px;color:#e8d29b;margin-top:12px"
+    id="street">WAITING FOR GAME</div>
   </div>
-  
-  <div class="poker-table" id="pokerTable">
-    <div class="center">
-      <div class="pot" id="potDisplay">Pot: 0</div>
-      <div class="board" id="board"></div>
-    </div>
-    
-    <div class="action-bar" id="actions" style="display:none;">
-      <button class="fold" onclick="doAction('fold')">Fold</button>
-      <button class="check" onclick="doAction('check')">Check</button>
-      <button class="call" onclick="doAction('call')">Call</button>
-      <button class="raise" onclick="doAction('raise')">Raise 200</button>
-    </div>
-  </div>
-</div>
+ </section>
+
+ <div class="controls">
+  <button class="primary" id="deal" onclick="newGame()">DEAL CARDS</button>
+  <button id="next" onclick="nextStreet()" disabled>NEXT STREET</button>
+  <button id="show" onclick="showdown()" disabled>SHOWDOWN</button>
+  <button onclick="resetGame()">RESET</button>
+ </div>
+
+ <div id="message">Тоглоом эхлүүлэхэд бэлэн.</div>
+
+ <section class="rules">
+  <h3>♠ TEXAS HOLD'EM</h3>
+  Тоглогч бүр 2 карт авна. Ширээн дээр 5 нийтлэг карт гарна.
+  Өөрийн 2 карт болон ширээний 5 картаас хамгийн сайн 5-ыг сонгоно.
+
+  <h3>♣ OMAHA</h3>
+  Тоглогч бүр 4 карт авна. Ширээний 5 картаас яг 3,
+  өөрийн 4 картаас яг 2 картыг сонгон хамгийн сайн гараа бүрдүүлнэ.
+
+  <h3>🏆 HAND RANKINGS</h3>
+  Royal Flush → Straight Flush → Four of a Kind →
+  Full House → Flush → Straight → Three of a Kind →
+  Two Pair → One Pair → High Card.
+ </section>
+</main>
 
 <script>
-let userChips = 10000;
-let players = [];
-let deck = [];
-let board = [];
+const $ = id => document.getElementById(id);
+
+let mode = "holdem";
+let balance = 10000;
 let pot = 0;
-let currentBet = 100;
-let turn = 0; 
-let stage = 0; 
-let isPlaying = false;
+let deck = [];
+let players = [];
+let board = [];
+let streetIndex = 0;
+let playing = false;
 
-const suits = ['♠', '♥', '♦', '♣'];
-const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const names = ["YOU","BAT","BOLD","TENGIS"];
+const suits = ["♠","♥","♦","♣"];
+const ranks = [2,3,4,5,6,7,8,9,10,11,12,13,14];
 
-function show(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+function makeDeck(){
+ let d=[];
+ for(let s of suits) for(let r of ranks)
+  d.push({r,s});
+ return d.sort(()=>Math.random()-.5);
 }
 
-function login() {
-  const name = document.getElementById('username').value;
-  const pass = document.getElementById('password').value;
-  if(name === 'admin' && pass === '1234') {
-    document.getElementById('userChips').innerText = userChips.toLocaleString();
-    show('lobby');
-  } else {
-    alert('Нэр эсвэл нууц үг буруу байна! (admin / 1234)');
-  }
+function cardName(c){
+ return c.r<=10?String(c.r):
+ ({11:"J",12:"Q",13:"K",14:"A"}[c.r]);
 }
 
-function joinTable(tableName) {
-  show('game');
-  startGame(tableName);
+function cardHTML(c,hidden=false){
+ if(hidden) return '<div class="card back">♠</div>';
+ let red=c.s==="♥"||c.s==="♦";
+ let n=cardName(c);
+ return `<div class="card ${red?"red":""}">
+ <div>${n}${c.s}</div><div class="bottom">${n}${c.s}</div>
+ </div>`;
 }
 
-function leaveTable() {
-  show('lobby');
-  isPlaying = false;
+function setMode(m){
+ if(playing){
+  $("message").textContent="Эхлээд одоогийн тоглоомыг дуусгана уу.";
+  return;
+ }
+ mode=m;
+ $("holdem").classList.toggle("active",m==="holdem");
+ $("omaha").classList.toggle("active",m==="omaha");
+ $("gameMode").textContent=m==="holdem"?"Texas Hold'em":"Omaha";
+ render();
 }
 
-function createDeck() {
-  deck = [];
-  for(let s of suits) for(let r of ranks) deck.push({r, s});
-  deck.sort(() => Math.random() - 0.5);
+function newGame(){
+ if(playing) return;
+ if(balance<100){
+  $("message").textContent="Чип хүрэлцэхгүй байна. RESET дарж эхлүүлнэ үү.";
+  return;
+ }
+
+ deck=makeDeck();
+ board=[];
+ pot=0;
+ streetIndex=0;
+ let count=mode==="holdem"?2:4;
+
+ players=names.map((name,i)=>({
+  name,
+  cards:deck.splice(0,count),
+  chips:i===0?balance-100:9900,
+  contribution:100,
+  folded:false
+ }));
+
+ balance-=100;
+ pot=400;
+ playing=true;
+
+ $("message").textContent="Карт тараагдлаа. Флоп нээхэд бэлэн.";
+ $("street").textContent="PRE-FLOP";
+ $("deal").disabled=true;
+ $("next").disabled=false;
+ $("show").disabled=true;
+ render();
 }
 
-function startGame(tableName) {
-  isPlaying = true;
-  pot = 0; currentBet = 100; stage = 0; turn = 1;
-  board = [];
-  createDeck();
-  
-  players = [
-    { name: 'Та', chips: userChips, cards: [deck.pop(), deck.pop()], isBot: false, folded: false },
-    { name: 'Бат', chips: 10000, cards: [deck.pop(), deck.pop()], isBot: true, folded: false },
-    { name: 'Сараа', chips: 10000, cards: [deck.pop(), deck.pop()], isBot: true, folded: false },
-    { name: 'Тэмүүлэн', chips: 10000, cards: [deck.pop(), deck.pop()], isBot: true, folded: false }
-  ];
-  
-  document.getElementById('gameStatus').innerText = tableName + " • Таны ээлж";
-  document.getElementById('actions').style.display = 'flex';
-  render();
+function nextStreet(){
+ if(!playing)return;
+
+ if(streetIndex===0){
+  deck.splice(0,1);
+  board.push(...deck.splice(0,3));
+  $("street").textContent="FLOP";
+ }else if(streetIndex===1){
+  deck.splice(0,1);
+  board.push(deck.splice(0,1)[0]);
+  $("street").textContent="TURN";
+ }else if(streetIndex===2){
+  deck.splice(0,1);
+  board.push(deck.splice(0,1)[0]);
+  $("street").textContent="RIVER";
+ }else{
+  showdown();
+  return;
+ }
+
+ streetIndex++;
+ $("message").textContent="Нийтлэг карт нээгдлээ.";
+ $("next").disabled=streetIndex>=3;
+ $("show").disabled=false;
+ render();
 }
 
-function render() {
-  const table = document.getElementById('pokerTable');
-  table.querySelectorAll('.seat').forEach(s => s.remove());
-  
-  players.forEach((p, i) => {
-    const seat = document.createElement('div');
-    seat.className = 'seat s' + i;
-    if(turn === i && isPlaying && !p.folded) seat.classList.add('active');
-    if(p.folded) seat.classList.add('folded');
-    
-    let cardsHtml = '';
-    if(i === 0) {
-      cardsHtml = `<div class="cards">
-        <div class="card ${p.cards[0].s === '♥' || p.cards[0].s === '♦' ? 'red' : ''}">${p.cards[0].r}${p.cards[0].s}</div>
-        <div class="card ${p.cards[1].s === '♥' || p.cards[1].s === '♦' ? 'red' : ''}">${p.cards[1].r}${p.cards[1].s}</div>
-      </div>`;
-    } else {
-      cardsHtml = `<div class="cards"><div class="card blank"></div><div class="card blank"></div></div>`;
-    }
-    
-    seat.innerHTML = `
-      <div class="avatar">${p.isBot ? '🤖' : '👤'}</div>
-      <div class="name">${p.name}</div>
-      <div class="chips">${p.chips.toLocaleString()}</div>
-      ${cardsHtml}
-    `;
-    table.appendChild(seat);
+function combinations(arr,k){
+ if(k===0)return [[]];
+ if(arr.length<k)return [];
+ let out=[];
+ for(let i=0;i<=arr.length-k;i++){
+  for(let rest of combinations(arr.slice(i+1),k-1))
+   out.push([arr[i],...rest]);
+ }
+ return out;
+}
+
+function score5(cards){
+ let vals=cards.map(c=>c.r).sort((a,b)=>b-a);
+ let counts={};
+ vals.forEach(v=>counts[v]=(counts[v]||0)+1);
+ let groups=Object.entries(counts)
+  .map(([r,n])=>({r:+r,n}))
+  .sort((a,b)=>b.n-a.n||b.r-a.r);
+
+ let flush=cards.every(c=>c.s===cards[0].s);
+ let unique=[...new Set(vals)];
+ let straight=0;
+
+ if(unique.length===5){
+  if(unique[0]-unique[4]===4)straight=unique[0];
+  else if(unique.join(",")==="14,5,4,3,2")straight=5;
+ }
+
+ let result;
+ if(flush&&straight)result=[8,straight];
+ else if(groups[0].n===4)result=[7,groups[0].r,groups[1].r];
+ else if(groups[0].n===3&&groups[1].n===2)
+  result=[6,groups[0].r,groups[1].r];
+ else if(flush)result=[5,...vals];
+ else if(straight)result=[4,straight];
+ else if(groups[0].n===3)
+  result=[3,groups[0].r,...groups.slice(1).map(x=>x.r)];
+ else if(groups[0].n===2&&groups[1].n===2)
+  result=[2,Math.max(groups[0].r,groups[1].r),
+   Math.min(groups[0].r,groups[1].r),groups[2].r];
+ else if(groups[0].n===2)
+  result=[1,groups[0].r,...groups.slice(1).map(x=>x.r)];
+ else result=[0,...vals];
+
+ return result;
+}
+
+function compare(a,b){
+ for(let i=0;i<Math.max(a.length,b.length);i++){
+  let x=a[i]||0,y=b[i]||0;
+  if(x!==y)return x-y;
+ }
+ return 0;
+}
+
+function evaluate(p){
+ let hands=[];
+ if(mode==="holdem"){
+  hands=combinations([...p.cards,...board],5);
+ }else{
+  let own=combinations(p.cards,2);
+  let common=combinations(board,3);
+  for(let a of own)for(let b of common)
+   hands.push([...a,...b]);
+ }
+ let best=null;
+ for(let h of hands){
+  let sc=score5(h);
+  if(!best||compare(sc,best)>0)best=sc;
+ }
+ return best;
+}
+
+const rankNames=[
+ "High Card","One Pair","Two Pair","Three of a Kind",
+ "Straight","Flush","Full House","Four of a Kind",
+ "Straight Flush"
+];
+
+function showdown(){
+ if(!playing||board.length!==5){
+  $("message").textContent="Showdown хийхийн тулд 5 нийтлэг карт нээ.";
+  return;
+ }
+
+ let ranked=players.map(p=>({
+  player:p,
+  score:evaluate(p)
+ })).sort((a,b)=>compare(b.score,a.score));
+
+ let best=ranked[0].score;
+ let winners=ranked.filter(x=>compare(x.score,best)===0);
+ let share=Math.floor(pot/winners.length);
+
+ winners.forEach(w=>{
+  if(w.player.name==="YOU")balance+=share;
+ });
+
+ $("message").textContent=
+  winners.map(w=>w.player.name).join(", ")+
+  " яллаа! "+rankNames[best[0]]+" — "+share+" CHIP.";
+
+ playing=false;
+ $("street").textContent="SHOWDOWN COMPLETE";
+ $("deal").disabled=false;
+ $("next").disabled=true;
+ $("show").disabled=true;
+ render(true);
+}
+
+function render(reveal=false){
+ $("balance").textContent=balance.toLocaleString();
+ $("pot").textContent=pot.toLocaleString();
+
+ $("board").innerHTML=board.map(c=>cardHTML(c)).join("");
+ while(board.length<5)
+  $("board").innerHTML+=cardHTML(null,true),
+  board.length; // Empty board spaces are drawn below.
+
+ $("board").innerHTML=board.map(c=>cardHTML(c)).join("");
+ if(board.length<5){
+  for(let i=board.length;i<5;i++)
+   $("board").innerHTML+=cardHTML(null,true);
+ }
+
+ players.forEach((p,i)=>{
+  let hidden=i!==0&&!reveal;
+  let el=$("seat"+i);
+  el.className="seat "+["bottomseat you","topseat","leftseat","rightseat"][i];
+  if(p.folded)el.classList.add("folded");
+  el.innerHTML=`
+   <strong>${p.name}</strong>
+   <small>${i===0?balance.toLocaleString():p.chips.toLocaleString()} CHIP</small>
+   <div class="hand">
+    ${p.cards.map(c=>cardHTML(c,hidden)).join("")}
+   </div>
+   ${reveal?'<div class="status">SHOWDOWN</div>':""}
+  `;
+ });
+
+ if(!players.length){
+  ["seat0","seat1","seat2","seat3"].forEach((id,i)=>{
+   $(id).innerHTML=`<strong>${names[i]}</strong><small>WAITING</small>`;
   });
-  
-  document.getElementById('potDisplay').innerText = 'Pot: ' + pot.toLocaleString();
-  
-  const boardEl = document.getElementById('board');
-  boardEl.innerHTML = '';
-  for(let i=0; i<5; i++) {
-    const c = document.createElement('div');
-    if(board[i]) {
-      c.className = 'card' + (board[i].s === '♥' || board[i].s === '♦' ? ' red' : '');
-      c.innerText = board[i].r + board[i].s;
-    } else {
-      c.className = 'card blank';
-    }
-    boardEl.appendChild(c);
-  }
+ }
 }
 
-function doAction(type) {
-  if(!isPlaying || turn !== 0) return;
-  document.getElementById('actions').style.display = 'none';
-  
-  if(type === 'fold') {
-    players[0].folded = true;
-    document.getElementById('gameStatus').innerText = "Та Fold хийлээ.";
-  } else if(type === 'call') {
-    pot += currentBet; 
-    players[0].chips -= currentBet; 
-    document.getElementById('gameStatus').innerText = "Та Call хийлээ.";
-  } else if(type === 'check') {
-    document.getElementById('gameStatus').innerText = "Та Check хийлээ.";
-  } else if(type === 'raise') {
-    pot += 200; 
-    players[0].chips -= 200; 
-    currentBet = 200;
-    document.getElementById('gameStatus').innerText = "Та Raise 200 хийлээ.";
-  }
-  
-  turn = 1;
-  render();
-  
-  // БОТУУДЫГ АВТОМАТААР ЭХЛҮҮЛЭХ
-  if(type !== 'fold') {
-    setTimeout(() => {
-        document.getElementById('gameStatus').innerText = "Ботууд бодож байна...";
-        setTimeout(botTurn, 1500);
-    }, 500);
-  }
+function resetGame(){
+ playing=false;
+ balance=10000;
+ pot=0;
+ board=[];
+ players=[];
+ streetIndex=0;
+ $("deal").disabled=false;
+ $("next").disabled=true;
+ $("show").disabled=true;
+ $("street").textContent="WAITING FOR GAME";
+ $("message").textContent="Шинэ тоглоом эхлүүлэхэд бэлэн.";
+ render();
 }
 
-function botTurn() {
-  if(!isPlaying) return;
-  
-  let alivePlayers = players.filter(p => !p.folded);
-  if(alivePlayers.length === 1) return showdown();
-
-  // Хэрэв бүх бот тоглож дууссан бол дараагийн шат руу шилжих
-  if(turn >= players.length) {
-    if(stage === 3) return showdown();
-    stage++;
-    if(stage === 1) board.push(deck.pop(), deck.pop(), deck.pop());
-    if(stage === 2) board.push(deck.pop());
-    if(stage === 3) board.push(deck.pop());
-    
-    turn = 1; // Дахин ботуудын ээлж
-    render();
-    setTimeout(botTurn, 1500); // Ботууд дараагийн шатанд тоглоно
-    return;
-  }
-  
-  const p = players[turn];
-  if(!p.folded) {
-    const rand = Math.random();
-    if(rand < 0.3) {
-      pot += 200; p.chips -= 200; currentBet = 200;
-    } else if (rand < 0.7) {
-      pot += 100; p.chips -= 100;
-    } else {
-      p.folded = true;
-    }
-  }
-  
-  turn++; // Дараагийн бот руу шилжих
-  render();
-  setTimeout(botTurn, 1000);
-}
-
-function showdown() {
-  let alivePlayers = players.filter(p => !p.folded);
-  let winnerIndex = Math.floor(Math.random() * alivePlayers.length);
-  let winner = alivePlayers[winnerIndex];
-  
-  document.getElementById('gameStatus').innerText = winner.name + " яллаа! +" + pot;
-  
-  if(winner.name === 'Та') {
-    userChips += pot;
-    document.getElementById('userChips').innerText = userChips.toLocaleString();
-  }
-  
-  isPlaying = false;
-  document.getElementById('actions').style.display = 'none';
-}
+render();
 </script>
 </body>
 </html>
