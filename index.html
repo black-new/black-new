@@ -111,10 +111,11 @@
     </div>
     
     <div class="action-bar" id="actions" style="display:none;">
-      <button class="fold" onclick="action('fold')">Fold</button>
-      <button class="check" onclick="action('check')">Check</button>
-      <button class="call" onclick="action('call')">Call</button>
-      <button class="raise" onclick="action('raise')">Raise 200</button>
+      <!-- ТОВЧНУУДЫГ ШУУД ФУНКЦ РУУ НЬ ХОЛБОСОН -->
+      <button class="fold" onclick="doAction('fold')">Fold</button>
+      <button class="check" onclick="doAction('check')">Check</button>
+      <button class="call" onclick="doAction('call')">Call</button>
+      <button class="raise" onclick="doAction('raise')">Raise 200</button>
     </div>
   </div>
 </div>
@@ -228,7 +229,7 @@ function render() {
   }
 }
 
-function action(type) {
+function doAction(type) {
   if(!isPlaying || turn !== 0) return;
   document.getElementById('actions').style.display = 'none';
   
@@ -238,19 +239,23 @@ function action(type) {
   } else if(type === 'call') {
     pot += currentBet; 
     players[0].chips -= currentBet; 
+    document.getElementById('gameStatus').innerText = "Та Call хийлээ.";
   } else if(type === 'check') {
-    // Check хийхэд мөнгө хасагдахгүй
+    document.getElementById('gameStatus').innerText = "Та Check хийлээ.";
   } else if(type === 'raise') {
     pot += 200; 
     players[0].chips -= 200; 
     currentBet = 200;
+    document.getElementById('gameStatus').innerText = "Та Raise 200 хийлээ.";
   }
   
   turn = 1;
   render();
   
   if(type !== 'fold') {
-    document.getElementById('gameStatus').innerText = "Ботууд бодож байна...";
+    setTimeout(() => {
+        document.getElementById('gameStatus').innerText = "Ботууд бодож байна...";
+    }, 500);
   }
   setTimeout(botTurn, 1500);
 }
