@@ -2,114 +2,793 @@
 <html lang="mn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BLACKCLUB Poker</title>
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <style>
-:root{--gold:#e8bd62;--gold2:#9b7131;--bg:#080b0a;--panel:#111715;--muted:#a9aaa4}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1a241f,#070908 65%);color:#f5f0e5;font-family:Arial,sans-serif;min-height:100vh}
-button,input{font:inherit}button{cursor:pointer;border:1px solid var(--gold2);background:linear-gradient(135deg,#d6ad57,#8f6526);color:#140f07;font-weight:bold;border-radius:9px;padding:11px 16px}button:disabled{opacity:.4;cursor:not-allowed}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 5%;border-bottom:1px solid #4b3b20;background:#080b0af2;position:sticky;top:0;z-index:5}
-.logo{font-size:24px;letter-spacing:4px;color:var(--gold);font-weight:900;text-shadow:0 0 15px #a67b32;white-space:nowrap}.status{font-size:12px;color:#9bd5a7}
-main{max-width:1120px;margin:auto;padding:22px 16px}.hero{text-align:center;padding:20px 0 12px}.hero h1{color:var(--gold);letter-spacing:4px;font-size:clamp(25px,5vw,43px);margin:8px}.hero p{color:var(--muted)}
-.panel{background:#101613;border:1px solid #70562b;border-radius:16px;padding:18px;margin:15px 0;box-shadow:0 12px 35px #0008}h2{color:var(--gold);margin:0 0 15px;font-size:20px}h3{color:var(--gold)}
-input{width:100%;padding:12px;background:#080c0a;color:white;border:1px solid #66502a;border-radius:8px;margin:7px 0}.muted{color:var(--muted);font-size:13px;line-height:1.6}.hidden{display:none!important}
-.nav{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin:18px 0}.nav button{background:#171d19;color:#ead9b5;min-width:120px}.nav button.active{background:var(--gold);color:#171008}
-.home-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.home-tile{background:linear-gradient(145deg,#1b241f,#0c100e);border:1px solid #70562b;border-radius:14px;padding:22px 12px;text-align:center;cursor:pointer}.home-tile:hover{border-color:var(--gold);transform:translateY(-2px)}.home-tile .symbol{font-size:28px;color:var(--gold);display:block;margin-bottom:9px}.home-tile strong{color:#f4dfb4;letter-spacing:1px}
-.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tabs button{background:#171d19;color:#e9d8b4}.tabs button.active{background:var(--gold);color:#171008}
-.table-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.table-card{background:linear-gradient(145deg,#1b241f,#0c100e);border:1px solid #4b422e;border-radius:13px;padding:15px}.table-card h3{margin:0 0 8px}.meta{color:#c0c2b9;font-size:13px;line-height:1.8}.table-card button{width:100%;margin-top:12px}
-.contact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.contact-grid a{display:block;text-decoration:none;text-align:center;padding:15px;border-radius:10px;background:#17251e;border:1px solid #66502a;color:#f4dfb4;font-weight:bold}
-#tableView{display:none}.table-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.secondary{background:#202923;color:#f4dfb4}
-.poker-table{position:relative;width:min(100%,760px);aspect-ratio:1.62/1;height:auto;margin:clamp(10px,2.5vw,22px) auto;border-radius:50%;border:clamp(6px,1.6vw,13px) solid #573d1c;background:radial-gradient(ellipse,#14734d,#075037 65%,#063c2c);box-shadow:inset 0 0 0 clamp(2px,.55vw,5px) #c39a4b,0 18px 45px #000b}
-.seat{position:absolute;width:clamp(76px,14%,126px);min-height:clamp(48px,8vw,72px);transform:translate(-50%,-50%);background:#101613;border:1px solid #c49b4e;border-radius:10px;padding:clamp(4px,.9vw,8px);text-align:center;box-shadow:0 6px 14px #0009;font-size:clamp(8px,1.35vw,12px);overflow:hidden}
-.seat .player-name{color:#f2d28b;font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.seat .chips{color:#bce0bd;margin-top:4px;overflow-wrap:anywhere}.seat .cards{font-size:clamp(11px,2.1vw,19px);margin-top:3px;white-space:nowrap}.seat.turn{outline:2px solid #f7d56c;box-shadow:0 0 18px #e8bd62}.seat.empty{background:#0b1712aa;border:1px dashed #d0ae6c;color:#e3c47f}
-.seat:nth-child(1){left:50%;top:5%}.seat:nth-child(2){left:82%;top:23%}.seat:nth-child(3){left:82%;top:77%}.seat:nth-child(4){left:50%;top:95%}.seat:nth-child(5){left:18%;top:77%}.seat:nth-child(6){left:18%;top:23%}
-.center-info{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:58%;max-width:440px}.pot{font-size:clamp(13px,2.8vw,22px);color:#ffe19a;font-weight:bold}.board{display:flex;justify-content:center;gap:5px;margin:10px 0;flex-wrap:wrap}.card{width:clamp(23px,5.5vw,42px);height:clamp(33px,7.6vw,58px);border-radius:6px;background:#f8f5ed;color:#181818;display:grid;place-items:center;font-size:clamp(11px,2.6vw,20px);font-weight:bold;box-shadow:0 2px 5px #0008}.card.red{color:#c32626}.card.back{background:repeating-linear-gradient(45deg,#172c50,#172c50 5px,#e2c06e 6px,#172c50 8px);border:2px solid #f0d58b}
-.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0}.actions button{min-width:82px}.actions input{max-width:150px;width:150px}#notice{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);background:#171d19;border:1px solid var(--gold);border-radius:9px;padding:12px 18px;display:none;z-index:10;max-width:calc(100vw - 24px);text-align:center}
-.auth-wrap{max-width:430px;margin:35px auto}.auth-switch{display:flex;gap:8px}.auth-switch button{flex:1;background:#202923;color:#f4dfb4}.auth-switch button.active{background:var(--gold);color:#171008}
-@media(max-width:600px){header{padding:12px}.logo{font-size:18px;letter-spacing:2px}main{padding:12px 9px}.panel{padding:12px;margin:12px 0}.home-grid{gap:7px}.home-tile{padding:16px 5px;font-size:12px}.home-tile .symbol{font-size:23px}.poker-table{width:100%;aspect-ratio:1.25/1;border-width:7px}.seat{width:clamp(67px,19%,94px);min-height:clamp(43px,12vw,59px);font-size:clamp(8px,2.2vw,10px);padding:4px}.seat:nth-child(1){left:50%;top:6%}.seat:nth-child(2){left:83%;top:25%}.seat:nth-child(3){left:83%;top:75%}.seat:nth-child(4){left:50%;top:94%}.seat:nth-child(5){left:17%;top:75%}.seat:nth-child(6){left:17%;top:25%}.center-info{width:54%}.center-info .muted{font-size:clamp(8px,2vw,11px)}.pot{font-size:clamp(12px,3.5vw,17px)}.card{width:clamp(20px,6vw,31px);height:clamp(29px,8.5vw,43px);font-size:clamp(10px,3vw,15px)}.actions{gap:6px}.actions button{min-width:68px;padding:9px 10px;font-size:12px}.actions input{width:110px;max-width:110px;padding:9px;font-size:12px}.contact-grid{grid-template-columns:1fr}}
-@media(max-width:360px){.poker-table{aspect-ratio:1.15/1}.seat{width:66px}.seat:nth-child(2),.seat:nth-child(3){left:84%}.seat:nth-child(5),.seat:nth-child(6){left:16%}}
+:root {
+  --gold:#e8bd62;
+  --gold2:#9b7131;
+  --bg:#070908;
+  --panel:#111714;
+  --green:#075b3c;
+  --text:#f5f0e5;
+  --muted:#9b9b91;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+button,input{font:inherit}
+button{cursor:pointer}
+header{
+  height:72px;
+  padding:0 5%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #302719;
+  background:#090c0a;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+.logo{
+  color:var(--gold);
+  font-size:25px;
+  font-weight:900;
+  letter-spacing:3px;
+}
+.logo span{color:white}
+.header-right{
+  display:flex;
+  align-items:center;
+  gap:15px;
+  color:var(--muted);
+  font-size:13px;
+}
+.online-dot{
+  display:inline-block;
+  width:8px;height:8px;
+  border-radius:50%;
+  background:#36d887;
+  margin-right:6px;
+}
+main{
+  width:min(1200px,94%);
+  margin:30px auto;
+}
+.hero{
+  padding:35px;
+  border:1px solid #3d3020;
+  border-radius:15px;
+  background:linear-gradient(120deg,#171b15,#090c0a);
+  margin-bottom:25px;
+}
+.hero h1{
+  font-size:clamp(27px,5vw,45px);
+  color:var(--gold);
+  margin:0 0 10px;
+  letter-spacing:2px;
+}
+.hero p{color:var(--muted);margin:0}
+.nav-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin-bottom:25px;
+}
+.nav-card{
+  padding:22px;
+  border:1px solid #47371f;
+  background:#111612;
+  border-radius:12px;
+  text-align:center;
+  color:var(--gold);
+  font-weight:bold;
+  font-size:17px;
+}
+.nav-card:hover{
+  background:#1d241b;
+  border-color:var(--gold);
+}
+.panel{
+  background:var(--panel);
+  border:1px solid #30291e;
+  border-radius:14px;
+  padding:22px;
+  margin-bottom:20px;
+}
+.panel-title{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+.panel-title h2{
+  color:var(--gold);
+  font-size:20px;
+  margin:0;
+}
+.tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.tab{
+  border:1px solid #4a3b26;
+  color:#c9b994;
+  background:#151914;
+  padding:10px 16px;
+  border-radius:8px;
+}
+.tab.active{
+  background:var(--gold);
+  color:#17130b;
+  font-weight:bold;
+}
+.table-list{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+.table-card{
+  background:#0b100d;
+  border:1px solid #34372a;
+  padding:17px;
+  border-radius:11px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.table-card h3{margin:0 0 7px;color:var(--gold)}
+.table-card p{margin:0;color:var(--muted);font-size:13px}
+.gold-btn{
+  border:0;
+  border-radius:8px;
+  padding:11px 18px;
+  background:linear-gradient(135deg,#f4d58a,#b88736);
+  color:#171108;
+  font-weight:bold;
+}
+.gold-btn:hover{filter:brightness(1.1)}
+.secondary-btn{
+  border:1px solid #67512d;
+  background:#171b15;
+  color:var(--gold);
+  border-radius:8px;
+  padding:10px 15px;
+}
+#tablePage{display:none}
+.poker-table{
+  width:100%;
+  min-height:490px;
+  position:relative;
+  background:#075536;
+  border:12px solid #533a20;
+  border-radius:25px;
+  box-shadow:inset 0 0 0 4px #c59a4c,0 12px 35px #000;
+  overflow:hidden;
+  margin:20px 0;
+}
+.table-inner{
+  position:absolute;
+  inset:15px;
+  border:2px solid rgba(238,205,133,.45);
+  border-radius:15px;
+}
+.table-name{
+  position:absolute;
+  top:18px;
+  left:50%;
+  transform:translateX(-50%);
+  color:#e8d4a5;
+  font-weight:bold;
+  letter-spacing:2px;
+}
+.pot{
+  position:absolute;
+  top:25%;
+  left:50%;
+  transform:translateX(-50%);
+  text-align:center;
+  color:white;
+  font-weight:bold;
+}
+.pot small{display:block;color:#e8d4a5;margin-bottom:5px}
+.board{
+  position:absolute;
+  top:43%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  display:flex;
+  gap:7px;
+}
+.playing-card{
+  width:43px;
+  height:61px;
+  border-radius:6px;
+  background:#fff;
+  color:#111;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:19px;
+  font-weight:bold;
+  box-shadow:0 2px 5px #0008;
+}
+.playing-card.red{color:#d21e28}
+.seat{
+  position:absolute;
+  width:115px;
+  min-height:65px;
+  background:#101713;
+  border:1px solid #c49a50;
+  border-radius:9px;
+  padding:8px;
+  text-align:center;
+  font-size:12px;
+  color:white;
+}
+.seat strong{display:block;color:var(--gold);margin-bottom:4px}
+.seat small{color:#c7c7b9}
+.seat-1{top:12px;left:12%}
+.seat-2{top:12px;right:12%}
+.seat-3{top:45%;right:8px}
+.seat-4{bottom:12px;right:12%}
+.seat-5{bottom:12px;left:12%}
+.seat-6{top:45%;left:8px}
+.actions{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:18px 0;
+}
+.actions input{
+  width:110px;
+  padding:11px;
+  background:#111713;
+  border:1px solid #66512f;
+  border-radius:8px;
+  color:white;
+}
+.contacts{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.contacts a{
+  color:var(--gold);
+  text-decoration:none;
+  padding:12px;
+  border:1px solid #4a3b26;
+  border-radius:8px;
+}
+.auth-screen{
+  position:fixed;
+  inset:0;
+  z-index:30;
+  background:#070908;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+.auth-box{
+  width:min(420px,100%);
+  background:#111713;
+  border:1px solid #594525;
+  border-radius:16px;
+  padding:30px;
+  box-shadow:0 15px 50px #000;
+}
+.auth-box h1{
+  text-align:center;
+  color:var(--gold);
+  letter-spacing:3px;
+}
+.auth-box input{
+  display:block;
+  width:100%;
+  margin:12px 0;
+  padding:14px;
+  background:#080d0a;
+  color:white;
+  border:1px solid #51432b;
+  border-radius:8px;
+}
+.auth-box button{width:100%;margin-top:10px}
+.auth-switch{
+  color:#c9b994;
+  text-align:center;
+  margin-top:18px;
+  cursor:pointer;
+}
+.message{
+  color:#ff8585;
+  font-size:13px;
+  margin-top:10px;
+}
+@media(max-width:700px){
+  header{height:60px;padding:0 4%}
+  .logo{font-size:20px}
+  main{width:96%;margin:15px auto}
+  .hero{padding:23px}
+  .nav-grid{gap:7px}
+  .nav-card{padding:15px 5px;font-size:13px}
+  .panel{padding:14px}
+  .table-list{grid-template-columns:1fr}
+  .poker-table{min-height:430px;border-width:8px}
+  .seat{width:86px;font-size:10px;padding:6px}
+  .playing-card{width:34px;height:49px;font-size:16px}
+  .seat-1{left:5%}
+  .seat-2{right:5%}
+  .seat-4{right:5%}
+  .seat-5{left:5%}
+  .seat-3{right:2px}
+  .seat-6{left:2px}
+}
 </style>
 </head>
 <body>
-<header><div class="logo">♠ BLACKCLUB ♣</div><div style="display:flex;align-items:center;gap:12px"><span id="connection" class="status">● OFFLINE</span><button id="logoutBtn" class="secondary hidden" onclick="logout()">ГАРАХ</button></div></header>
-<main>
-<section id="authView" class="auth-wrap">
- <div class="hero"><h1>BLACKCLUB</h1><p>WELCOME TO BLACKCLUB</p></div>
- <div class="panel">
-  <div class="auth-switch"><button id="loginTab" class="active" onclick="showAuth('login')">НЭВТРЭХ</button><button id="registerTab" onclick="showAuth('register')">БҮРТГҮҮЛЭХ</button></div>
-  <form id="loginForm" onsubmit="login(event)">
-   <h2 style="margin-top:18px">Нэвтрэх</h2><input id="loginUsername" autocomplete="username" maxlength="24" placeholder="Хэрэглэгчийн нэр" required>
-   <div style="position:relative"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Нууц үг" required><button type="button" class="secondary" style="width:100%;margin:4px 0" onclick="togglePassword('loginPassword',this)">Нууц үг харуулах</button></div>
-   <button type="submit" style="width:100%;margin-top:10px">НЭВТРЭХ</button>
-   <p class="muted">Нууц үгээ мартсан бол админтай холбогдож сэргээнэ үү.</p>
-  </form>
-  <form id="registerForm" class="hidden" onsubmit="register(event)">
-   <h2 style="margin-top:18px">Шинэ бүртгэл</h2><input id="regUsername" autocomplete="username" maxlength="24" placeholder="Хэрэглэгчийн нэр" required>
-   <input id="regDisplayName" maxlength="18" placeholder="Тоглоомд харагдах нэр" required>
-   <input id="regPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Нууц үг (8-аас дээш тэмдэгт)" required>
-   <input id="regPassword2" type="password" autocomplete="new-password" minlength="8" placeholder="Нууц үгээ давтан оруулна уу" required>
-   <button type="button" class="secondary" style="width:100%" onclick="togglePassword('regPassword',this)">Нууц үг харуулах/нуух</button>
-   <button type="submit" style="width:100%;margin-top:10px">БҮРТГҮҮЛЭХ</button>
-  </form>
- </div>
- <p class="muted" style="text-align:center">Бүртгэл үүсгэснээр виртуал чиптэй тоглоомд нэвтрэх боломжтой. Бодит мөнгөний тоглолт биш.</p>
-</section>
 
-<section id="lobbyView" class="hidden">
- <div class="hero"><h1>WELCOME TO BLACKCLUB</h1><p>Choose your table • Take your seat • Play together</p></div>
- <div class="home-grid">
-  <div class="home-tile" onclick="showPage('tablesPage')"><span class="symbol">♠</span><strong>ШИРЭЭ</strong></div>
-  <div class="home-tile" onclick="showPage('tournamentPage')"><span class="symbol">🏆</span><strong>ТЭМЦЭЭН</strong></div>
-  <div class="home-tile" onclick="showPage('prizesPage')"><span class="symbol">🎁</span><strong>ШАГНАЛ</strong></div>
- </div>
- <section id="tablesPage" class="page panel">
-  <div class="table-top"><h2>ПОКЕР ШИРЭЭНҮҮД</h2><span id="welcomeName" class="muted"></span></div>
-  <div class="tabs"><button class="active" data-filter="all">БҮГД</button><button data-filter="texas">TEXAS HOLD'EM</button><button data-filter="omaha">OMAHA</button></div>
-  <div id="tables" class="table-grid"><p class="muted">Ширээнүүд ачаалж байна...</p></div>
-  <p class="muted">Ширээ бүр 6 суудалтай. Сул суудалд автоматаар сууна. Тоглолт эхлэхэд 2 тоглогч шаардлагатай.</p>
- </section>
- <section id="tournamentPage" class="page panel hidden"><h2>🏆 ТЭМЦЭЭН</h2><p>BLACKCLUB тэмцээний мэдээлэл удахгүй энд нийтлэгдэнэ.</p><p class="muted">Тэмцээний хуваарь, оролцох нөхцөл, онооны мэдээллийг энд байршуулна.</p></section>
- <section id="prizesPage" class="page panel hidden"><h2>🎁 ШАГНАЛ</h2><p>Шагналын мэдээлэл удахгүй энд нийтлэгдэнэ.</p><p class="muted">Одоогоор шагналын төрөл, шалгуур баталгаажаагүй тул худал мэдээлэл оруулаагүй.</p></section>
- <section class="panel"><h2>АДМИНТАЙ ХОЛБОГДОХ</h2><div class="contact-grid"><a href="https://t.me/" target="_blank" rel="noopener">✈ TELEGRAM АДМИН</a><a href="https://www.facebook.com/" target="_blank" rel="noopener">f FACEBOOK АДМИН</a></div><p class="muted">Эдгээр холбоосыг өөрийн админы хаягаар солих шаардлагатай.</p></section>
-</section>
-
-<section id="tableView">
- <div class="panel"><div class="table-top"><div><h2 id="tableTitle">POKER TABLE</h2><div id="tableSub" class="muted"></div></div><button class="secondary" onclick="leaveTable()">← Лобби руу буцах</button></div>
-  <div id="pokerTable" class="poker-table">
-   <div id="seat0" class="seat empty">СУЛ СУУДАЛ</div><div id="seat1" class="seat empty">СУЛ СУУДАЛ</div><div id="seat2" class="seat empty">СУЛ СУУДАЛ</div><div id="seat3" class="seat empty">СУЛ СУУДАЛ</div><div id="seat4" class="seat empty">СУЛ СУУДАЛ</div><div id="seat5" class="seat empty">СУЛ СУУДАЛ</div>
-   <div class="center-info"><div id="phaseLabel" class="muted">WAITING</div><div class="pot">POT: <span id="pot">0</span></div><div id="board" class="board"></div><div id="tableMessage" class="muted">Тоглогч хүлээж байна</div></div>
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box">
+    <h1>BLACKCLUB</h1>
+    <p style="text-align:center;color:#aaa">ONLINE POKER CLUB</p>
+    <input id="authUsername" placeholder="Хэрэглэгчийн нэр">
+    <input id="authPassword" type="password" placeholder="Нууц үг">
+    <button class="gold-btn" id="loginBtn" onclick="login()">НЭВТРЭХ</button>
+    <button class="secondary-btn" id="registerBtn" onclick="register()">БҮРТГҮҮЛЭХ</button>
+    <div class="message" id="authMessage"></div>
   </div>
-  <div class="actions" id="actions"><button class="secondary" onclick="sendAction('fold')">FOLD</button><button class="secondary" onclick="sendAction('check')">CHECK</button><button onclick="sendAction('call')">CALL</button><input id="raiseAmount" type="number" min="1" placeholder="Raise нийт дүн"><button onclick="sendAction('raise')">RAISE</button><button class="secondary" onclick="nextHand()">ДАРААГИЙН ГАР</button></div>
-  <div class="muted" style="text-align:center">Таны карт</div><div id="myCards" class="board"></div>
- </div>
-</section>
-</main><div id="notice"></div>
+</div>
+
+<header>
+  <div class="logo">BLACK<span>CLUB</span></div>
+  <div class="header-right">
+    <span><i class="online-dot"></i>ONLINE</span>
+    <span id="userName"></span>
+    <button class="secondary-btn" onclick="logout()">ГАРАХ</button>
+  </div>
+</header>
+
+<main id="lobbyPage">
+  <section class="hero">
+    <h1>WELCOME TO BLACKCLUB</h1>
+    <p>Тавтай морил. Өөрийн ширээг сонгоод тоглоомдоо нэгдээрэй.</p>
+  </section>
+
+  <div class="nav-grid">
+    <div class="nav-card" onclick="showPage('lobby')">♠ ШИРЭЭ</div>
+    <div class="nav-card" onclick="alert('Тэмцээн удахгүй')">🏆 ТЭМЦЭЭН</div>
+    <div class="nav-card" onclick="alert('Шагнал удахгүй')">🎁 ШАГНАЛ</div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-title">
+      <h2>ПОКЕРЫН ШИРЭЭ</h2>
+      <span id="onlineCount">0 ONLINE</span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="setFilter('all',this)">БҮГД</button>
+      <button class="tab" onclick="setFilter('texas',this)">TEXAS</button>
+      <button class="tab" onclick="setFilter('omaha',this)">OMAHA</button>
+    </div>
+    <div class="table-list" id="tableList"></div>
+  </section>
+
+  <section class="panel">
+    <h2 style="color:var(--gold)">ХОЛБОО БАРИХ</h2>
+    <div class="contacts">
+      <a href="https://t.me/" target="_blank">TELEGRAM</a>
+      <a href="https://facebook.com/" target="_blank">FACEBOOK</a>
+    </div>
+  </section>
+</main>
+
+<main id="tablePage">
+  <button class="secondary-btn" onclick="leaveTable()">← БУЦАХ</button>
+  <section class="panel">
+    <div class="panel-title">
+      <h2 id="tableTitle">POKER TABLE</h2>
+      <span id="tableInfo"></span>
+    </div>
+    <div class="poker-table">
+      <div class="table-inner"></div>
+      <div class="table-name">BLACKCLUB</div>
+      <div class="pot"><small>POT</small><span id="potAmount">0</span></div>
+      <div class="board" id="boardCards"></div>
+      <div class="seat seat-1" id="seat0"></div>
+      <div class="seat seat-2" id="seat1"></div>
+      <div class="seat seat-3" id="seat2"></div>
+      <div class="seat seat-4" id="seat3"></div>
+      <div class="seat seat-5" id="seat4"></div>
+      <div class="seat seat-6" id="seat5"></div>
+    </div>
+    <div class="actions">
+      <button class="secondary-btn" onclick="sendAction('fold')">FOLD</button>
+      <button class="secondary-btn" onclick="sendAction('check')">CHECK</button>
+      <button class="secondary-btn" onclick="sendAction('call')">CALL</button>
+      <input id="raiseAmount" type="number" min="1" placeholder="Дүн">
+      <button class="gold-btn" onclick="sendAction('raise')">RAISE</button>
+      <button class="gold-btn" onclick="nextHand()">NEXT HAND</button>
+    </div>
+  </section>
+</main>
 <script>
-const SERVER_URL="https://black-new.onrender.com";
-let socket=null,token=localStorage.getItem("blackclub_token")||"",user=null,allTables=[],filter="all",currentTable=null,lastState=null;
-const $=id=>document.getElementById(id);
-function notice(msg){$("notice").textContent=msg;$("notice").style.display="block";clearTimeout(window.noticeTimer);window.noticeTimer=setTimeout(()=>$("notice").style.display="none",3200);}
-function showAuth(which){$("loginForm").classList.toggle("hidden",which!=="login");$("registerForm").classList.toggle("hidden",which!=="register");$("loginTab").classList.toggle("active",which==="login");$("registerTab").classList.toggle("active",which==="register");}
-function togglePassword(id,btn){const x=$(id);x.type=x.type==="password"?"text":"password";btn.textContent=x.type==="password"?"Нууц үг харуулах":"Нууц үг нуух";}
-async function api(path,data){const r=await fetch(SERVER_URL+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});const j=await r.json().catch(()=>({message:"Серверийн хариу уншигдсангүй"}));if(!r.ok)throw new Error(j.message||"Алдаа гарлаа");return j;}
-async function login(e){e.preventDefault();try{const j=await api("/api/login",{username:$("loginUsername").value.trim(),password:$("loginPassword").value});acceptLogin(j);}catch(err){notice(err.message);}}
-async function register(e){e.preventDefault();if($("regPassword").value!==$("regPassword2").value){notice("Нууц үг таарахгүй байна.");return;}try{const j=await api("/api/register",{username:$("regUsername").value.trim(),displayName:$("regDisplayName").value.trim(),password:$("regPassword").value});acceptLogin(j);}catch(err){notice(err.message);}}
-function acceptLogin(j){token=j.token;user=j.user;localStorage.setItem("blackclub_token",token);connectSocket();showLobby();}
-function showLobby(){$("authView").classList.add("hidden");$("lobbyView").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("welcomeName").textContent="Сайн байна уу, "+(user?.displayName||"Player");showPage("tablesPage");}
-function connectSocket(){if(socket){socket.disconnect();}socket=io(SERVER_URL,{auth:{token},transports:["websocket","polling"]});socket.on("connect",()=>$("connection").textContent="● ONLINE");socket.on("disconnect",()=>$("connection").textContent="● OFFLINE");socket.on("connect_error",e=>{ $("connection").textContent="● ХОЛБОГДОХГҮЙ";if(e.message==="unauthorized"){logout();notice("Нэвтрэлт дууссан. Дахин нэвтэрнэ үү.");}});socket.on("lobby:update",list=>{allTables=list;renderTables();});socket.on("notice",m=>notice(typeof m==="string"?m:m.message));socket.on("table:update",s=>{lastState=s;renderTable(s);});}
-function logout(){if(socket){if(currentTable)socket.emit("table:leave");socket.disconnect();socket=null;}token="";user=null;currentTable=null;localStorage.removeItem("blackclub_token");$("logoutBtn").classList.add("hidden");$("lobbyView").classList.add("hidden");$("tableView").style.display="none";$("authView").classList.remove("hidden");showAuth("login");}
-function showPage(id){document.querySelectorAll(".page").forEach(p=>p.classList.toggle("hidden",p.id!==id));}
-document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));renderTables();});
-function renderTables(){const list=allTables.filter(t=>filter==="all"||t.game===filter);$("tables").innerHTML=list.map(t=>`<article class="table-card"><h3>${t.game==="texas"?"♠ TEXAS HOLD'EM":"♦ OMAHA"}</h3><div class="meta">${escapeHtml(t.name)}<br>Blind: ${Number(t.smallBlind).toLocaleString()} / ${Number(t.bigBlind).toLocaleString()}<br>Суусан: ${t.players} / ${t.maxPlayers}<br>Төлөв: ${t.status==="playing"?"Тоглолт явагдаж байна":"Суудал авч байна"}</div><button ${t.players>=t.maxPlayers||t.status==="playing"?"disabled":""} onclick="joinTable('${t.id}')">ШИРЭЭНД СУУХ</button></article>`).join("")||"<p>Ширээ алга.</p>";}
-function joinTable(tableId){if(!socket?.connected){notice("Сервертэй холбогдоогүй байна.");return;}socket.emit("table:join",{tableId,name:user?.displayName||"Player"},res=>{if(!res||!res.success){notice(res?.message||"Ширээнд сууж чадсангүй.");return;}currentTable=tableId;$("lobbyView").classList.add("hidden");$("tableView").style.display="block";renderTable(res.table);});}
-function cardHtml(c){if(!c)return '<div class="card back"></div>';const red=c.suit==="♥"||c.suit==="♦";return `<div class="card ${red?"red":""}">${c.rank}${c.suit}</div>`;}
-function renderTable(s){if(!s)return;currentTable=s.id;$("lobbyView").classList.add("hidden");$("tableView").style.display="block";$("tableTitle").textContent=s.game==="texas"?"TEXAS HOLD'EM":"OMAHA";$("tableSub").textContent=`${s.name} • Blind ${s.smallBlind}/${s.bigBlind}`;$("phaseLabel").textContent=(s.phase||"waiting").toUpperCase();$("pot").textContent=(s.pot||0).toLocaleString();$("tableMessage").textContent=s.message||"";$("board").innerHTML=(s.board||[]).map(cardHtml).join("");$("myCards").innerHTML=(s.myCards||[]).map(cardHtml).join("");for(let i=0;i<6;i++){const el=$("seat"+i),p=(s.players||[]).find(x=>x.seat===i);el.className="seat "+(p?(p.isTurn?"turn":""):"empty");el.innerHTML=p?`<div class="player-name">${escapeHtml(p.name)}${p.isDealer?" • D":""}</div><div class="chips">${Number(p.chips).toLocaleString()} chips</div><div class="muted">Bet: ${Number(p.bet).toLocaleString()} ${p.folded?" • FOLD":""}</div><div class="cards">${(p.cards||[]).map(c=>c?`${c.rank}${c.suit}`:"🂠").join(" ")}</div>`:"<div>СУЛ СУУДАЛ</div>";}const myTurn=s.turnId===s.myId&&s.status==="playing";document.querySelectorAll("#actions button").forEach(b=>{if(!b.textContent.includes("ДАРААГИЙН"))b.disabled=!myTurn;});const nextBtn=[...document.querySelectorAll("#actions button")].find(b=>b.textContent.includes("ДАРААГИЙН"));if(nextBtn)nextBtn.disabled=s.phase!=="showdown";}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function sendAction(action){if(!currentTable)return;socket.emit("game:action",{action,amount:Number($("raiseAmount").value)});}
-function nextHand(){socket.emit("game:next");}
-function leaveTable(){if(currentTable)socket.emit("table:leave");currentTable=null;lastState=null;$("tableView").style.display="none";$("lobbyView").classList.remove("hidden");socket.emit("lobby:get",list=>{allTables=list;renderTables();});}
-async function boot(){if(!token)return;try{const r=await fetch(SERVER_URL+"/api/me",{headers:{Authorization:"Bearer "+token}});if(!r.ok)throw new Error("expired");const j=await r.json();user=j.user;connectSocket();showLobby();}catch(e){localStorage.removeItem("blackclub_token");token="";}}
+const SERVER_URL = "https://black-new.onrender.com";
+
+let socket = null;
+let token = localStorage.getItem("blackclub_token") || "";
+let user = null;
+let allTables = [];
+let filter = "all";
+let currentTable = null;
+let lastState = null;
+
+const $ = id => document.getElementById(id);
+
+async function api(path, data = {}) {
+  const response = await fetch(SERVER_URL + path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "Authorization": "Bearer " + token } : {})
+    },
+    body: JSON.stringify(data)
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || result.error || "Алдаа гарлаа");
+  }
+
+  return result;
+}
+
+function showMessage(message) {
+  $("authMessage").textContent = message;
+}
+
+async function login() {
+  const username = $("authUsername").value.trim();
+  const password = $("authPassword").value;
+
+  if (!username || !password) {
+    showMessage("Нэр болон нууц үгээ оруулна уу");
+    return;
+  }
+
+  try {
+    $("loginBtn").disabled = true;
+    const result = await api("/api/login", { username, password });
+    acceptLogin(result);
+  } catch (error) {
+    showMessage(error.message);
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+}
+
+async function register() {
+  const username = $("authUsername").value.trim();
+  const password = $("authPassword").value;
+
+  if (!username || !password) {
+    showMessage("Нэр болон нууц үгээ оруулна уу");
+    return;
+  }
+
+  if (password.length < 6) {
+    showMessage("Нууц үг 6-аас дээш тэмдэгттэй байна");
+    return;
+  }
+
+  try {
+    $("registerBtn").disabled = true;
+    const result = await api("/api/register", { username, password });
+    acceptLogin(result);
+  } catch (error) {
+    showMessage(error.message);
+  } finally {
+    $("registerBtn").disabled = false;
+  }
+}
+
+function acceptLogin(result) {
+  token = result.token || result.idToken || result.accessToken;
+
+  if (!token) {
+    showMessage("Нэвтрэх токен ирсэнгүй");
+    return;
+  }
+
+  localStorage.setItem("blackclub_token", token);
+  user = result.user || result;
+
+  $("authScreen").style.display = "none";
+  $("userName").textContent = user.username || user.name || "PLAYER";
+
+  showLobby();
+  connectSocket();
+}
+
+async function boot() {
+  if (!token) {
+    $("authScreen").style.display = "flex";
+    return;
+  }
+
+  try {
+    const result = await api("/api/me");
+    user = result.user || result;
+
+    $("authScreen").style.display = "none";
+    $("userName").textContent = user.username || user.name || "PLAYER";
+
+    showLobby();
+    connectSocket();
+  } catch (error) {
+    localStorage.removeItem("blackclub_token");
+    token = "";
+    $("authScreen").style.display = "flex";
+  }
+}
+
+function logout() {
+  if (socket) socket.disconnect();
+
+  localStorage.removeItem("blackclub_token");
+  token = "";
+  user = null;
+  currentTable = null;
+
+  $("authScreen").style.display = "flex";
+  $("lobbyPage").style.display = "block";
+  $("tablePage").style.display = "none";
+}
+
+function showLobby() {
+  $("lobbyPage").style.display = "block";
+  $("tablePage").style.display = "none";
+}
+
+function showPage(page) {
+  if (page === "lobby") showLobby();
+}
+
+function connectSocket() {
+  if (socket) socket.disconnect();
+
+  socket = io(SERVER_URL, {
+    auth: { token },
+    transports: ["websocket", "polling"]
+  });
+
+  socket.on("connect", () => {
+    socket.emit("lobby:get");
+  });
+
+  socket.on("connect_error", error => {
+    console.error("Socket холболтын алдаа:", error.message);
+  });
+
+  socket.on("lobby:update", data => {
+    allTables = Array.isArray(data) ? data : (data.tables || []);
+    renderTables();
+    $("onlineCount").textContent =
+      (data.onlineCount ?? data.online ?? 0) + " ONLINE";
+  });
+
+  socket.on("table:update", data => {
+    lastState = data;
+    renderTable(data);
+  });
+
+  socket.on("notice", data => {
+    const message = typeof data === "string"
+      ? data
+      : (data.message || "Мэдэгдэл");
+
+    alert(message);
+  });
+}
+
+function setFilter(value, button) {
+  filter = value;
+
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.remove("active");
+  });
+
+  button.classList.add("active");
+  renderTables();
+}
+
+function renderTables() {
+  const list = $("tableList");
+  list.innerHTML = "";
+
+  const tables = allTables.filter(table => {
+    const type = String(table.type || table.game || "").toLowerCase();
+
+    if (filter === "all") return true;
+    return type.includes(filter);
+  });
+
+  if (!tables.length) {
+    list.innerHTML =
+      '<p style="color:#aaa">Одоогоор ширээ алга байна.</p>';
+    return;
+  }
+
+  tables.forEach((table, index) => {
+    const id = table.id || table.tableId || String(index);
+    const name = table.name || table.title || "Ширээ " + (index + 1);
+    const type = String(table.type || table.game || "Texas").toUpperCase();
+    const players = table.players || table.seats || [];
+    const count = Array.isArray(players)
+      ? players.filter(Boolean).length
+      : (table.playerCount || 0);
+
+    const card = document.createElement("div");
+    card.className = "table-card";
+
+    card.innerHTML = `
+      <div>
+        <h3>${escapeHtml(name)}</h3>
+        <p>${escapeHtml(type)} · ${count}/6 тоглогч</p>
+      </div>
+      <button class="gold-btn">СУУХ</button>
+    `;
+
+    card.querySelector("button").addEventListener("click", () => {
+      joinTable(id);
+    });
+
+    list.appendChild(card);
+  });
+}
+
+function joinTable(tableId) {
+  if (!socket || !socket.connected) {
+    alert("Сервертэй холбогдоогүй байна. Дахин оролдоно уу.");
+    return;
+  }
+
+  socket.emit("table:join", { tableId }, result => {
+    if (!result || !result.success) {
+      alert(result?.message || "Ширээнд сууж чадсангүй");
+      return;
+    }
+
+    currentTable = tableId;
+    $("lobbyPage").style.display = "none";
+    $("tablePage").style.display = "block";
+
+    if (result.table) {
+      lastState = result.table;
+      renderTable(result.table);
+    }
+  });
+}
+
+function cardHtml(card) {
+  if (!card) {
+    return '<div class="playing-card" style="background:#ddd">?</div>';
+  }
+
+  const value = card.rank || card.value || card.card || "";
+  const suit = card.suit || "";
+  const red = ["♥", "♦", "hearts", "diamonds", "heart", "diamond"]
+    .includes(String(suit).toLowerCase());
+
+  const symbols = {
+    hearts: "♥",
+    heart: "♥",
+    diamonds: "♦",
+    diamond: "♦",
+    clubs: "♣",
+    club: "♣",
+    spades: "♠",
+    spade: "♠"
+  };
+
+  const symbol = symbols[String(suit).toLowerCase()] || suit;
+
+  return `<div class="playing-card ${red ? "red" : ""}">
+    ${escapeHtml(String(value))}${escapeHtml(String(symbol))}
+  </div>`;
+}
+
+function renderTable(data) {
+  if (!data) return;
+
+  const table = data.table || data;
+  const players = table.players || table.seats || [];
+  const board = table.board || table.communityCards || [];
+
+  $("tableTitle").textContent =
+    table.name || table.title || "BLACKCLUB POKER";
+
+  $("tableInfo").textContent =
+    String(table.type || table.game || "").toUpperCase();
+
+  $("potAmount").textContent =
+    table.pot ?? table.totalPot ?? 0;
+
+  $("boardCards").innerHTML = board.map(cardHtml).join("");
+
+  for (let i = 0; i < 6; i++) {
+    const seat = $("seat" + i);
+    const player = players[i];
+
+    if (!player) {
+      seat.innerHTML = `<strong>СУУДАЛ ${i + 1}</strong><small>Хоосон</small>`;
+      continue;
+    }
+
+    const name = player.username || player.name || "PLAYER";
+    const chips = player.chips ?? player.stack ?? 0;
+
+    seat.innerHTML = `
+      <strong>${escapeHtml(name)}</strong>
+      <small>${escapeHtml(String(chips))} chips</small>
+    `;
+  }
+}
+
+function sendAction(action) {
+  if (!socket || !currentTable) {
+    alert("Эхлээд ширээнд сууна уу");
+    return;
+  }
+
+  const amount = Number($("raiseAmount").value || 0);
+
+  socket.emit("game:action", {
+    action,
+    amount
+  });
+}
+
+function nextHand() {
+  if (!socket || !currentTable) return;
+  socket.emit("game:next");
+}
+
+function leaveTable() {
+  if (socket && currentTable) {
+    socket.emit("table:leave");
+  }
+
+  currentTable = null;
+  lastState = null;
+  showLobby();
+
+  if (socket) socket.emit("lobby:get");
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
 boot();
 </script>
-</body></html>
+
+</body>
+</html>
