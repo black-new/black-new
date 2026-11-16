@@ -1,19 +1,10 @@
-
 {
   "name": "blackclub-poker-server",
   "version": "1.0.0",
   "private": true,
-  "description": "BLACKCLUB Online Poker Server",
+  "description": "BLACKCLUB online poker tables",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "express": "^4.21.2",
-    "socket.io": "^4.8.1",
-    "cors": "^2.8.5"
-  }
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.21.2", "socket.io": "^4.8.1", "cors": "^2.8.5" }
 }
