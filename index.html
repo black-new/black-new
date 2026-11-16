@@ -1,455 +1,390 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="mn">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BLACKCLUB Poker</title>
+<title>BLACKCLUB POKER</title>
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 
 <style>
 *{box-sizing:border-box}
 :root{
   --gold:#e8bd62;
-  --gold2:#ffdf91;
+  --gold2:#ffe5a3;
   --bg:#080a0b;
-  --panel:#111517;
-  --muted:#9b9b9b;
+  --panel:#111715;
 }
 body{
   margin:0;
+  min-height:100vh;
   background:var(--bg);
   color:white;
   font-family:Arial,Helvetica,sans-serif;
-  min-height:100vh;
 }
 button,input{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+.gold{color:var(--gold)}
+.main-btn{
+  width:100%;
+  padding:14px;
+  border:0;
+  border-radius:9px;
+  margin-top:12px;
+  font-weight:bold;
+  letter-spacing:1px;
+  color:#17120a;
+  background:linear-gradient(135deg,#ffe5a3,#bd8731);
+}
+.secondary-btn{
+  padding:12px 16px;
+  border:1px solid #947039;
+  border-radius:8px;
+  color:var(--gold);
+  background:#171a18;
+}
+input{
+  width:100%;
+  padding:13px;
+  margin:6px 0;
+  border:1px solid #49402e;
+  border-radius:8px;
+  outline:none;
+  background:#080a0b;
+  color:white;
+}
+input:focus{border-color:var(--gold)}
+.message{
+  min-height:22px;
+  margin-top:12px;
+  color:#ff9999;
+  font-size:13px;
+}
+.card-panel{
+  background:#111715;
+  border:1px solid #80602c;
+  border-radius:14px;
+  padding:20px;
+}
+h2,h3{color:var(--gold)}
 
 /* LOGIN */
 #loginPage{
   min-height:100vh;
   display:flex;
-  justify-content:center;
   align-items:center;
-  padding:25px 15px;
+  justify-content:center;
+  padding:20px;
   position:relative;
   overflow:hidden;
-  background:
-    radial-gradient(ellipse at 50% 40%,#282014 0%,#10100e 35%,#070809 75%);
+  background:radial-gradient(ellipse at center,#282014,#080a0b 75%);
 }
 .glow{
   position:absolute;
-  width:400px;height:400px;
+  width:350px;height:350px;
   border-radius:50%;
   background:#dba83c;
-  opacity:.07;
-  filter:blur(100px);
-  animation:glow 5s infinite alternate;
+  opacity:.09;
+  filter:blur(90px);
+  animation:glow 4s infinite alternate;
 }
 @keyframes glow{
-  from{transform:scale(.8)}
-  to{transform:scale(1.4)}
+  to{transform:scale(1.5)}
 }
-.floating-card{
+.floating{
   position:absolute;
-  font-size:65px;
   color:#d8b35f;
-  opacity:.13;
-  animation:float 7s ease-in-out infinite;
+  opacity:.14;
+  font-size:65px;
+  animation:float 7s infinite ease-in-out;
   pointer-events:none;
 }
-.card-a{left:8%;top:18%;transform:rotate(-18deg)}
-.card-b{right:9%;top:22%;animation-delay:2s;transform:rotate(15deg)}
-.card-c{left:15%;bottom:15%;animation-delay:3s}
-.card-d{right:14%;bottom:12%;animation-delay:1s}
+.f1{left:8%;top:18%}
+.f2{right:9%;top:20%;animation-delay:2s}
+.f3{left:15%;bottom:15%;animation-delay:3s}
+.f4{right:14%;bottom:12%;animation-delay:1s}
 @keyframes float{
-  0%,100%{translate:0 0;rotate:0deg}
-  50%{translate:0 -25px;rotate:8deg}
+  50%{transform:translateY(-25px) rotate(12deg)}
 }
 .login-box{
-  width:100%;
-  max-width:420px;
   position:relative;
   z-index:2;
-  padding:35px 30px;
-  background:rgba(15,17,17,.94);
-  border:1px solid rgba(232,189,98,.4);
-  border-radius:20px;
-  box-shadow:0 20px 80px #000;
+  width:100%;
+  max-width:420px;
+  padding:32px 27px;
   text-align:center;
+  border:1px solid #947039;
+  border-radius:20px;
+  background:#101211f5;
+  box-shadow:0 20px 80px #000;
 }
 .logo{
-  font-size:43px;
-  font-weight:1000;
-  letter-spacing:7px;
   color:var(--gold);
-  text-shadow:0 0 25px #c18d2d;
-  animation:logoPulse 2.5s infinite alternate;
+  font-size:40px;
+  font-weight:1000;
+  letter-spacing:6px;
+  animation:pulse 2s infinite alternate;
 }
-@keyframes logoPulse{
-  from{text-shadow:0 0 8px #b17b21}
-  to{text-shadow:0 0 28px #ffcf70,0 0 50px #9b6a20}
+@keyframes pulse{
+  to{text-shadow:0 0 30px #ffcf70}
 }
 .welcome{
-  margin:12px 0 25px;
   color:#eee0c0;
-  font-size:12px;
-  letter-spacing:5px;
+  margin:12px 0 25px;
+  font-size:11px;
+  letter-spacing:4px;
 }
 .tabs{
   display:flex;
-  background:#080a0b;
-  border-radius:10px;
+  gap:5px;
   padding:5px;
-  margin-bottom:22px;
+  border-radius:9px;
+  background:#080a0b;
+  margin-bottom:20px;
 }
 .tabs button{
   flex:1;
+  padding:12px;
   border:0;
   border-radius:7px;
-  padding:12px;
+  color:#aaa;
   background:transparent;
-  color:#999;
   font-weight:bold;
 }
 .tabs button.active{
-  background:linear-gradient(135deg,#f5d58b,#b88632);
   color:#17120a;
+  background:linear-gradient(135deg,#ffe5a3,#bd8731);
 }
-.field{
-  text-align:left;
-  margin:13px 0;
-}
+.field{text-align:left;margin:12px 0}
 .field label{
   display:block;
-  font-size:12px;
+  margin-bottom:6px;
   color:#c9b98e;
-  margin-bottom:7px;
+  font-size:12px;
 }
-.field input{
-  width:100%;
-  background:#080a0b;
-  border:1px solid #343434;
-  border-radius:9px;
-  padding:14px;
-  color:white;
-  outline:none;
-}
-.field input:focus{border-color:var(--gold)}
 .password-wrap{position:relative}
 .password-wrap input{padding-right:65px}
 .show-pass{
   position:absolute;
-  right:9px;
+  right:8px;
   top:50%;
   transform:translateY(-50%);
   border:0;
-  color:var(--gold);
   background:transparent;
+  color:var(--gold);
   font-size:11px;
 }
-.main-btn{
-  width:100%;
-  border:0;
-  border-radius:9px;
-  padding:15px;
-  margin-top:15px;
-  color:#17120a;
-  font-weight:900;
-  letter-spacing:2px;
-  background:linear-gradient(135deg,#ffe5a3,#c08b34);
-  box-shadow:0 5px 20px #a6752633;
-}
-.main-btn:hover{filter:brightness(1.12)}
 .forgot{
   display:block;
   text-align:right;
-  color:#d7b66f;
+  color:var(--gold);
   font-size:12px;
-  margin-top:13px;
   cursor:pointer;
 }
-.message{
-  min-height:18px;
-  font-size:12px;
-  color:#ff8585;
-  margin-top:10px;
-}
-.demo-note{
-  color:#777;
-  font-size:10px;
-  line-height:1.5;
-  margin-top:20px;
-}
+.note{font-size:10px;color:#888;margin-top:20px;line-height:1.5}
 
 /* LOBBY */
 #lobbyPage{
   min-height:100vh;
-  padding:25px;
-  background:radial-gradient(ellipse at top,#252016,#080a0b 65%);
+  padding:22px;
+  background:radial-gradient(ellipse at top,#252016,#080a0b 70%);
 }
 .topbar{
+  max-width:1100px;
+  margin:auto;
   display:flex;
-  justify-content:space-between;
   align-items:center;
-  gap:15px;
-  border-bottom:1px solid #554321;
+  justify-content:space-between;
+  gap:12px;
   padding:10px 5px 20px;
+  border-bottom:1px solid #554321;
 }
 .small-logo{
   color:var(--gold);
+  font-size:24px;
   font-weight:1000;
   letter-spacing:4px;
-  font-size:25px;
 }
-.user-info{color:#ccc;font-size:13px}
-.gold{color:var(--gold)}
-.lobby-content{
-  max-width:900px;
-  margin:65px auto;
-  text-align:center;
-}
-.lobby-content h1{
-  color:var(--gold);
-  letter-spacing:5px;
-  font-size:30px;
-}
-.lobby-content p{color:#aaa}
+.user-info{font-size:13px;color:#ccc}
+.content{max-width:1000px;margin:45px auto}
+.heading{text-align:center}
+.heading h1{color:var(--gold);letter-spacing:5px}
+.heading p{color:#aaa}
 .game-options{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:22px;
-  margin-top:45px;
+  gap:20px;
+  margin:30px 0;
 }
 .game-card{
-  padding:35px 20px;
+  padding:28px 20px;
+  text-align:center;
   border:1px solid #80602c;
-  border-radius:16px;
+  border-radius:15px;
   background:linear-gradient(145deg,#1d1b16,#101212);
-  transition:.25s;
 }
-.game-card:hover{
-  transform:translateY(-7px);
-  border-color:var(--gold2);
-  box-shadow:0 10px 35px #c08b3422;
-}
-.game-icon{font-size:55px}
+.game-card:hover{border-color:var(--gold2)}
+.game-icon{font-size:48px}
 .game-card h2{color:var(--gold)}
-.game-card p{font-size:13px;line-height:1.6}
+.game-card p{font-size:13px;color:#aaa}
 .game-card button{
-  background:linear-gradient(135deg,#f8dc9a,#bd8731);
-  color:#17120a;
   border:0;
-  padding:13px 25px;
   border-radius:8px;
+  padding:12px 22px;
+  margin-top:10px;
   font-weight:bold;
-  margin-top:12px;
+  color:#17120a;
+  background:linear-gradient(135deg,#ffe5a3,#bd8731);
+}
+.connection{
+  padding:12px;
+  margin-bottom:15px;
+  border-radius:8px;
+  background:#080a0b;
+  color:#aaa;
+  font-size:13px;
+}
+.room-buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.room-list{
+  margin-top:15px;
+  line-height:1.8;
+  color:#ddd;
+  overflow-wrap:anywhere;
+}
+.room-code{
+  color:var(--gold);
+  font-size:23px;
+  font-weight:bold;
+  letter-spacing:3px;
+}
+.player{
+  padding:10px;
+  border-bottom:1px solid #3a3325;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
 }
 
 /* TABLE */
 #tablePage{
   min-height:100vh;
   padding:15px;
-  background:
-    radial-gradient(ellipse at center,#174d37 0%,#0b2b20 48%,#080a0b 100%);
+  background:radial-gradient(ellipse at center,#174d37,#080a0b);
 }
 .table-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  max-width:1100px;
-  margin:auto;
-}
-.back-btn,.logout-btn{
-  background:#171a18;
-  border:1px solid #85652f;
-  color:var(--gold);
-  padding:10px 14px;
-  border-radius:8px;
-}
-.table-title{
-  text-align:center;
-  color:var(--gold);
-  font-size:20px;
-  letter-spacing:3px;
-  font-weight:bold;
-}
-.poker-table{
   max-width:950px;
-  height:430px;
-  margin:25px auto 15px;
-  border:12px solid #51371d;
-  border-radius:48%;
-  background:radial-gradient(ellipse,#176c48,#10442f 75%);
-  box-shadow:inset 0 0 35px #061b11,0 15px 35px #0008;
+  margin:auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.table-title{color:var(--gold);font-weight:bold;letter-spacing:2px}
+.poker-table{
   position:relative;
+  max-width:850px;
+  min-height:330px;
+  margin:35px auto 20px;
+  border:10px solid #51371d;
+  border-radius:48%;
+  background:radial-gradient(ellipse,#176c48,#10442f);
   display:flex;
   flex-direction:column;
-  align-items:center;
   justify-content:center;
+  align-items:center;
+  box-shadow:inset 0 0 35px #061b11,0 15px 35px #0008;
 }
-.opponent{
-  position:absolute;
-  background:#101715;
-  border:1px solid #c39b4e;
-  border-radius:10px;
-  padding:9px 12px;
-  text-align:center;
-  min-width:110px;
-  font-size:11px;
-}
-.opponent .chips{color:var(--gold);margin-top:5px}
-.opp1{top:-25px;left:50%;transform:translateX(-50%)}
-.opp2{top:27%;right:-35px}
-.opp3{bottom:27%;right:-35px}
-.opp4{bottom:-25px;left:50%;transform:translateX(-50%)}
-.opp5{bottom:27%;left:-35px}
-.opp6{top:27%;left:-35px}
 .board{
   display:flex;
-  justify-content:center;
-  align-items:center;
-  gap:8px;
-  min-height:105px;
   flex-wrap:wrap;
+  justify-content:center;
+  gap:7px;
+  min-height:90px;
 }
 .playing-card{
-  width:65px;
-  height:91px;
-  border-radius:7px;
-  background:#fff;
+  width:55px;
+  height:77px;
+  background:white;
   color:#111;
-  position:relative;
-  overflow:hidden;
-  box-shadow:0 3px 7px #0008;
-  flex-shrink:0;
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
   font-weight:bold;
 }
-.playing-card.red{color:#d32632}
-.playing-card .rank{
-  position:absolute;
-  top:5px;left:6px;
-  font-size:19px;
-  line-height:1;
-}
-.playing-card .suit{
-  position:absolute;
-  top:29px;left:0;
-  width:100%;
-  text-align:center;
-  font-size:31px;
-}
-.playing-card .bottom-rank{
-  position:absolute;
-  right:6px;bottom:4px;
-  font-size:16px;
-  transform:rotate(180deg);
-}
+.red{color:#d32632}
 .card-back{
+  color:white;
   background:repeating-linear-gradient(45deg,#172e63,#172e63 5px,#d7b66f 6px,#172e63 8px);
-  border:4px solid white;
+  border:3px solid white;
 }
-.board-label{
-  color:#f1d48d;
-  font-size:12px;
-  letter-spacing:2px;
-  margin:12px 0;
-}
-.pot{
-  color:#ffdf91;
-  font-size:17px;
-  font-weight:bold;
-  margin:12px;
-}
+.pot{color:#ffdf91;font-weight:bold;margin:12px}
 .my-area{
   max-width:650px;
-  margin:10px auto;
+  margin:auto;
+  padding:15px;
   text-align:center;
-  background:#101715bb;
-  border:1px solid #9a7437;
-  border-radius:14px;
-  padding:14px;
+  border:1px solid #947039;
+  border-radius:13px;
+  background:#101715;
 }
 .my-cards{
   display:flex;
   justify-content:center;
-  gap:8px;
-  min-height:95px;
-  align-items:center;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:12px;
 }
-.my-info{color:#eee;font-size:13px;margin:8px}
-.my-info span{color:var(--gold)}
+.status{text-align:center;color:var(--gold);font-size:13px;margin:12px}
 .controls{
   display:flex;
   justify-content:center;
   flex-wrap:wrap;
   gap:10px;
-  margin:15px auto;
+  margin:15px;
 }
 .controls button{
-  border:1px solid #a77c36;
+  padding:11px 18px;
+  border:1px solid #947039;
   border-radius:8px;
+  color:var(--gold);
   background:#171a18;
-  color:#f2d18a;
-  padding:12px 20px;
-  font-weight:bold;
 }
-.controls button.primary{
-  background:linear-gradient(135deg,#f5d88f,#b7812d);
-  color:#17120a;
-}
-.status{
-  text-align:center;
-  color:#f5d88f;
-  font-size:13px;
-  min-height:20px;
-  padding:5px;
-}
+
 @media(max-width:650px){
-  .login-box{padding:28px 20px}
-  .logo{font-size:34px;letter-spacing:5px}
-  .welcome{font-size:10px;letter-spacing:3px}
-  #lobbyPage{padding:15px}
-  .lobby-content{margin:45px auto}
-  .lobby-content h1{font-size:23px}
-  .game-options{grid-template-columns:1fr;gap:14px;margin-top:25px}
-  .game-card{padding:22px}
-  .poker-table{
-    height:340px;
-    margin:35px 5px 15px;
-    border-width:8px;
-  }
-  .opponent{min-width:75px;padding:6px;font-size:9px}
-  .opp2,.opp3{right:-12px}
-  .opp5,.opp6{left:-12px}
-  .playing-card{width:48px;height:70px}
-  .playing-card .rank{font-size:15px;top:4px;left:4px}
-  .playing-card .suit{font-size:23px;top:23px}
-  .playing-card .bottom-rank{font-size:13px;right:4px}
-  .board{gap:4px;min-height:78px}
-  .my-cards{gap:5px}
-  .table-title{font-size:15px;letter-spacing:2px}
-  .controls button{padding:11px 13px;font-size:12px}
-}
-@media(max-width:360px){
-  .playing-card{width:42px;height:63px}
-  .board{gap:3px}
-  .opponent{min-width:65px}
+  #lobbyPage{padding:13px}
+  .content{margin:30px auto}
+  .game-options{grid-template-columns:1fr;gap:12px}
+  .game-card{padding:20px}
+  .small-logo{font-size:19px}
+  .poker-table{min-height:280px;border-width:7px;margin:30px 5px 20px}
+  .playing-card{width:43px;height:63px;font-size:22px}
+  .table-title{font-size:13px}
+  .room-buttons{grid-template-columns:1fr}
+  .login-box{padding:26px 19px}
+  .logo{font-size:33px}
+  .welcome{font-size:9px;letter-spacing:3px}
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN PAGE -->
+<!-- LOGIN -->
 <section id="loginPage">
   <div class="glow"></div>
-  <div class="floating-card card-a">♠</div>
-  <div class="floating-card card-b">♥</div>
-  <div class="floating-card card-c">♦</div>
-  <div class="floating-card card-d">♣</div>
+  <div class="floating f1">♠</div>
+  <div class="floating f2">♥</div>
+  <div class="floating f3">♦</div>
+  <div class="floating f4">♣</div>
 
   <div class="login-box">
     <div class="logo">BLACKCLUB</div>
@@ -490,104 +425,145 @@ button{cursor:pointer}
       </div>
       <div class="field">
         <label>НУУЦ ҮГ ДАВТАХ</label>
-        <div class="password-wrap">
-          <input id="confirmPassword" type="password" placeholder="Нууц үгээ давтана уу">
-          <button class="show-pass" onclick="togglePassword('confirmPassword',this)">ХАРАХ</button>
-        </div>
+        <input id="confirmPassword" type="password" placeholder="Нууц үгээ давтана уу">
       </div>
       <button class="main-btn" onclick="registerUser()">БҮРТГҮҮЛЭХ</button>
     </div>
 
     <div id="loginMessage" class="message"></div>
-    <div class="demo-note">
+    <div class="note">
       BLACKCLUB POKER ROOM<br>
-      Virtual chips • Entertainment only
+      Virtual chips • Entertainment only<br>
+      Туршилтын бүртгэл — нэг төхөөрөмж дээр хадгалагдана
     </div>
   </div>
 </section>
 
-<!-- LOBBY PAGE -->
+<!-- LOBBY -->
 <section id="lobbyPage" class="hidden">
   <div class="topbar">
     <div class="small-logo">BLACKCLUB</div>
     <div class="user-info">
       <span class="gold" id="lobbyUser">PLAYER</span>
-      &nbsp; | &nbsp;
-      <button class="logout-btn" onclick="logout()">ГАРАХ</button>
+      <button class="secondary-btn" onclick="logout()">ГАРАХ</button>
     </div>
   </div>
 
-  <div class="lobby-content">
-    <h1>POKER LOBBY</h1>
-    <p>Өөрийн тоглох төрлийг сонгоно уу</p>
+  <div class="content">
+    <div class="heading">
+      <h1>POKER LOBBY</h1>
+      <p>Тоглох төрлөө сонгоод онлайн өрөөнд нэгдээрэй</p>
+    </div>
 
     <div class="game-options">
       <div class="game-card">
         <div class="game-icon">🂡</div>
         <h2>TEXAS HOLD'EM</h2>
         <p>2 хувийн хөзөр + 5 ширээний хөзөр</p>
-        <button onclick="startGame('Texas Hold’em')">PLAY TEXAS</button>
+        <button onclick="selectGame('texas')">TEXAS ӨРӨӨ ҮҮСГЭХ</button>
       </div>
-
       <div class="game-card">
         <div class="game-icon">🃏</div>
         <h2>OMAHA</h2>
         <p>4 хувийн хөзөр + 5 ширээний хөзөр</p>
-        <button onclick="startGame('Omaha')">PLAY OMAHA</button>
+        <button onclick="selectGame('omaha')">OMAHA ӨРӨӨ ҮҮСГЭХ</button>
       </div>
+    </div>
+
+    <div class="card-panel">
+      <h2>ONLINE ROOMS</h2>
+      <div class="connection" id="connectionStatus">Сервертэй холбогдож байна...</div>
+
+      <label>Өрөөний нэр</label>
+      <input id="roomName" placeholder="BLACKCLUB ROOM">
+
+      <div class="room-buttons">
+        <button class="secondary-btn" onclick="createRoom('texas')">TEXAS ӨРӨӨ ҮҮСГЭХ</button>
+        <button class="secondary-btn" onclick="createRoom('omaha')">OMAHA ӨРӨӨ ҮҮСГЭХ</button>
+      </div>
+
+      <hr style="border-color:#554321;margin:20px 0">
+
+      <h3>ӨРӨӨНИЙ КОДООР НЭГДЭХ</h3>
+      <input id="joinRoomId" placeholder="Жишээ: ABC123">
+      <button class="main-btn" onclick="joinRoom()">ӨРӨӨНД НЭГДЭХ</button>
+
+      <div id="roomPanel" class="hidden" style="margin-top:22px">
+        <h3>МИНИЙ ӨРӨӨ</h3>
+        <div class="room-code" id="roomCode"></div>
+        <div id="roomDetails" class="room-list"></div>
+        <h3>ТОГЛОГЧИД</h3>
+        <div id="roomPlayers" class="room-list"></div>
+        <button class="secondary-btn" onclick="leaveRoom()">ӨРӨӨНӨӨС ГАРАХ</button>
+      </div>
+
+      <div class="message" id="roomMessage"></div>
     </div>
   </div>
 </section>
 
-<!-- TABLE PAGE -->
+<!-- TABLE PLACEHOLDER -->
 <section id="tablePage" class="hidden">
   <div class="table-top">
-    <button class="back-btn" onclick="backToLobby()">← LOBBY</button>
+    <button class="secondary-btn" onclick="backLobby()">← LOBBY</button>
     <div class="table-title" id="gameTitle">BLACKCLUB</div>
-    <button class="logout-btn" onclick="logout()">ГАРАХ</button>
+    <button class="secondary-btn" onclick="logout()">ГАРАХ</button>
   </div>
 
   <div class="poker-table">
-    <div class="opponent opp1">PLAYER 01<div class="chips">10,000 chips</div><div id="oppCards1">🂠 🂠</div></div>
-    <div class="opponent opp2">PLAYER 02<div class="chips">10,000 chips</div><div id="oppCards2">🂠 🂠</div></div>
-    <div class="opponent opp3">PLAYER 03<div class="chips">10,000 chips</div><div id="oppCards3">🂠 🂠</div></div>
-    <div class="opponent opp4">PLAYER 04<div class="chips">10,000 chips</div><div id="oppCards4">🂠 🂠</div></div>
-    <div class="opponent opp5">PLAYER 05<div class="chips">10,000 chips</div><div id="oppCards5">🂠 🂠</div></div>
-    <div class="opponent opp6">PLAYER 06<div class="chips">10,000 chips</div><div id="oppCards6">🂠 🂠</div></div>
-
-    <div class="board-label">COMMUNITY CARDS</div>
+    <div style="color:#ffe5a3;letter-spacing:3px">COMMUNITY CARDS</div>
     <div class="board" id="board"></div>
-    <div class="pot" id="pot">POT: 0</div>
+    <div class="pot">ONLINE TABLE</div>
   </div>
 
   <div class="my-area">
-    <div class="my-info">
-      <span id="playerName">PLAYER</span>
-      &nbsp; • &nbsp;
-      ЧИП: <span id="playerBalance">10,000</span>
+    <div class="gold" id="tablePlayer"></div>
+    <div class="status" id="tableStatus">
+      Онлайн өрөөний холболт хийгдсэн. Тоглолтын хөдөлгүүр дараагийн шатанд нэмэгдэнэ.
     </div>
-    <div class="my-cards" id="myCards"></div>
-    <div class="status" id="gameStatus">Шинэ тоглоом эхлүүлнэ үү</div>
-  </div>
-
-  <div class="controls">
-    <button class="primary" onclick="newHand()">NEW HAND</button>
-    <button onclick="nextStage()">NEXT</button>
-    <button onclick="showCards()">SHOW CARDS</button>
   </div>
 </section>
 
 <script>
-/* DEMO ACCOUNT SYSTEM */
-let currentUser = "";
-let currentGame = "Texas Hold’em";
-let balance = 10000;
+/* SERVER CONNECTION */
+const SERVER_URL = "https://black-new.onrender.com";
+const socket = io(SERVER_URL);
 
+let currentUser = "";
+let currentGame = "texas";
+let currentRoomId = null;
+let currentRoom = null;
+
+socket.on("connect", () => {
+  document.getElementById("connectionStatus").textContent =
+    "🟢 BLACKCLUB сервертэй холбогдлоо";
+});
+
+socket.on("disconnect", () => {
+  document.getElementById("connectionStatus").textContent =
+    "🔴 Серверээс саллаа. Дахин холбогдохыг хүлээнэ үү.";
+});
+
+socket.on("connect_error", () => {
+  document.getElementById("connectionStatus").textContent =
+    "Сервертэй холбогдож чадсангүй.";
+});
+
+socket.on("room:update", room => {
+  if (!currentRoomId || room.id !== currentRoomId) return;
+  currentRoom = room;
+  renderRoom(room);
+});
+
+/* DEMO LOGIN */
 function getAccounts(){
   try{
     return JSON.parse(localStorage.getItem("blackclub_accounts") || "{}");
-  }catch(e){return {}}
+  }catch(e){
+    return {};
+  }
 }
+
 function saveAccounts(accounts){
   localStorage.setItem("blackclub_accounts",JSON.stringify(accounts));
 }
@@ -602,13 +578,8 @@ function switchTab(tab){
 
 function togglePassword(id,button){
   const input=document.getElementById(id);
-  if(input.type==="password"){
-    input.type="text";
-    button.textContent="НУУХ";
-  }else{
-    input.type="password";
-    button.textContent="ХАРАХ";
-  }
+  input.type=input.type==="password"?"text":"password";
+  button.textContent=input.type==="password"?"ХАРАХ":"НУУХ";
 }
 
 function registerUser(){
@@ -617,25 +588,30 @@ function registerUser(){
   const confirm=document.getElementById("confirmPassword").value;
   const msg=document.getElementById("loginMessage");
 
-  if(!name || !pass || !confirm){
-    msg.textContent="Бүх талбарыг бөглөнө үү";
+  if(!name||!pass||!confirm){
+    msg.textContent="Бүх талбарыг бөглөнө үү.";
     return;
   }
-  if(name.length<3 || pass.length<4){
-    msg.textContent="Нэр 3-аас, нууц үг 4-өөс дээш тэмдэгттэй байна";
+  if(name.length<3||pass.length<6){
+    msg.textContent="Нэр 3-аас, нууц үг 6-аас дээш тэмдэгттэй байна.";
     return;
   }
   if(pass!==confirm){
-    msg.textContent="Нууц үг таарахгүй байна";
+    msg.textContent="Нууц үг таарахгүй байна.";
     return;
   }
+
   const accounts=getAccounts();
-  if(accounts[name]){
-    msg.textContent="Энэ нэр бүртгэлтэй байна";
+  const key=name.toLowerCase();
+
+  if(accounts[key]){
+    msg.textContent="Энэ нэр бүртгэлтэй байна.";
     return;
   }
-  accounts[name]={password:pass};
+
+  accounts[key]={name:name,password:pass};
   saveAccounts(accounts);
+
   msg.style.color="#8de5a0";
   msg.textContent="Бүртгэл амжилттай. Нэвтэрнэ үү.";
   switchTab("login");
@@ -645,35 +621,22 @@ function registerUser(){
 function loginUser(){
   const name=document.getElementById("loginName").value.trim();
   const pass=document.getElementById("loginPassword").value;
-  const msg=document.getElementById("loginMessage");
   const accounts=getAccounts();
+  const account=accounts[name.toLowerCase()];
 
-  if(!accounts[name] || accounts[name].password!==pass){
+  if(!account||account.password!==pass){
+    const msg=document.getElementById("loginMessage");
     msg.style.color="#ff8585";
-    msg.textContent="Нэр эсвэл нууц үг буруу байна";
+    msg.textContent="Нэр эсвэл нууц үг буруу байна.";
     return;
   }
-  currentUser=name;
-  balance=10000;
+
+  currentUser=account.name;
   openLobby();
 }
 
 function forgotPassword(){
-  const name=prompt("Бүртгүүлсэн хэрэглэгчийн нэрээ оруулна уу:");
-  if(!name)return;
-  const accounts=getAccounts();
-  if(!accounts[name]){
-    alert("Ийм хэрэглэгч олдсонгүй");
-    return;
-  }
-  const newPass=prompt("Шинэ нууц үгээ оруулна уу:");
-  if(!newPass || newPass.length<4){
-    alert("Нууц үг 4-өөс дээш тэмдэгттэй байна");
-    return;
-  }
-  accounts[name].password=newPass;
-  saveAccounts(accounts);
-  alert("Туршилтын нууц үг шинэчлэгдлээ. Нэвтэрнэ үү.");
+  alert("Энэ туршилтын хувилбарт нууц үг сэргээх баталгаажуулалт холбогдоогүй байна.");
 }
 
 function openLobby(){
@@ -682,139 +645,145 @@ function openLobby(){
   document.getElementById("lobbyPage").classList.remove("hidden");
   document.getElementById("lobbyUser").textContent=currentUser;
 }
+
 function logout(){
+  if(currentRoomId) leaveRoom();
   currentUser="";
   document.getElementById("loginPage").classList.remove("hidden");
   document.getElementById("lobbyPage").classList.add("hidden");
   document.getElementById("tablePage").classList.add("hidden");
 }
-function backToLobby(){
+
+function backLobby(){
   document.getElementById("tablePage").classList.add("hidden");
   document.getElementById("lobbyPage").classList.remove("hidden");
 }
 
-/* POKER TABLE DEMO */
-let deck=[];
-let boardCards=[];
-let myHand=[];
-let opponentHands=[];
-let stage=0;
-let pot=0;
-let revealed=false;
-
-const suits=["♠","♥","♦","♣"];
-const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
-
-function createDeck(){
-  deck=[];
-  for(const suit of suits){
-    for(const rank of ranks){
-      deck.push({suit,rank});
-    }
-  }
-  for(let i=deck.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [deck[i],deck[j]]=[deck[j],deck[i]];
-  }
-}
-function drawCard(){
-  return deck.pop();
-}
-function cardHTML(card,back=false){
-  if(back){
-    return '<div class="playing-card card-back"></div>';
-  }
-  const red=card.suit==="♥" || card.suit==="♦";
-  return `
-    <div class="playing-card ${red?"red":""}">
-      <div class="rank">${card.rank}</div>
-      <div class="suit">${card.suit}</div>
-      <div class="bottom-rank">${card.rank}${card.suit}</div>
-    </div>`;
-}
-
-function startGame(game){
+/* ONLINE ROOMS */
+function selectGame(game){
   currentGame=game;
-  document.getElementById("lobbyPage").classList.add("hidden");
-  document.getElementById("tablePage").classList.remove("hidden");
-  document.getElementById("gameTitle").textContent=game.toUpperCase();
-  document.getElementById("playerName").textContent=currentUser;
-  newHand();
+  document.getElementById("roomName").value =
+    game==="texas"?"BLACKCLUB TEXAS":"BLACKCLUB OMAHA";
+  document.getElementById("roomName").scrollIntoView({
+    behavior:"smooth",block:"center"
+  });
 }
 
-function newHand(){
-  createDeck();
-  boardCards=[];
-  myHand=[];
-  opponentHands=[];
-  stage=0;
-  pot=0;
-  revealed=false;
-
-  const cardCount=currentGame==="Omaha"?4:2;
-  for(let i=0;i<cardCount;i++)myHand.push(drawCard());
-
-  for(let p=0;p<6;p++){
-    const hand=[];
-    for(let i=0;i<cardCount;i++)hand.push(drawCard());
-    opponentHands.push(hand);
-  }
-
-  pot=700;
-  balance=Math.max(0,balance-100);
-  updateTable();
-  document.getElementById("gameStatus").textContent="Шинэ гар эхэллээ. NEXT дарж хөзрөө нээнэ үү.";
+function roomError(message){
+  document.getElementById("roomMessage").textContent=message;
 }
 
-function updateTable(){
-  document.getElementById("board").innerHTML=
-    boardCards.map(c=>cardHTML(c)).join("")+
-    Array(5-boardCards.length).fill(0).map(()=>cardHTML(null,true)).join("");
+function createRoom(game){
+  roomError("");
 
-  document.getElementById("myCards").innerHTML=
-    myHand.map(c=>cardHTML(c)).join("");
-
-  document.getElementById("playerBalance").textContent=balance.toLocaleString();
-  document.getElementById("pot").textContent="POT: "+pot.toLocaleString();
-
-  for(let i=0;i<6;i++){
-    const el=document.getElementById("oppCards"+(i+1));
-    el.innerHTML=revealed
-      ?opponentHands[i].map(c=>cardHTML(c)).join("")
-      :Array(opponentHands[i].length).fill("🂠").join(" ");
-  }
-}
-
-function nextStage(){
-  if(stage>=3){
-    document.getElementById("gameStatus").textContent="Бүх ширээний хөзөр нээгдсэн. SHOW CARDS дарна уу.";
+  if(!socket.connected){
+    roomError("Сервертэй холбогдоогүй байна. Түр хүлээнэ үү.");
     return;
   }
 
-  if(stage===0){
-    for(let i=0;i<3;i++)boardCards.push(drawCard());
-    document.getElementById("gameStatus").textContent="FLOP нээгдлээ";
-  }else if(stage===1){
-    boardCards.push(drawCard());
-    document.getElementById("gameStatus").textContent="TURN нээгдлээ";
-  }else{
-    boardCards.push(drawCard());
-    document.getElementById("gameStatus").textContent="RIVER нээгдлээ";
-  }
-
-  stage++;
-  updateTable();
-}
-
-function showCards(){
-  if(stage<3){
-    document.getElementById("gameStatus").textContent="Эхлээд бүх 5 ширээний хөзрийг нээнэ үү.";
+  if(currentRoomId){
+    roomError("Та аль хэдийн өрөөнд байна.");
     return;
   }
-  revealed=true;
-  updateTable();
-  document.getElementById("gameStatus").textContent="Хөзрүүд ил гарлаа. Дараагийн гар эхлүүлэх бол NEW HAND дарна уу.";
+
+  currentGame=game;
+
+  socket.emit("room:create",{
+    game:game,
+    name:document.getElementById("roomName").value.trim() ||
+      (game==="texas"?"BLACKCLUB TEXAS":"BLACKCLUB OMAHA"),
+    playerName:currentUser
+  },result=>{
+    if(!result||!result.success){
+      roomError(result?.message||"Өрөө үүсгэж чадсангүй.");
+      return;
+    }
+
+    currentRoomId=result.room.id;
+    currentRoom=result.room;
+    renderRoom(result.room);
+    roomError("Өрөө амжилттай үүслээ!");
+  });
+}
+
+function joinRoom(){
+  roomError("");
+
+  if(!socket.connected){
+    roomError("Сервертэй холбогдоогүй байна.");
+    return;
+  }
+
+  if(currentRoomId){
+    roomError("Та аль хэдийн өрөөнд байна.");
+    return;
+  }
+
+  const id=document.getElementById("joinRoomId").value.trim().toUpperCase();
+
+  if(!id){
+    roomError("Өрөөний кодоо оруулна уу.");
+    return;
+  }
+
+  socket.emit("room:join",{
+    roomId:id,
+    playerName:currentUser
+  },result=>{
+    if(!result||!result.success){
+      roomError(result?.message||"Өрөөнд нэгдэж чадсангүй.");
+      return;
+    }
+
+    currentRoomId=result.room.id;
+    currentRoom=result.room;
+    renderRoom(result.room);
+    roomError("Өрөөнд амжилттай нэгдлээ!");
+  });
+}
+
+function renderRoom(room){
+  document.getElementById("roomPanel").classList.remove("hidden");
+  document.getElementById("roomCode").textContent=room.id;
+
+  document.getElementById("roomDetails").innerHTML=
+    "Өрөө: "+escapeHTML(room.name)+"<br>"+
+    "Төрөл: "+room.game.toUpperCase()+"<br>"+
+    "Тоглогч: "+room.players.length+"/"+room.maxPlayers;
+
+  document.getElementById("roomPlayers").innerHTML=
+    room.players.map(player=>
+      "<div class='player'><span>"+
+      escapeHTML(player.name)+
+      "</span><span class='gold'>"+
+      Number(player.chips).toLocaleString()+
+      " chips</span></div>"
+    ).join("");
+}
+
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g,char=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  })[char]);
+}
+
+function leaveRoom(){
+  if(!currentRoomId) return;
+
+  socket.emit("room:leave");
+  currentRoomId=null;
+  currentRoom=null;
+
+  document.getElementById("roomPanel").classList.add("hidden");
+  document.getElementById("roomPlayers").innerHTML="";
+  document.getElementById("roomCode").textContent="";
+  document.getElementById("roomMessage").textContent="Өрөөнөөс гарлаа.";
 }
 </script>
+
 </body>
 </html>
