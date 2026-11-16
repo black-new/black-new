@@ -4,239 +4,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BLACKCLUB</title>
+<title>BLACKCLUB POKER</title>
 
 <style>
 *{box-sizing:border-box}
-html,body{
- margin:0;width:100%;height:100%;
- overflow:hidden;
-}
-body{
- background:#080d0a;color:#fff;
- font-family:Arial,sans-serif;
-}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{background:#080d0a;color:white;font-family:Arial,sans-serif}
 button,input{font:inherit}
 button{cursor:pointer}
-.screen{
- width:100%;height:100vh;height:100dvh;
- display:none;flex-direction:column;
-}
+.screen{display:none;width:100%;height:100vh;height:100dvh;flex-direction:column}
 .screen.active{display:flex}
 
-/* LOGIN */
+/* LOGIN DESIGN */
 #login{
- align-items:center;justify-content:center;
- background:radial-gradient(circle,#203c2b,#080d0a 70%);
- padding:20px;
+ align-items:center;justify-content:center;padding:15px;
+ background:
+ radial-gradient(ellipse at 50% 30%,#23442d 0%,#101c13 45%,#060907 100%);
+ position:relative;overflow:hidden;
+}
+.floating-card{
+ position:absolute;width:65px;height:95px;
+ background:#f8f5eb;color:#b18a3e;
+ border-radius:8px;display:flex;align-items:center;
+ justify-content:center;font-size:35px;
+ opacity:.08;animation:float 8s ease-in-out infinite;
+}
+.fc1{top:12%;left:12%;transform:rotate(-20deg)}
+.fc2{top:22%;right:12%;transform:rotate(20deg);animation-delay:2s}
+.fc3{bottom:10%;left:20%;transform:rotate(15deg);animation-delay:3s}
+.fc4{bottom:12%;right:18%;transform:rotate(-15deg);animation-delay:1s}
+@keyframes float{
+ 0%,100%{translate:0 0}
+ 50%{translate:0 -20px}
 }
 .login-box{
- width:min(360px,100%);
- padding:30px 25px;
- background:#111b14;
- border:1px solid #a88740;
- border-radius:16px;
+ position:relative;z-index:2;
+ width:min(390px,100%);
+ padding:28px 25px;
+ background:linear-gradient(145deg,#18251b,#0d150f);
+ border:1px solid #a88740;border-radius:18px;
  text-align:center;
+ box-shadow:0 20px 65px #000b,0 0 30px #c39c3b18;
 }
 .logo{
- color:#dfbd67;font-size:30px;
- font-weight:900;letter-spacing:4px;
+ font-size:35px;font-weight:1000;
+ letter-spacing:5px;color:#e3c36d;
+ text-shadow:0 0 20px #d5ae4b55;
 }
-.sub{color:#a9b5aa;font-size:12px;letter-spacing:3px}
-.login-box input{
- width:100%;padding:14px;margin-top:18px;
- background:#080e0a;color:white;
- border:1px solid #536348;border-radius:8px;
- outline:none;
+.logo span{color:white}
+.logo-mark{font-size:25px;color:#d9b65c;margin-bottom:5px}
+.sub{font-size:10px;letter-spacing:5px;color:#9eac9e;margin-top:5px}
+.welcome{font-size:13px;letter-spacing:2px;color:#e5d6ad;margin:19px 0 17px}
+.tabs{display:flex;background:#09110b;border-radius:8px;padding:4px;gap:4px}
+.tabs button{
+ flex:1;background:transparent;color:#9eaa9e;
+ border:0;border-radius:6px;padding:11px 5px;font-size:12px;
+}
+.tabs button.selected{background:#b89543;color:#15140e;font-weight:bold}
+.form{display:none;text-align:left}
+.form.active{display:block}
+.field-label{display:block;color:#c4cdbf;font-size:11px;margin:15px 0 6px}
+.field-wrap{position:relative}
+.field-wrap input{
+ width:100%;padding:13px 43px 13px 12px;
+ background:#080e0a;border:1px solid #435342;
+ border-radius:7px;color:white;outline:none;
+}
+.field-wrap input:focus{border-color:#d0ae5d}
+.eye{
+ position:absolute;right:10px;top:50%;
+ transform:translateY(-50%);
+ background:transparent;border:0;color:#d8bd77;
+ font-size:17px;padding:4px;
 }
 .gold{
- background:linear-gradient(135deg,#e5c873,#a47a2c);
- color:#17140c;border:0;border-radius:8px;
- padding:12px 18px;font-weight:bold;
+ width:100%;margin-top:19px;padding:13px;
+ background:linear-gradient(120deg,#e8cb7b,#a67e32);
+ border:0;border-radius:7px;color:#15130d;font-weight:900;
+ letter-spacing:1px;
 }
-.login-box button{width:100%;margin-top:16px}
-.note{font-size:11px;color:#829083;margin-top:18px}
+.gold:hover{filter:brightness(1.12)}
+.forgot{
+ display:block;text-align:right;margin-top:13px;
+ color:#d8bd77;font-size:11px;cursor:pointer;
+}
+.login-message{min-height:17px;color:#f0c878;font-size:11px;margin-top:10px}
+.login-footer{font-size:10px;color:#758478;margin-top:20px;line-height:1.7}
+.demo-label{font-size:9px;color:#9b8a5c;margin-top:9px}
 
-/* HEADER */
+/* COMMON HEADER */
 header{
- height:52px;flex-shrink:0;
- display:flex;align-items:center;
- justify-content:space-between;
- padding:0 16px;background:#111a13;
- border-bottom:1px solid #715a2b;
+ height:50px;flex-shrink:0;
+ display:flex;align-items:center;justify-content:space-between;
+ padding:0 15px;background:#111a13;border-bottom:1px solid #715a2b;
 }
-.brand{
- font-size:21px;font-weight:900;
- letter-spacing:2px;color:#dfbd67;
-}
-.header-right{
- display:flex;align-items:center;gap:10px;font-size:13px;
-}
+.brand{font-size:21px;font-weight:900;letter-spacing:2px;color:#dfbd67}
+.header-right{display:flex;align-items:center;gap:9px;font-size:12px}
 .small-btn{
- background:#202c22;color:#e4c36e;
- border:1px solid #67542e;border-radius:6px;
- padding:7px 10px;font-size:12px;
+ background:#202c22;color:#e4c36e;border:1px solid #67542e;
+ border-radius:6px;padding:7px 10px;font-size:11px;
 }
 
 /* LOBBY */
-#lobby{align-items:center;justify-content:center;padding:20px}
-.lobby-title{
- font-size:clamp(25px,5vw,42px);
- color:#e3c16b;letter-spacing:4px;
-}
-.lobby-sub{color:#9eaa9f;margin:10px 0 30px}
-.game-options{
- display:flex;gap:18px;width:min(650px,100%);
-}
+#lobby{align-items:center;justify-content:center;padding:18px}
+.lobby-title{font-size:clamp(25px,5vw,42px);color:#e3c16b;letter-spacing:4px}
+.lobby-sub{color:#9eaa9f;margin:10px 0 28px;font-size:12px}
+.game-options{display:flex;gap:15px;width:min(650px,100%)}
 .game-option{
  flex:1;min-width:0;background:#142119;
  border:1px solid #94743b;border-radius:15px;
- padding:25px 12px;text-align:center;
- cursor:pointer;
+ padding:25px 10px;text-align:center;cursor:pointer;
+ transition:.2s;
 }
-.game-option:hover{background:#203b29}
+.game-option:hover{background:#203b29;transform:translateY(-3px)}
 .game-option .symbol{font-size:40px;color:#e1bf65}
-.game-option h2{font-size:clamp(15px,3vw,22px);color:#e1bf65}
-.game-option p{font-size:12px;color:#aab5aa}
+.game-option h2{font-size:clamp(14px,3vw,22px);color:#e1bf65}
+.game-option p{font-size:11px;color:#aab5aa}
 
 /* GAME */
 #game{min-height:0}
 .gamebar{
- height:35px;flex-shrink:0;
- display:flex;align-items:center;justify-content:center;
+ height:34px;flex-shrink:0;display:flex;
+ align-items:center;justify-content:center;
  color:#e3c16b;font-weight:bold;letter-spacing:2px;
 }
 .table-area{
- flex:1;min-height:0;
- display:flex;align-items:center;justify-content:center;
- padding:4px 10px;
+ flex:1;min-height:0;display:flex;
+ align-items:center;justify-content:center;padding:4px 10px;
 }
 .table{
- width:min(850px,100%);
- height:100%;max-height:500px;
- border:8px solid #523b20;
- border-radius:46%;
+ width:min(850px,100%);height:100%;max-height:500px;
+ border:8px solid #523b20;border-radius:46%;
  background:radial-gradient(ellipse,#17623d,#0c3928 70%,#102017);
  box-shadow:inset 0 0 35px #0008,0 8px 25px #0008;
  display:flex;flex-direction:column;
  align-items:center;justify-content:center;
 }
-.table-name{
- font-size:clamp(12px,2vw,17px);
- letter-spacing:3px;color:#e5c875;
-}
-.pot{
- font-size:clamp(13px,2vw,18px);
- color:#ffe6a1;margin-top:7px;font-weight:bold;
-}
-
-/* CARDS */
-.board{
- display:flex;justify-content:center;
- align-items:center;gap:clamp(3px,1vw,9px);
- margin:12px 0;
-}
+.table-name{font-size:15px;letter-spacing:3px;color:#e5c875}
+.pot{font-size:16px;color:#ffe6a1;margin-top:7px;font-weight:bold}
+.board{display:flex;justify-content:center;align-items:center;gap:7px;margin:12px 0}
 .card{
- position:relative;
- flex:0 0 auto;
- width:clamp(34px,5.8vw,60px);
- aspect-ratio:0.69;
- background:#fff;color:#151515;
- border-radius:6px;
- box-shadow:0 2px 7px #0008;
- overflow:hidden;
+ position:relative;flex:0 0 auto;width:clamp(34px,5.8vw,60px);
+ aspect-ratio:.69;background:#fff;color:#151515;
+ border-radius:6px;box-shadow:0 2px 7px #0008;overflow:hidden;
 }
 .card.red{color:#d21d36}
 .card .rank-top{
- position:absolute;top:5%;left:8%;
- font-size:clamp(12px,2.3vw,22px);
+ position:absolute;top:5%;left:8%;font-size:clamp(12px,2.3vw,22px);
  line-height:1;font-weight:900;
 }
 .card .suit-center{
  position:absolute;left:0;right:0;top:50%;
- transform:translateY(-50%);
- text-align:center;
- font-size:clamp(18px,3.3vw,34px);
- line-height:1;
+ transform:translateY(-50%);text-align:center;
+ font-size:clamp(18px,3.3vw,34px);line-height:1;
 }
 .card .rank-bottom{
  position:absolute;bottom:5%;right:8%;
- font-size:clamp(12px,2.3vw,22px);
- line-height:1;font-weight:900;
- transform:rotate(180deg);
+ font-size:clamp(12px,2.3vw,22px);line-height:1;
+ font-weight:900;transform:rotate(180deg);
 }
 .card.back{
- background:repeating-linear-gradient(
-  45deg,#173d2a,#173d2a 5px,
-  #b18a3e 6px,#173d2a 9px
- );
+ background:repeating-linear-gradient(45deg,#173d2a,#173d2a 5px,#b18a3e 6px,#173d2a 9px);
  border:2px solid #e2c36f;
 }
-.card.empty{
- background:#ffffff12;
- border:1px dashed #ffffff55;
- box-shadow:none;
-}
+.card.empty{background:#ffffff12;border:1px dashed #ffffff55;box-shadow:none}
 .community-label{font-size:10px;color:#c9d6c8}
-
-/* PLAYERS */
 .player-area{
- flex-shrink:0;
- display:flex;justify-content:center;
- align-items:center;gap:10px;
- padding:5px 10px 3px;
+ flex-shrink:0;display:flex;justify-content:center;
+ align-items:center;gap:10px;padding:5px 10px 3px;
 }
 .player{
- min-width:0;flex:1;max-width:190px;
- text-align:center;
- background:#142019;
- border:1px solid #536348;
+ min-width:0;flex:1;max-width:190px;text-align:center;
+ background:#142019;border:1px solid #536348;
  border-radius:9px;padding:7px 5px;
 }
 .player.you{border-color:#d8b75e}
-.player-name{
- font-size:clamp(10px,1.5vw,13px);
- font-weight:bold;white-space:nowrap;
- overflow:hidden;text-overflow:ellipsis;
-}
-.player-chips{
- font-size:11px;color:#e4c36e;margin-top:4px;
-}
-.hand{
- display:flex;justify-content:center;
- align-items:center;gap:3px;
- margin-top:6px;min-width:0;
-}
-.hand .card{
- width:clamp(22px,3.8vw,39px);
- border-radius:4px;
-}
-.hand .rank-top,.hand .rank-bottom{
- font-size:clamp(9px,1.6vw,15px);
-}
-.hand .suit-center{
- font-size:clamp(13px,2.4vw,23px);
-}
-
-/* BUTTONS */
-.controls{
- flex-shrink:0;
- display:flex;justify-content:center;
- align-items:center;gap:8px;
- padding:7px 10px 10px;
-}
+.player-name{font-size:12px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-chips{font-size:11px;color:#e4c36e;margin-top:4px}
+.hand{display:flex;justify-content:center;align-items:center;gap:3px;margin-top:6px}
+.hand .card{width:clamp(22px,3.8vw,39px);border-radius:4px}
+.hand .rank-top,.hand .rank-bottom{font-size:clamp(9px,1.6vw,15px)}
+.hand .suit-center{font-size:clamp(13px,2.4vw,23px)}
+.controls{flex-shrink:0;display:flex;justify-content:center;gap:8px;padding:7px 10px 10px}
 .controls button{font-size:12px;padding:10px 16px}
-.status{
- flex-shrink:0;text-align:center;
- color:#e7d6a5;font-size:11px;
- min-height:17px;padding-bottom:3px;
-}
+.status{flex-shrink:0;text-align:center;color:#e7d6a5;font-size:11px;min-height:17px;padding-bottom:3px}
 
-/* MOBILE */
 @media(max-width:600px){
- header{height:45px;padding:0 9px}
+ header{height:44px;padding:0 9px}
  .brand{font-size:18px}
- .header-right{gap:6px;font-size:11px}
+ .header-right{gap:6px;font-size:10px}
  .small-btn{padding:6px 7px}
  .game-options{gap:9px}
  .game-option{padding:20px 6px}
@@ -249,6 +205,9 @@ header{
  .hand{gap:2px}
  .controls{gap:5px;padding:6px 3px}
  .controls button{padding:9px 10px;font-size:10px}
+ .login-box{padding:24px 18px}
+ .logo{font-size:30px}
+ .floating-card{width:45px;height:67px;font-size:26px}
 }
 @media(max-height:650px){
  header{height:40px}
@@ -263,22 +222,78 @@ header{
 
 <body>
 
+<!-- LOGIN -->
 <section id="login" class="screen active">
+ <div class="floating-card fc1">♠</div>
+ <div class="floating-card fc2">♥</div>
+ <div class="floating-card fc3">♦</div>
+ <div class="floating-card fc4">♣</div>
+
  <div class="login-box">
-  <div class="logo">BLACKCLUB</div>
-  <div class="sub">POKER ROOM</div>
-  <input id="username" placeholder="Хэрэглэгчийн нэр">
-  <input id="password" type="password" placeholder="Нууц үг">
-  <button class="gold" onclick="login()">НЭВТРЭХ</button>
-  <div class="note">ТУРШИЛТЫН ХУВИЛБАР · ВИРТУАЛ ЧИП</div>
+  <div class="logo-mark">♠</div>
+  <div class="logo">BLACK<span>CLUB</span></div>
+  <div class="sub">PRIVATE POKER ROOM</div>
+  <div class="welcome">WELCOME TO BLACKCLUB</div>
+
+  <div class="tabs">
+   <button id="loginTab" class="selected" onclick="switchTab('signin')">НЭВТРЭХ</button>
+   <button id="registerTab" onclick="switchTab('register')">БҮРТГҮҮЛЭХ</button>
+  </div>
+
+  <!-- SIGN IN -->
+  <div id="signin" class="form active">
+   <label class="field-label">Хэрэглэгчийн нэр</label>
+   <div class="field-wrap">
+    <input id="loginName" placeholder="Нэрээ оруулна уу" autocomplete="username">
+   </div>
+
+   <label class="field-label">Нууц үг</label>
+   <div class="field-wrap">
+    <input id="loginPass" type="password" placeholder="Нууц үгээ оруулна уу" autocomplete="current-password">
+    <button class="eye" onclick="togglePass('loginPass',this)">◉</button>
+   </div>
+
+   <span class="forgot" onclick="forgotPassword()">Нууц үг мартсан уу?</span>
+   <button class="gold" onclick="loginUser()">НЭВТРЭХ</button>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="register" class="form">
+   <label class="field-label">Хэрэглэгчийн нэр</label>
+   <div class="field-wrap">
+    <input id="regName" placeholder="Шинэ нэр сонгоно уу" autocomplete="username">
+   </div>
+
+   <label class="field-label">Нууц үг</label>
+   <div class="field-wrap">
+    <input id="regPass" type="password" placeholder="Нууц үг үүсгэнэ үү" autocomplete="new-password">
+    <button class="eye" onclick="togglePass('regPass',this)">◉</button>
+   </div>
+
+   <label class="field-label">Нууц үг давтах</label>
+   <div class="field-wrap">
+    <input id="regConfirm" type="password" placeholder="Нууц үгээ дахин оруулна уу" autocomplete="new-password">
+    <button class="eye" onclick="togglePass('regConfirm',this)">◉</button>
+   </div>
+
+   <button class="gold" onclick="registerUser()">БҮРТГҮҮЛЭХ</button>
+  </div>
+
+  <div id="loginMessage" class="login-message"></div>
+  <div class="login-footer">
+   BLACKCLUB POKER EXPERIENCE<br>
+   PLAY SMART · PLAY FAIR
+  </div>
+  <div class="demo-label">DEMO VERSION · VIRTUAL CHIPS ONLY</div>
  </div>
 </section>
 
+<!-- LOBBY -->
 <section id="lobby" class="screen">
  <header>
   <div class="brand">BLACKCLUB</div>
   <div class="header-right">
-   <span id="welcome"></span>
+   <span id="welcomeUser"></span>
    <button class="small-btn" onclick="logout()">ГАРАХ</button>
   </div>
  </header>
@@ -300,6 +315,7 @@ header{
  </div>
 </section>
 
+<!-- GAME -->
 <section id="game" class="screen">
  <header>
   <div class="brand">BLACKCLUB</div>
@@ -321,7 +337,6 @@ header{
  </div>
 
  <div class="player-area" id="players"></div>
-
  <div class="status" id="status">Тоглоом эхэллээ.</div>
 
  <div class="controls">
@@ -344,25 +359,142 @@ function screen(id){
  $(id).classList.add("active");
 }
 
-function login(){
- let name=$("username").value.trim();
- let pass=$("password").value.trim();
- if(!name||!pass){
-  alert("Нэр болон нууц үгээ оруулна уу.");
+function switchTab(tab){
+ $("signin").classList.toggle("active",tab==="signin");
+ $("register").classList.toggle("active",tab==="register");
+ $("loginTab").classList.toggle("selected",tab==="signin");
+ $("registerTab").classList.toggle("selected",tab==="register");
+ $("loginMessage").textContent="";
+}
+
+function togglePass(id,button){
+ let field=$(id);
+ field.type=field.type==="password"?"text":"password";
+ button.textContent=field.type==="password"?"◉":"◎";
+}
+
+function getAccounts(){
+ try{
+  return JSON.parse(localStorage.getItem("blackclub_accounts")||"{}");
+ }catch(e){
+  return {};
+ }
+}
+
+function saveAccounts(accounts){
+ try{
+  localStorage.setItem("blackclub_accounts",JSON.stringify(accounts));
+  return true;
+ }catch(e){
+  $("loginMessage").textContent="Браузер хадгалах боломжгүй байна.";
+  return false;
+ }
+}
+
+function registerUser(){
+ let name=$("regName").value.trim();
+ let pass=$("regPass").value;
+ let confirm=$("regConfirm").value;
+
+ if(name.length<3){
+  $("loginMessage").textContent="Нэр хамгийн багадаа 3 тэмдэгт байна.";
   return;
  }
- username=name;
- $("welcome").textContent="Сайн уу, "+username;
+ if(pass.length<4){
+  $("loginMessage").textContent="Нууц үг хамгийн багадаа 4 тэмдэгт байна.";
+  return;
+ }
+ if(pass!==confirm){
+  $("loginMessage").textContent="Нууц үг таарахгүй байна.";
+  return;
+ }
+
+ let accounts=getAccounts();
+ let key=name.toLowerCase();
+
+ if(accounts[key]){
+  $("loginMessage").textContent="Энэ нэр бүртгэлтэй байна.";
+  return;
+ }
+
+ accounts[key]={name:name,password:pass};
+ if(!saveAccounts(accounts))return;
+
+ $("loginMessage").textContent="Бүртгэл амжилттай. Одоо нэвтэрнэ үү.";
+ $("loginName").value=name;
+ $("loginPass").value="";
+ $("regPass").value="";
+ $("regConfirm").value="";
+ switchTab("signin");
+}
+
+function loginUser(){
+ let name=$("loginName").value.trim();
+ let pass=$("loginPass").value;
+
+ if(!name||!pass){
+  $("loginMessage").textContent="Нэр болон нууц үгээ оруулна уу.";
+  return;
+ }
+
+ let accounts=getAccounts();
+ let account=accounts[name.toLowerCase()];
+
+ if(!account||account.password!==pass){
+  $("loginMessage").textContent="Нэр эсвэл нууц үг буруу байна.";
+  return;
+ }
+
+ username=account.name;
+ $("welcomeUser").textContent="Сайн уу, "+username;
+ $("loginMessage").textContent="";
+ $("loginPass").value="";
  screen("lobby");
 }
 
-function logout(){screen("login")}
+function forgotPassword(){
+ let name=prompt("Бүртгүүлсэн хэрэглэгчийн нэрээ оруулна уу:");
+ if(!name)return;
+
+ let accounts=getAccounts();
+ let key=name.trim().toLowerCase();
+
+ if(!accounts[key]){
+  $("loginMessage").textContent="Ийм бүртгэл олдсонгүй.";
+  return;
+ }
+
+ let newPass=prompt("Шинэ нууц үгээ оруулна уу (4-өөс дээш тэмдэгт):");
+ if(!newPass)return;
+
+ if(newPass.length<4){
+  $("loginMessage").textContent="Нууц үг хэт богино байна.";
+  return;
+ }
+
+ let confirm=prompt("Шинэ нууц үгээ дахин оруулна уу:");
+ if(newPass!==confirm){
+  $("loginMessage").textContent="Нууц үг таарахгүй байна.";
+  return;
+ }
+
+ accounts[key].password=newPass;
+ if(saveAccounts(accounts)){
+  $("loginMessage").textContent="Нууц үг шинэчлэгдлээ. Нэвтэрнэ үү.";
+ }
+}
+
+function logout(){
+ username="";
+ screen("login");
+ switchTab("signin");
+}
+
 function backLobby(){screen("lobby")}
 
 function startGame(type){
  mode=type;
- $("gameTitle").textContent=
-  type==="holdem"?"TEXAS HOLD'EM":"OMAHA";
+ $("gameTitle").textContent=type==="holdem"?"TEXAS HOLD'EM":"OMAHA";
  screen("game");
  newHand();
 }
@@ -371,11 +503,13 @@ function shuffle(){
  deck=[];
  const suits=["♠","♥","♦","♣"];
  const ranks=["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
+
  for(let s of suits){
   for(let i=0;i<ranks.length;i++){
    deck.push({rank:ranks[i],value:i+2,suit:s});
   }
  }
+
  for(let i=deck.length-1;i>0;i--){
   let j=Math.floor(Math.random()*(i+1));
   [deck[i],deck[j]]=[deck[j],deck[i]];
@@ -385,13 +519,11 @@ function shuffle(){
 function draw(){return deck.pop()}
 
 function cardHTML(c,hidden=false){
- if(hidden){
-  return '<div class="card back"></div>';
- }
- if(!c){
-  return '<div class="card empty"></div>';
- }
+ if(hidden)return '<div class="card back"></div>';
+ if(!c)return '<div class="card empty"></div>';
+
  let red=(c.suit==="♥"||c.suit==="♦")?"red":"";
+
  return `<div class="card ${red}">
   <span class="rank-top">${c.rank}</span>
   <span class="suit-center">${c.suit}</span>
@@ -407,6 +539,7 @@ function newHand(){
  revealed=false;
 
  const count=mode==="omaha"?4:2;
+
  players=[
   {name:username||"YOU",chips:balance,cards:[],you:true},
   {name:"PLAYER 2",chips:10000,cards:[]},
@@ -429,7 +562,7 @@ function newHand(){
 
 function nextCards(){
  if(revealed){
-  $("status").textContent="Шинэ тоглолт эхлүүлэхийн тулд NEW HAND дарна уу.";
+  $("status").textContent="NEW HAND дарж шинэ тоглолт эхлүүлнэ үү.";
   return;
  }
 
@@ -467,8 +600,7 @@ function render(){
 
  $("board").innerHTML="";
  for(let i=0;i<5;i++){
-  $("board").innerHTML+=board[i]?
-   cardHTML(board[i]):cardHTML(null);
+  $("board").innerHTML+=board[i]?cardHTML(board[i]):cardHTML(null);
  }
 
  $("players").innerHTML=players.map(p=>{
@@ -484,9 +616,6 @@ function render(){
  }).join("");
 }
 
-newHand();
-screen("login");
 </script>
-
 </body>
 </html>
