@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BLACKCLUB Poker</title>
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+
 <style>
-:root {
+:root{
   --gold:#e8bd62;
   --gold2:#9b7131;
   --bg:#070908;
@@ -24,6 +25,7 @@ body{
 }
 button,input{font:inherit}
 button{cursor:pointer}
+
 header{
   height:72px;
   padding:0 5%;
@@ -52,7 +54,8 @@ header{
 }
 .online-dot{
   display:inline-block;
-  width:8px;height:8px;
+  width:8px;
+  height:8px;
   border-radius:50%;
   background:#36d887;
   margin-right:6px;
@@ -75,6 +78,7 @@ main{
   letter-spacing:2px;
 }
 .hero p{color:var(--muted);margin:0}
+
 .nav-grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -163,15 +167,22 @@ main{
   border-radius:8px;
   padding:10px 15px;
 }
+
+/* POKER TABLE */
 #tablePage{display:none}
+
 .poker-table{
   width:100%;
+  height:490px;
   min-height:490px;
   position:relative;
-  background:#075536;
+  background:radial-gradient(ellipse,#087348 0%,#075536 72%,#043b29 100%);
   border:12px solid #533a20;
-  border-radius:25px;
-  box-shadow:inset 0 0 0 4px #c59a4c,0 12px 35px #000;
+  border-radius:50% / 50%;
+  box-shadow:
+    inset 0 0 0 4px #c59a4c,
+    inset 0 0 35px #001e13,
+    0 12px 35px #000;
   overflow:hidden;
   margin:20px 0;
 }
@@ -179,34 +190,43 @@ main{
   position:absolute;
   inset:15px;
   border:2px solid rgba(238,205,133,.45);
-  border-radius:15px;
+  border-radius:50% / 50%;
+  pointer-events:none;
 }
 .table-name{
   position:absolute;
-  top:18px;
+  top:13%;
   left:50%;
   transform:translateX(-50%);
   color:#e8d4a5;
   font-weight:bold;
-  letter-spacing:2px;
+  letter-spacing:3px;
+  font-size:13px;
 }
 .pot{
   position:absolute;
-  top:25%;
+  top:28%;
   left:50%;
   transform:translateX(-50%);
   text-align:center;
   color:white;
   font-weight:bold;
+  z-index:2;
 }
-.pot small{display:block;color:#e8d4a5;margin-bottom:5px}
+.pot small{
+  display:block;
+  color:#e8d4a5;
+  margin-bottom:5px;
+  letter-spacing:2px;
+}
 .board{
   position:absolute;
-  top:43%;
+  top:47%;
   left:50%;
   transform:translate(-50%,-50%);
   display:flex;
   gap:7px;
+  z-index:2;
 }
 .playing-card{
   width:43px;
@@ -222,26 +242,90 @@ main{
   box-shadow:0 2px 5px #0008;
 }
 .playing-card.red{color:#d21e28}
+
+/* PLAYER SEATS */
 .seat{
   position:absolute;
-  width:115px;
-  min-height:65px;
-  background:#101713;
+  width:120px;
+  min-height:90px;
+  background:linear-gradient(145deg,#18221b,#080e0b);
   border:1px solid #c49a50;
-  border-radius:9px;
-  padding:8px;
+  border-radius:12px;
+  padding:7px 5px;
   text-align:center;
   font-size:12px;
   color:white;
+  box-shadow:0 4px 12px #0008;
+  z-index:3;
 }
-.seat strong{display:block;color:var(--gold);margin-bottom:4px}
-.seat small{color:#c7c7b9}
-.seat-1{top:12px;left:12%}
-.seat-2{top:12px;right:12%}
-.seat-3{top:45%;right:8px}
-.seat-4{bottom:12px;right:12%}
-.seat-5{bottom:12px;left:12%}
-.seat-6{top:45%;left:8px}
+.seat strong{
+  display:block;
+  color:#f5d58d;
+  margin:4px 0;
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.seat small{
+  color:#c7c7b9;
+  display:block;
+}
+
+/* AVATAR */
+.avatar{
+  width:38px;
+  height:38px;
+  margin:0 auto 3px;
+  border-radius:50%;
+  border:2px solid var(--gold);
+  background:radial-gradient(circle at 35% 25%,#80602e,#241a0d 75%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffe4a3;
+  font-size:17px;
+  font-weight:900;
+  box-shadow:0 0 9px #d6a94c55;
+}
+.seat-empty .avatar{
+  border-color:#77705d;
+  background:#18221b;
+  color:#8c927f;
+}
+
+/* CHIP DISPLAY */
+.chip-display{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  margin-top:4px;
+  padding:3px 8px;
+  border-radius:20px;
+  background:#302512;
+  border:1px solid #a9823d;
+  color:#f6d98e;
+  font-size:11px;
+  font-weight:bold;
+}
+.chip-icon{
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  border:2px dashed #ffe3a0;
+  background:#b88635;
+  display:inline-block;
+}
+
+/* SIX SEATS */
+.seat-1{top:5%;left:18%}
+.seat-2{top:5%;right:18%}
+.seat-3{top:40%;right:2%}
+.seat-4{bottom:5%;right:18%}
+.seat-5{bottom:5%;left:18%}
+.seat-6{top:40%;left:2%}
+
 .actions{
   display:flex;
   justify-content:center;
@@ -270,6 +354,8 @@ main{
   border:1px solid #4a3b26;
   border-radius:8px;
 }
+
+/* LOGIN */
 .auth-screen{
   position:fixed;
   inset:0;
@@ -315,27 +401,66 @@ main{
   font-size:13px;
   margin-top:10px;
 }
+
+/* MOBILE */
 @media(max-width:700px){
-  header{height:60px;padding:0 4%}
+  header{
+    height:60px;
+    padding:0 4%;
+  }
   .logo{font-size:20px}
-  main{width:96%;margin:15px auto}
+  main{
+    width:96%;
+    margin:15px auto;
+  }
   .hero{padding:23px}
   .nav-grid{gap:7px}
-  .nav-card{padding:15px 5px;font-size:13px}
+  .nav-card{
+    padding:15px 5px;
+    font-size:13px;
+  }
   .panel{padding:14px}
   .table-list{grid-template-columns:1fr}
-  .poker-table{min-height:430px;border-width:8px}
-  .seat{width:86px;font-size:10px;padding:6px}
-  .playing-card{width:34px;height:49px;font-size:16px}
-  .seat-1{left:5%}
-  .seat-2{right:5%}
-  .seat-4{right:5%}
-  .seat-5{left:5%}
-  .seat-3{right:2px}
-  .seat-6{left:2px}
+
+  .poker-table{
+    height:430px;
+    min-height:430px;
+    border-width:8px;
+  }
+  .table-inner{inset:10px}
+
+  .seat{
+    width:88px;
+    min-height:78px;
+    font-size:10px;
+    padding:5px 3px;
+  }
+  .seat strong{font-size:10px}
+  .avatar{
+    width:32px;
+    height:32px;
+    font-size:14px;
+  }
+  .chip-display{
+    font-size:9px;
+    padding:2px 5px;
+  }
+  .playing-card{
+    width:34px;
+    height:49px;
+    font-size:16px;
+  }
+  .board{gap:4px}
+  .seat-1{top:5%;left:15%}
+  .seat-2{top:5%;right:15%}
+  .seat-3{top:41%;right:1%}
+  .seat-4{bottom:5%;right:15%}
+  .seat-5{bottom:5%;left:15%}
+  .seat-6{top:41%;left:1%}
 }
 </style>
 </head>
+
 <body>
 
 <div class="auth-screen" id="authScreen">
@@ -400,11 +525,16 @@ main{
       <h2 id="tableTitle">POKER TABLE</h2>
       <span id="tableInfo"></span>
     </div>
+
     <div class="poker-table">
       <div class="table-inner"></div>
       <div class="table-name">BLACKCLUB</div>
-      <div class="pot"><small>POT</small><span id="potAmount">0</span></div>
+      <div class="pot">
+        <small>POT</small>
+        <span id="potAmount">0</span>
+      </div>
       <div class="board" id="boardCards"></div>
+
       <div class="seat seat-1" id="seat0"></div>
       <div class="seat seat-2" id="seat1"></div>
       <div class="seat seat-3" id="seat2"></div>
@@ -412,6 +542,7 @@ main{
       <div class="seat seat-5" id="seat4"></div>
       <div class="seat seat-6" id="seat5"></div>
     </div>
+
     <div class="actions">
       <button class="secondary-btn" onclick="sendAction('fold')">FOLD</button>
       <button class="secondary-btn" onclick="sendAction('check')">CHECK</button>
@@ -440,7 +571,7 @@ async function api(path, data = {}) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { "Authorization": "Bearer " + token } : {})
+      "Authorization": "Bearer " + token
     },
     body: JSON.stringify(data)
   });
@@ -454,27 +585,21 @@ async function api(path, data = {}) {
   return result;
 }
 
-function showMessage(message) {
-  $("authMessage").textContent = message;
-}
-
 async function login() {
   const username = $("authUsername").value.trim();
   const password = $("authPassword").value;
 
   if (!username || !password) {
-    showMessage("Нэр болон нууц үгээ оруулна уу");
+    $("authMessage").textContent = "Нэр болон нууц үгээ оруулна уу";
     return;
   }
 
   try {
-    $("loginBtn").disabled = true;
+    $("authMessage").textContent = "Нэвтэрч байна...";
     const result = await api("/api/login", { username, password });
     acceptLogin(result);
   } catch (error) {
-    showMessage(error.message);
-  } finally {
-    $("loginBtn").disabled = false;
+    $("authMessage").textContent = error.message;
   }
 }
 
@@ -483,42 +608,34 @@ async function register() {
   const password = $("authPassword").value;
 
   if (!username || !password) {
-    showMessage("Нэр болон нууц үгээ оруулна уу");
-    return;
-  }
-
-  if (password.length < 6) {
-    showMessage("Нууц үг 6-аас дээш тэмдэгттэй байна");
+    $("authMessage").textContent = "Нэр болон нууц үгээ оруулна уу";
     return;
   }
 
   try {
-    $("registerBtn").disabled = true;
+    $("authMessage").textContent = "Бүртгүүлж байна...";
     const result = await api("/api/register", { username, password });
     acceptLogin(result);
   } catch (error) {
-    showMessage(error.message);
-  } finally {
-    $("registerBtn").disabled = false;
+    $("authMessage").textContent = error.message;
   }
 }
 
 function acceptLogin(result) {
-  token = result.token || result.idToken || result.accessToken;
+  token = result.token || result.user?.token || "";
+  user = result.user || result;
 
   if (!token) {
-    showMessage("Нэвтрэх токен ирсэнгүй");
+    $("authMessage").textContent = "Нэвтрэх token олдсонгүй";
     return;
   }
 
   localStorage.setItem("blackclub_token", token);
-  user = result.user || result;
-
   $("authScreen").style.display = "none";
-  $("userName").textContent = user.username || user.name || "PLAYER";
+  $("userName").textContent = user.username || user.name || "Тоглогч";
 
-  showLobby();
   connectSocket();
+  showLobby();
 }
 
 async function boot() {
@@ -532,10 +649,10 @@ async function boot() {
     user = result.user || result;
 
     $("authScreen").style.display = "none";
-    $("userName").textContent = user.username || user.name || "PLAYER";
+    $("userName").textContent = user.username || user.name || "Тоглогч";
 
-    showLobby();
     connectSocket();
+    showLobby();
   } catch (error) {
     localStorage.removeItem("blackclub_token");
     token = "";
@@ -559,6 +676,11 @@ function logout() {
 function showLobby() {
   $("lobbyPage").style.display = "block";
   $("tablePage").style.display = "none";
+  currentTable = null;
+
+  if (socket && socket.connected) {
+    socket.emit("lobby:get");
+  }
 }
 
 function showPage(page) {
@@ -582,23 +704,27 @@ function connectSocket() {
   });
 
   socket.on("lobby:update", data => {
-    allTables = Array.isArray(data) ? data : (data.tables || []);
+    const tables = Array.isArray(data) ? data : (data.tables || []);
+    allTables = tables;
+
+    if (data.onlineCount !== undefined) {
+      $("onlineCount").textContent = data.onlineCount + " ONLINE";
+    }
+
     renderTables();
-    $("onlineCount").textContent =
-      (data.onlineCount ?? data.online ?? 0) + " ONLINE";
   });
 
-  socket.on("table:update", data => {
-    lastState = data;
-    renderTable(data);
+  socket.on("table:update", state => {
+    lastState = state;
+    renderTable(state);
   });
 
-  socket.on("notice", data => {
-    const message = typeof data === "string"
-      ? data
-      : (data.message || "Мэдэгдэл");
+  socket.on("notice", message => {
+    const text = typeof message === "string"
+      ? message
+      : message.message || "Мэдэгдэл";
 
-    alert(message);
+    console.log("BLACKCLUB:", text);
   });
 }
 
@@ -609,7 +735,8 @@ function setFilter(value, button) {
     tab.classList.remove("active");
   });
 
-  button.classList.add("active");
+  if (button) button.classList.add("active");
+
   renderTables();
 }
 
@@ -618,9 +745,12 @@ function renderTables() {
   list.innerHTML = "";
 
   const tables = allTables.filter(table => {
-    const type = String(table.type || table.game || "").toLowerCase();
-
     if (filter === "all") return true;
+
+    const type = String(
+      table.type || table.gameType || table.game || ""
+    ).toLowerCase();
+
     return type.includes(filter);
   });
 
@@ -630,30 +760,28 @@ function renderTables() {
     return;
   }
 
-  tables.forEach((table, index) => {
-    const id = table.id || table.tableId || String(index);
-    const name = table.name || table.title || "Ширээ " + (index + 1);
-    const type = String(table.type || table.game || "Texas").toUpperCase();
-    const players = table.players || table.seats || [];
-    const count = Array.isArray(players)
-      ? players.filter(Boolean).length
-      : (table.playerCount || 0);
+  tables.forEach(table => {
+    const id = table.id || table.tableId;
+    const name = table.name || table.title || "Poker Table";
+    const game = table.type || table.gameType || table.game || "Poker";
+    const players = table.players?.length ??
+      table.playerCount ??
+      table.seats?.filter(Boolean).length ??
+      0;
 
+    const maxPlayers = table.maxPlayers || 6;
     const card = document.createElement("div");
-    card.className = "table-card";
 
+    card.className = "table-card";
     card.innerHTML = `
       <div>
         <h3>${escapeHtml(name)}</h3>
-        <p>${escapeHtml(type)} · ${count}/6 тоглогч</p>
+        <p>${escapeHtml(String(game))} · ${players}/${maxPlayers} тоглогч</p>
       </div>
-      <button class="gold-btn">СУУХ</button>
+      <button class="gold-btn">ОРОХ</button>
     `;
 
-    card.querySelector("button").addEventListener("click", () => {
-      joinTable(id);
-    });
-
+    card.querySelector("button").onclick = () => joinTable(id);
     list.appendChild(card);
   });
 }
@@ -665,8 +793,8 @@ function joinTable(tableId) {
   }
 
   socket.emit("table:join", { tableId }, result => {
-    if (!result || !result.success) {
-      alert(result?.message || "Ширээнд сууж чадсангүй");
+    if (result && result.error) {
+      alert(result.error);
       return;
     }
 
@@ -674,19 +802,20 @@ function joinTable(tableId) {
     $("lobbyPage").style.display = "none";
     $("tablePage").style.display = "block";
 
-    if (result.table) {
+    if (result && result.table) {
       lastState = result.table;
       renderTable(result.table);
+    } else if (result && result.state) {
+      lastState = result.state;
+      renderTable(result.state);
     }
   });
 }
 
 function cardHtml(card) {
-  if (!card) {
-    return '<div class="playing-card" style="background:#ddd">?</div>';
-  }
+  if (!card) return "";
 
-  const value = card.rank || card.value || card.card || "";
+  const rank = card.rank || card.value || "";
   const suit = card.suit || "";
   const red = ["♥", "♦", "hearts", "diamonds", "heart", "diamond"]
     .includes(String(suit).toLowerCase());
@@ -705,50 +834,113 @@ function cardHtml(card) {
   const symbol = symbols[String(suit).toLowerCase()] || suit;
 
   return `<div class="playing-card ${red ? "red" : ""}">
-    ${escapeHtml(String(value))}${escapeHtml(String(symbol))}
+    ${escapeHtml(String(rank))}${escapeHtml(String(symbol))}
   </div>`;
 }
 
-function renderTable(data) {
-  if (!data) return;
+function getPlayerName(player) {
+  return player?.username ||
+    player?.name ||
+    player?.user?.username ||
+    player?.user?.name ||
+    "Тоглогч";
+}
 
-  const table = data.table || data;
-  const players = table.players || table.seats || [];
-  const board = table.board || table.communityCards || [];
+function getPlayerChips(player) {
+  return player?.chips ??
+    player?.stack ??
+    player?.balance ??
+    player?.chipCount ??
+    0;
+}
+
+function renderSeat(player, index) {
+  const seat = $("seat" + index);
+
+  if (!player) {
+    seat.className = "seat seat-" + (index + 1) + " seat-empty";
+    seat.innerHTML = `
+      <div class="avatar">＋</div>
+      <strong>СУЛ СУУДАЛ</strong>
+      <small>Нээлттэй</small>
+    `;
+    return;
+  }
+
+  const name = getPlayerName(player);
+  const chips = Number(getPlayerChips(player)).toLocaleString("en-US");
+  const initial = name.trim().charAt(0).toUpperCase() || "P";
+
+  const isMe =
+    player.id === user?.id ||
+    player.userId === user?.id ||
+    player.username === user?.username;
+
+  seat.className = "seat seat-" + (index + 1);
+
+  seat.innerHTML = `
+    <div class="avatar">${escapeHtml(initial)}</div>
+    <strong>${escapeHtml(name)}</strong>
+    <div class="chip-display">
+      <span class="chip-icon"></span>
+      <span>${chips} CHIP</span>
+    </div>
+    ${isMe ? '<small style="color:#f6d98e">ТАНЫ СУУДАЛ</small>' : ""}
+  `;
+}
+
+function renderTable(state) {
+  if (!state) return;
+
+  const table = state.table || state;
+  const players = table.players || state.players || [];
+  const seats = table.seats || state.seats || [];
 
   $("tableTitle").textContent =
     table.name || table.title || "BLACKCLUB POKER";
 
   $("tableInfo").textContent =
-    String(table.type || table.game || "").toUpperCase();
+    table.type || table.gameType || "";
 
-  $("potAmount").textContent =
-    table.pot ?? table.totalPot ?? 0;
+  $("potAmount").textContent = Number(
+    state.pot ?? table.pot ?? 0
+  ).toLocaleString("en-US");
+
+  const board = state.communityCards ||
+    state.board ||
+    table.communityCards ||
+    [];
 
   $("boardCards").innerHTML = board.map(cardHtml).join("");
 
-  for (let i = 0; i < 6; i++) {
-    const seat = $("seat" + i);
-    const player = players[i];
+  const seatPlayers = Array(6).fill(null);
 
-    if (!player) {
-      seat.innerHTML = `<strong>СУУДАЛ ${i + 1}</strong><small>Хоосон</small>`;
-      continue;
-    }
+  if (Array.isArray(seats) && seats.length) {
+    seats.forEach((seat, index) => {
+      if (index < 6) {
+        seatPlayers[index] = seat?.player || seat || null;
+      }
+    });
+  } else if (Array.isArray(players)) {
+    players.forEach((player, index) => {
+      const position = Number.isInteger(player.seat)
+        ? player.seat
+        : index;
 
-    const name = player.username || player.name || "PLAYER";
-    const chips = player.chips ?? player.stack ?? 0;
-
-    seat.innerHTML = `
-      <strong>${escapeHtml(name)}</strong>
-      <small>${escapeHtml(String(chips))} chips</small>
-    `;
+      if (position >= 0 && position < 6) {
+        seatPlayers[position] = player;
+      }
+    });
   }
+
+  seatPlayers.forEach((player, index) => {
+    renderSeat(player, index);
+  });
 }
 
 function sendAction(action) {
-  if (!socket || !currentTable) {
-    alert("Эхлээд ширээнд сууна уу");
+  if (!socket || !socket.connected || !currentTable) {
+    alert("Ширээнд холбогдоогүй байна.");
     return;
   }
 
@@ -761,7 +953,8 @@ function sendAction(action) {
 }
 
 function nextHand() {
-  if (!socket || !currentTable) return;
+  if (!socket || !socket.connected || !currentTable) return;
+
   socket.emit("game:next");
 }
 
@@ -770,15 +963,11 @@ function leaveTable() {
     socket.emit("table:leave");
   }
 
-  currentTable = null;
-  lastState = null;
   showLobby();
-
-  if (socket) socket.emit("lobby:get");
 }
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, char => ({
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
