@@ -992,9 +992,53 @@ body.game-active #tablePage .poker-table {
 .auth-foot{margin-top:17px;padding-top:14px;border-top:1px solid #ffffff10;color:#62666b;font-size:8px;letter-spacing:2px}
 .auth-foot b{color:#bd9855;padding:0 5px}
 @media(max-width:480px){.auth-screen{padding:16px}.auth-box{padding:28px 23px 20px}.auth-brand{font-size:28px}}
-/* Prevent the login overlay itself from creating a vertical page scrollbar. */
-body:has(#authScreen:not([style*="display: none"])) { overflow:hidden; }
-.auth-screen{overscroll-behavior:none;}
+/* LOGIN FIX: keep the screen within the viewport and prevent autofill white boxes. */
+html, body { min-height:100%; }
+body:has(#authScreen:not([style*="display: none"])) {
+  height:100%; min-height:100svh; overflow:hidden;
+}
+.auth-screen {
+  position:fixed; inset:0; width:100%; height:100%; min-height:0;
+  padding:12px; overflow:hidden; overscroll-behavior:none;
+  display:flex; align-items:center; justify-content:center;
+}
+.auth-box {
+  width:min(430px,100%); max-height:calc(100svh - 24px);
+  overflow:hidden; padding:26px 32px 20px; margin:auto;
+}
+.auth-divider { margin:19px 0 17px; }
+.auth-label { margin:11px 0 6px; }
+.auth-box .auth-input-wrap input,
+.auth-box .auth-input-wrap input:focus,
+.auth-box .auth-input-wrap input:-webkit-autofill,
+.auth-box .auth-input-wrap input:-webkit-autofill:hover,
+.auth-box .auth-input-wrap input:-webkit-autofill:focus {
+  color:#f1d28a !important;
+  -webkit-text-fill-color:#f1d28a !important;
+  caret-color:#f1d28a;
+  -webkit-box-shadow:0 0 0 1000px #0b1118 inset !important;
+  box-shadow:0 0 0 1000px #0b1118 inset !important;
+  transition:background-color 999999s ease-out 0s;
+}
+.auth-register-note { margin:13px 0 0; }
+.auth-box #loginBtn { margin-top:18px; }
+.auth-box #registerBtn { margin-top:7px; }
+.auth-box .message { min-height:0; margin-top:7px; }
+@media(max-height:650px) {
+  .auth-box { padding:17px 26px 13px; }
+  .auth-crown { width:44px; height:44px; margin-bottom:7px; font-size:25px; }
+  .auth-brand { font-size:27px; }
+  .auth-subtitle { margin-top:4px; }
+  .auth-divider { margin:12px 0 10px; }
+  .auth-label { margin:8px 0 5px; }
+  .auth-input-wrap { height:43px; }
+  .auth-box #loginBtn { height:44px; margin-top:13px; }
+  .auth-register-note { margin-top:9px; }
+  .auth-box #registerBtn { height:35px; margin-top:5px; }
+}
+@media(max-width:480px) {
+  .auth-box { padding:24px 21px 17px; }
+}
 
 </style>
 </head>
@@ -1015,7 +1059,6 @@ body:has(#authScreen:not([style*="display: none"])) { overflow:hidden; }
     <div class="auth-register-note">BLACKCLUB-д шинээр нэгдэх үү?</div>
     <button class="secondary-btn" id="registerBtn" onclick="register()">БҮРТГҮҮЛЭХ</button>
     <div class="message" id="authMessage"></div>
-    <div class="auth-foot">SECURE ACCESS <b>•</b> BLACKCLUB</div>
   </div>
 </div>
 
