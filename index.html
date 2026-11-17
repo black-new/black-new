@@ -949,7 +949,8 @@ body.game-active #tablePage .poker-table {
 
 /* PREMIUM LOGIN ONLY — authentication handlers and IDs are unchanged */
 .auth-screen{
-  overflow:auto;
+  overflow:hidden;
+  min-height:100svh;
   background:
     radial-gradient(ellipse at 50% 38%,rgba(31,54,76,.52),transparent 43%),
     radial-gradient(circle at 15% 85%,rgba(172,126,48,.10),transparent 28%),
@@ -991,6 +992,9 @@ body.game-active #tablePage .poker-table {
 .auth-foot{margin-top:17px;padding-top:14px;border-top:1px solid #ffffff10;color:#62666b;font-size:8px;letter-spacing:2px}
 .auth-foot b{color:#bd9855;padding:0 5px}
 @media(max-width:480px){.auth-screen{padding:16px}.auth-box{padding:28px 23px 20px}.auth-brand{font-size:28px}}
+/* Prevent the login overlay itself from creating a vertical page scrollbar. */
+body:has(#authScreen:not([style*="display: none"])) { overflow:hidden; }
+.auth-screen{overscroll-behavior:none;}
 
 </style>
 </head>
@@ -1202,7 +1206,9 @@ async function api(path, data = {}) {
 }
 
 function getUsername() {
-  return user?.username || user?.name || "Тоглогч";
+  const rawName = String(user?.username || user?.name || "Тоглогч").trim();
+  // Keep the internal admin account name out of the public header/profile UI.
+  return rawName.toLowerCase() === "admin" ? "BLACKCLUB" : rawName;
 }
 
 function getBalance() {
@@ -1268,7 +1274,7 @@ function openAccountSection(section) {
       </div>
       <div class="account-info-row">
         <span>Эрх</span>
-        <strong>${escapeHtml(user?.role || "Хэрэглэгч")}</strong>
+        <strong>${String(user?.role || "Хэрэглэгч").toLowerCase() === "admin" ? "Удирдлага" : escapeHtml(user?.role || "Хэрэглэгч")}</strong>
       </div>
       <div class="account-info-row">
         <span>CHIP үлдэгдэл</span>
