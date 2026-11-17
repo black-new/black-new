@@ -945,6 +945,53 @@ body.game-active #tablePage .poker-table {
   body.game-active #tablePage .actions { flex:0 0 auto; }
 }
 
+
+
+/* PREMIUM LOGIN ONLY — authentication handlers and IDs are unchanged */
+.auth-screen{
+  overflow:auto;
+  background:
+    radial-gradient(ellipse at 50% 38%,rgba(31,54,76,.52),transparent 43%),
+    radial-gradient(circle at 15% 85%,rgba(172,126,48,.10),transparent 28%),
+    radial-gradient(circle at 85% 12%,rgba(172,126,48,.09),transparent 25%),
+    #05070a;
+}
+.auth-screen:before,.auth-screen:after{
+  content:"";position:absolute;width:340px;height:340px;border:1px solid rgba(207,166,86,.10);
+  border-radius:50%;pointer-events:none
+}
+.auth-screen:before{left:-210px;top:-210px;box-shadow:0 0 0 28px rgba(207,166,86,.025),0 0 0 56px rgba(207,166,86,.018)}
+.auth-screen:after{right:-210px;bottom:-210px;box-shadow:0 0 0 28px rgba(207,166,86,.025),0 0 0 56px rgba(207,166,86,.018)}
+.auth-box{
+  position:relative;width:min(430px,100%);padding:34px 38px 25px;text-align:center;
+  border:1px solid #8c6b35;border-radius:15px;
+  background:linear-gradient(155deg,rgba(19,24,30,.98),rgba(7,10,14,.99) 65%);
+  box-shadow:0 24px 80px #000c,0 0 0 5px rgba(194,151,70,.045),inset 0 1px rgba(255,255,255,.055)
+}
+.auth-crown{width:58px;height:58px;margin:0 auto 12px;display:grid;place-items:center;border:1px solid #c49a4d;border-radius:50%;color:#e9c779;font-size:31px;text-shadow:0 2px 12px #c28d38;box-shadow:0 0 25px #c49a4d22}
+.auth-brand{font-size:32px;font-weight:900;letter-spacing:5px;color:#f1d28a;text-shadow:0 2px 18px #b4863a44}
+.auth-brand span{color:#fff}
+.auth-subtitle{margin-top:7px;color:#a99a7b;font-size:10px;letter-spacing:4px}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:27px 0 23px;color:#b99a5e;font-size:9px;letter-spacing:2.5px;white-space:nowrap}
+.auth-divider i{height:1px;flex:1;background:linear-gradient(90deg,transparent,#8e6c36)}
+.auth-divider i:last-child{background:linear-gradient(90deg,#8e6c36,transparent)}
+.auth-label{display:block;text-align:left;margin:15px 0 7px;color:#cbb783;font-size:10px;font-weight:bold;letter-spacing:1.5px}
+.auth-input-wrap{height:49px;display:flex;align-items:center;gap:11px;padding:0 13px;border:1px solid #806334;border-radius:7px;background:linear-gradient(100deg,#080c11,#10151b);box-shadow:inset 0 2px 8px #0008;transition:border-color .2s,box-shadow .2s}
+.auth-input-wrap:focus-within{border-color:#e3bd70;box-shadow:0 0 0 2px #d4aa5922,inset 0 2px 8px #0008}
+.auth-input-wrap>span{width:17px;color:#c9a45d;font-size:16px}
+.auth-box .auth-input-wrap input{width:100%;height:100%;margin:0;padding:0;border:0;outline:0;background:transparent;color:#fff;font-size:14px;box-shadow:none}
+.auth-box .auth-input-wrap input::placeholder{color:#74777b}
+.auth-box #loginBtn{height:49px;margin-top:24px;border-radius:7px;background:linear-gradient(110deg,#f0d58f,#c3984d 55%,#e4c477);color:#171108;font-size:14px;font-weight:900;letter-spacing:2px;box-shadow:0 7px 22px #bd914333,inset 0 1px #fff8}
+.auth-box #loginBtn span{float:right;font-size:20px;line-height:15px}
+.auth-box #loginBtn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.auth-register-note{margin:22px 0 2px;color:#858585;font-size:11px}
+.auth-box #registerBtn{height:40px;margin-top:8px;border:1px solid #806334;border-radius:7px;background:#11161c;color:#e0c17d;font-size:11px;font-weight:bold;letter-spacing:1.7px}
+.auth-box #registerBtn:hover{background:#1b2026;border-color:#c49a4d}
+.auth-box .message{min-height:16px;color:#ff9696}
+.auth-foot{margin-top:17px;padding-top:14px;border-top:1px solid #ffffff10;color:#62666b;font-size:8px;letter-spacing:2px}
+.auth-foot b{color:#bd9855;padding:0 5px}
+@media(max-width:480px){.auth-screen{padding:16px}.auth-box{padding:28px 23px 20px}.auth-brand{font-size:28px}}
+
 </style>
 </head>
 
@@ -952,13 +999,19 @@ body.game-active #tablePage .poker-table {
 
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
-    <h1>BLACKCLUB</h1>
-    <p style="text-align:center;color:#aaa">ONLINE POKER CLUB</p>
-    <input id="authUsername" placeholder="Хэрэглэгчийн нэр">
-    <input id="authPassword" type="password" placeholder="Нууц үг">
-    <button class="gold-btn" id="loginBtn" onclick="login()">НЭВТРЭХ</button>
+    <div class="auth-crown">♠</div>
+    <div class="auth-brand">BLACK<span>CLUB</span></div>
+    <div class="auth-subtitle">PRIVATE POKER CLUB</div>
+    <div class="auth-divider"><i></i><span>WELCOME BACK</span><i></i></div>
+    <label class="auth-label" for="authUsername">ХЭРЭГЛЭГЧИЙН НЭР</label>
+    <div class="auth-input-wrap"><span>♙</span><input id="authUsername" placeholder="Нэрээ оруулна уу" autocomplete="username"></div>
+    <label class="auth-label" for="authPassword">НУУЦ ҮГ</label>
+    <div class="auth-input-wrap"><span>◆</span><input id="authPassword" type="password" placeholder="Нууц үгээ оруулна уу" autocomplete="current-password"></div>
+    <button class="gold-btn" id="loginBtn" onclick="login()">НЭВТРЭХ <span>→</span></button>
+    <div class="auth-register-note">BLACKCLUB-д шинээр нэгдэх үү?</div>
     <button class="secondary-btn" id="registerBtn" onclick="register()">БҮРТГҮҮЛЭХ</button>
     <div class="message" id="authMessage"></div>
+    <div class="auth-foot">SECURE ACCESS <b>•</b> BLACKCLUB</div>
   </div>
 </div>
 
