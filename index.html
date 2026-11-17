@@ -1040,6 +1040,56 @@ body:has(#authScreen:not([style*="display: none"])) {
   .auth-box { padding:24px 21px 17px; }
 }
 
+
+/* BLACKCLUB MONGOLIAN LOBBY REFRESH */
+#lobbyPage{
+  width:min(1440px,96%); margin:22px auto 34px; display:grid;
+  grid-template-columns:224px minmax(0,1fr); gap:20px; align-items:start;
+}
+.lobby-sidebar{background:linear-gradient(180deg,#101d2d,#0a1421);border:1px solid #263b53;border-radius:15px;padding:17px;position:sticky;top:92px}
+.lobby-brand{display:flex;align-items:center;gap:9px;padding:5px 4px 17px;border-bottom:1px solid #29384a;margin-bottom:15px;color:#f0c66e;font-weight:900;letter-spacing:2px}
+.lobby-brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#f2d58c,#a8792f);color:#17130b;display:grid;place-items:center;font-size:21px}
+.lobby-nav{display:grid;gap:6px}
+.lobby-nav button{width:100%;display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:#c4cedb;text-align:left;font-size:13px}
+.lobby-nav button span{width:20px;text-align:center;color:#d5ad60;font-size:16px}
+.lobby-nav button:hover,.lobby-nav button.active{background:linear-gradient(90deg,#302719,#1b2430);border-color:#66502e;color:#f4d58e}
+.lobby-side-note{margin-top:18px;padding:13px;border:1px solid #4b3b25;border-radius:11px;background:linear-gradient(145deg,#211b12,#101925)}
+.lobby-side-note strong{display:block;color:#e8bd62;font-size:12px;letter-spacing:1px}
+.lobby-side-note p{margin:6px 0 0;color:#9da9b7;font-size:11px;line-height:1.5}
+.lobby-content{min-width:0}
+.lobby-welcome{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 23px;margin-bottom:16px;border:1px solid #30435a;border-radius:15px;background:radial-gradient(ellipse at 85% 10%,#1d3550 0%,transparent 48%),linear-gradient(120deg,#101d2d,#0a1420);}
+.lobby-welcome h1{margin:0 0 6px;color:#f1d18a;font-size:clamp(21px,3vw,29px);letter-spacing:1px}
+.lobby-welcome p{margin:0;color:#aab6c4;font-size:13px}
+.lobby-welcome-balance{flex-shrink:0;padding:11px 15px;border:1px solid #70562e;border-radius:10px;background:#171a19;text-align:right}
+.lobby-welcome-balance small{display:block;color:#9da9b7;font-size:10px;margin-bottom:5px}
+.lobby-welcome-balance strong{color:#f0ca77;font-size:17px}
+.lobby-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-bottom:16px}
+.lobby-shortcut{display:flex;align-items:center;gap:11px;min-height:67px;padding:13px 15px;border:1px solid #2a3d53;border-radius:12px;background:#101b29;color:#e9edf2;text-align:left}
+.lobby-shortcut:hover{border-color:#b18a49;background:#172638}
+.lobby-shortcut i{font-style:normal;font-size:21px;color:#e0b966}
+.lobby-shortcut strong{display:block;font-size:13px}
+.lobby-shortcut small{display:block;margin-top:4px;color:#91a0b1;font-size:10px}
+#lobbyPage .panel{margin:0 0 15px;padding:18px;border-radius:14px;background:#0d1927;border-color:#2a3e55}
+#lobbyPage .panel-title{margin-bottom:14px}
+#lobbyPage .panel-title h2{font-size:17px;color:#f0ca78;letter-spacing:.7px}
+#lobbyPage .tabs{gap:7px}
+#lobbyPage .tab{padding:8px 13px;border-radius:7px;background:#111f2e;border-color:#34465a;color:#bdc8d5;font-size:11px}
+#lobbyPage .tab.active{background:linear-gradient(135deg,#f0d28a,#b8893d);border-color:#d5ae65;color:#17130b}
+#lobbyPage .table-list{display:grid;grid-template-columns:1fr;gap:8px}
+#lobbyPage .table-card{display:grid;grid-template-columns:minmax(150px,1.5fr) minmax(95px,.8fr) minmax(105px,1fr) auto;align-items:center;gap:12px;padding:13px 15px;border:1px solid #293d53;border-radius:10px;background:linear-gradient(100deg,#122237,#0d1927)}
+#lobbyPage .table-card:hover{border-color:#92713d;background:linear-gradient(100deg,#182b42,#101e2e)}
+#lobbyPage .table-card h3{margin:0 0 4px;color:#f0ca78;font-size:14px}
+#lobbyPage .table-card p{margin:0;color:#9eacbb;font-size:11px}
+.lobby-table-meta{color:#c5cfdb;font-size:12px}
+.lobby-table-meta small{display:block;color:#8293a5;font-size:10px;margin-bottom:4px}
+.lobby-table-status{color:#62d59b;font-size:11px;white-space:nowrap}
+#lobbyPage .table-card .gold-btn{padding:9px 16px;border-radius:7px;font-size:11px;white-space:nowrap}
+.lobby-empty{padding:28px 12px;text-align:center;color:#9eacbb;border:1px dashed #34485e;border-radius:10px;font-size:13px}
+#lobbyPage .contacts{display:flex;gap:10px;flex-wrap:wrap}
+#lobbyPage .contacts a{color:#d9b66e;border:1px solid #4a3b27;border-radius:7px;padding:8px 12px;text-decoration:none;font-size:11px}
+@media(max-width:850px){#lobbyPage{grid-template-columns:1fr;gap:13px}.lobby-sidebar{position:static;padding:12px}.lobby-brand{padding-bottom:10px;margin-bottom:10px}.lobby-nav{grid-template-columns:repeat(4,minmax(0,1fr))}.lobby-nav button{justify-content:center;padding:9px 5px;font-size:10px;gap:5px}.lobby-nav button span{width:auto}.lobby-side-note{display:none}}
+@media(max-width:560px){#lobbyPage{width:94%;margin:13px auto 25px}.lobby-welcome{padding:15px;align-items:flex-start;flex-direction:column}.lobby-welcome-balance{width:100%;text-align:left}.lobby-shortcuts{grid-template-columns:1fr}.lobby-shortcut{min-height:55px}#lobbyPage .table-card{grid-template-columns:1fr auto;gap:8px}#lobbyPage .table-card .lobby-table-meta{grid-column:1}#lobbyPage .table-card .gold-btn{grid-column:2;grid-row:1 / span 2}#lobbyPage .panel{padding:13px}.lobby-nav{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
 </style>
 </head>
 
@@ -1123,37 +1173,48 @@ body:has(#authScreen:not([style*="display: none"])) {
 </div>
 
 <main id="lobbyPage">
-  <section class="hero">
-    <h1>WELCOME TO BLACKCLUB</h1>
-    <p>Тавтай морил. Өөрийн ширээг сонгоод тоглоомдоо нэгдээрэй.</p>
-  </section>
+  <aside class="lobby-sidebar">
+    <div class="lobby-brand"><span class="lobby-brand-mark">♠</span><span>BLACKCLUB</span></div>
+    <nav class="lobby-nav">
+      <button class="active" onclick="showPage('lobby')"><span>⌂</span>Нүүр</button>
+      <button onclick="showPage('lobby')"><span>♠</span>Бүх ширээ</button>
+      <button onclick="alert('Тэмцээн удахгүй')"><span>♜</span>Тэмцээн</button>
+      <button onclick="alert('Тоглогчдын жагсаалт удахгүй')"><span>♟</span>Тоглогчид</button>
+      <button onclick="openAccountSection('history')"><span>◷</span>Тоглолтын түүх</button>
+      <button onclick="openAccountSection('balance')"><span>◉</span>Миний хэтэвч</button>
+      <button onclick="openAccountSection('settings')"><span>⚙</span>Тохиргоо</button>
+      <button onclick="logout()"><span>⇥</span>Гарах</button>
+    </nav>
+    <div class="lobby-side-note"><strong>♛ BLACKCLUB</strong><p>Тавтай морил. Өөрийн ширээг сонгоод тоглоомдоо нэгдээрэй.</p></div>
+  </aside>
 
-  <div class="nav-grid">
-    <div class="nav-card" onclick="showPage('lobby')">♠ ШИРЭЭ</div>
-    <div class="nav-card" onclick="alert('Тэмцээн удахгүй')">🏆 ТЭМЦЭЭН</div>
-    <div class="nav-card" onclick="alert('Шагнал удахгүй')">🎁 ШАГНАЛ</div>
+  <div class="lobby-content">
+    <section class="lobby-welcome">
+      <div><h1>Тавтай морил, <span id="lobbyWelcomeName">тоглогч</span></h1><p>Өнөөдөр аль ширээнд тоглох вэ?</p></div>
+      <div class="lobby-welcome-balance"><small>МИНИЙ CHIP ҮЛДЭГДЭЛ</small><strong id="lobbyBalance">0 CHIP</strong></div>
+    </section>
+
+    <div class="lobby-shortcuts">
+      <button class="lobby-shortcut" onclick="showPage('lobby')"><i>♠</i><span><strong>Бүх ширээ</strong><small>Тоглох ширээгээ сонгох</small></span></button>
+      <button class="lobby-shortcut" onclick="alert('Тэмцээн удахгүй')"><i>🏆</i><span><strong>Тэмцээн</strong><small>Тэмцээний мэдээлэл</small></span></button>
+      <button class="lobby-shortcut" onclick="openAccountSection('history')"><i>◷</i><span><strong>Тоглолтын түүх</strong><small>Өмнөх тоглолтууд</small></span></button>
+    </div>
+
+    <section class="panel">
+      <div class="panel-title"><h2>ПОКЕРЫН ШИРЭЭНҮҮД</h2><span id="onlineCount">0 онлайн</span></div>
+      <div class="tabs">
+        <button class="tab active" onclick="setFilter('all',this)">Бүх ширээ</button>
+        <button class="tab" onclick="setFilter('texas',this)">Техас</button>
+        <button class="tab" onclick="setFilter('omaha',this)">Омаха</button>
+      </div>
+      <div class="table-list" id="tableList"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><h2>ХОЛБОО БАРИХ</h2></div>
+      <div class="contacts"><a href="https://t.me/" target="_blank" rel="noopener">TELEGRAM</a><a href="https://facebook.com/" target="_blank" rel="noopener">FACEBOOK</a></div>
+    </section>
   </div>
-
-  <section class="panel">
-    <div class="panel-title">
-      <h2>ПОКЕРЫН ШИРЭЭ</h2>
-      <span id="onlineCount">0 ONLINE</span>
-    </div>
-    <div class="tabs">
-      <button class="tab active" onclick="setFilter('all',this)">БҮГД</button>
-      <button class="tab" onclick="setFilter('texas',this)">TEXAS</button>
-      <button class="tab" onclick="setFilter('omaha',this)">OMAHA</button>
-    </div>
-    <div class="table-list" id="tableList"></div>
-  </section>
-
-  <section class="panel">
-    <h2 style="color:var(--gold)">ХОЛБОО БАРИХ</h2>
-    <div class="contacts">
-      <a href="https://t.me/" target="_blank">TELEGRAM</a>
-      <a href="https://facebook.com/" target="_blank">FACEBOOK</a>
-    </div>
-  </section>
 </main>
 
 <main id="tablePage">
@@ -1278,6 +1339,8 @@ function updateHeader() {
   if ($("sideUserName")) $("sideUserName").textContent = name;
   if ($("sideBalance")) $("sideBalance").textContent = balance;
   if ($("sideAvatar")) $("sideAvatar").textContent = initial;
+  if ($("lobbyWelcomeName")) $("lobbyWelcomeName").textContent = name;
+  if ($("lobbyBalance")) $("lobbyBalance").textContent = balance;
 }
 
 function toggleAccountMenu() {
@@ -1576,46 +1639,47 @@ function renderTables() {
 
   const tables = allTables.filter(table => {
     if (filter === "all") return true;
-
-    const type = String(
-      table.type || table.gameType || table.game || ""
-    ).toLowerCase();
-
+    const type = String(table.type || table.gameType || table.game || "").toLowerCase();
     return type.includes(filter);
   });
 
   if (!tables.length) {
-    list.innerHTML =
-      '<p style="color:#aaa">Одоогоор ширээ алга байна.</p>';
+    list.innerHTML = '<div class="lobby-empty">Одоогоор нээлттэй ширээ алга байна.</div>';
     return;
   }
 
+  const formatAmount = value => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toLocaleString("en-US") : String(value);
+  };
+
   tables.forEach(table => {
     const id = table.id || table.tableId;
-    const name = table.name || table.title || "Poker Table";
-    const game = table.type || table.gameType || table.game || "Poker";
-    const players = table.players?.length ??
-      table.playerCount ??
-      table.seats?.filter(Boolean).length ??
-      0;
-
+    const name = table.name || table.title || "Покерын ширээ";
+    const rawGame = table.type || table.gameType || table.game || "Покер";
+    const game = String(rawGame).toLowerCase().includes("omaha") ? "Омаха" :
+      (String(rawGame).toLowerCase().includes("texas") ? "Техас" : String(rawGame));
+    const players = table.players?.length ?? table.playerCount ?? table.seats?.filter(Boolean).length ?? 0;
     const maxPlayers = table.maxPlayers || 6;
-    const card = document.createElement("div");
+    const smallBlind = table.smallBlind ?? table.blinds?.small ?? table.smallBlindAmount;
+    const bigBlind = table.bigBlind ?? table.blinds?.big ?? table.bigBlindAmount;
+    const stakes = smallBlind != null && bigBlind != null
+      ? `${formatAmount(smallBlind)} / ${formatAmount(bigBlind)} CHIP`
+      : (table.stakes ? escapeHtml(String(table.stakes)) : "Түвшин тодорхойгүй");
 
+    const card = document.createElement("div");
     card.className = "table-card";
     card.innerHTML = `
-      <div>
-        <h3>${escapeHtml(name)}</h3>
-        <p>${escapeHtml(String(game))} · ${players}/${maxPlayers} тоглогч</p>
-      </div>
-      <button class="gold-btn">ОРОХ</button>
+      <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(game)} · ${players}/${maxPlayers} тоглогч</p></div>
+      <div class="lobby-table-meta"><small>БОOЦОО</small>${stakes}</div>
+      <div class="lobby-table-meta"><small>СУУДАЛ</small><span class="lobby-table-status">● ${players < maxPlayers ? "Сул суудалтай" : "Дүүрсэн"}</span></div>
+      <button class="gold-btn" ${players >= maxPlayers ? "disabled" : ""}>${players >= maxPlayers ? "ДҮҮРСЭН" : "ШИРЭЭНД СУУХ"}</button>
     `;
-
-    card.querySelector("button").onclick = () => joinTable(id);
+    const joinButton = card.querySelector("button");
+    if (players < maxPlayers) joinButton.onclick = () => joinTable(id);
     list.appendChild(card);
   });
 }
-
 function joinTable(tableId) {
   if (!socket || !socket.connected) {
     alert("Сервертэй холбогдоогүй байна. Дахин оролдоно уу.");
