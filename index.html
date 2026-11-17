@@ -699,6 +699,92 @@ body.classic-cards .playing-card.red{color:#d21e28}
   .seat strong{font-size:13px}
 }
 
+
+/* ===== BLACKCLUB TABLE LAYOUT FIX — desktop + mobile ===== */
+#tablePage{width:100%;max-width:none;margin:0 auto;padding:10px clamp(12px,2vw,30px) 12px}
+#tablePage>.secondary-btn{margin:0 0 8px 2px;padding:8px 16px;border-radius:10px}
+#tablePage>.panel{padding:12px clamp(12px,1.7vw,24px) 10px;border-radius:16px;overflow:visible}
+#tablePage .panel-title{margin:0 0 4px;align-items:center}
+#tablePage .panel-title h2{font-size:clamp(15px,1.3vw,20px);letter-spacing:.5px}
+#tablePage .panel-title span{color:#f1ce79;font-weight:700;font-size:13px}
+.poker-table{
+  width:min(100%,1320px);
+  height:clamp(390px,calc(100svh - 300px),650px);
+  min-height:0;
+  aspect-ratio:1.82/1;
+  margin:8px auto 10px;
+  border:10px solid #b88a3d;
+  border-radius:50%;
+  box-shadow:inset 0 0 0 3px #f2d48a,inset 0 0 0 8px #102c52,inset 0 0 45px #001126,0 12px 36px #000c,0 0 20px #c18d3b33;
+  background:radial-gradient(ellipse at 50% 48%,#0750a0 0%,#07366f 55%,#031a39 100%);
+}
+.table-inner{inset:13px;border:2px solid rgba(238,198,111,.8);border-radius:50%}
+.table-name{top:20%;font-size:clamp(11px,1vw,15px);color:#f5d78e;text-shadow:0 2px 8px #000;letter-spacing:3px}
+.pot{top:29%;font-size:clamp(15px,1.5vw,21px);text-shadow:0 2px 7px #000}
+.pot small{font-size:11px}
+.board{top:53%;gap:clamp(5px,.7vw,10px)}
+.playing-card{width:clamp(38px,4.2vw,62px);height:clamp(54px,6vw,86px);font-size:clamp(18px,2vw,27px);border-radius:7px;border:2px solid #f3d58a;box-shadow:0 5px 12px #0008}
+.seat{
+  width:164px;min-height:62px;height:auto;padding:6px 8px 6px 39px;
+  display:flex;align-items:center;justify-content:flex-start;gap:5px;
+  border-radius:13px;border:1px solid #d5ad5b;
+  background:linear-gradient(110deg,#071321f2,#101e31ed 72%,#050b14f5);
+  box-shadow:0 5px 16px #000b,0 0 10px #d6a84a22;
+  text-align:left;overflow:visible;
+}
+.seat .avatar{position:absolute;left:-19px;top:50%;transform:translateY(-50%);width:54px;height:54px;margin:0;border:3px solid #edc96d;background:radial-gradient(circle at 35% 25%,#b98b39,#101d32 75%);font-size:21px;box-shadow:0 0 0 3px #091321,0 0 17px #e3b95a66}
+.seat-info{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.seat strong{max-width:100%;margin:0;color:#fff;font-size:13px;line-height:1.2}
+.seat small{font-size:9px}
+.seat .chip-display{margin:0;padding:2px 6px;border:0;background:transparent;color:#f4d27e;font-size:12px;white-space:nowrap}
+.seat .chip-icon{width:10px;height:10px}
+.seat .seat-me{color:#f6d98e;font-weight:bold}
+.seat-empty{opacity:.78}
+.seat-1{top:3%;left:23%}.seat-2{top:3%;right:23%}
+.seat-3{top:43%;right:1%}.seat-4{bottom:3%;right:23%}
+.seat-5{bottom:3%;left:23%}.seat-6{top:43%;left:1%}
+.actions{max-width:1320px;margin:4px auto 0;padding:10px 4px 2px;gap:10px;flex-wrap:nowrap;border-top:1px solid #594629}
+.actions button{min-height:58px;min-width:112px!important;border-radius:12px;font-size:15px;letter-spacing:.4px}
+.actions .secondary-btn{background:linear-gradient(145deg,#102b50,#07172d);border:1px solid #a17a3c;color:#fff}
+.actions input{height:48px;width:150px;border-radius:10px}
+.actions .gold-btn{min-width:130px!important}
+
+@media(min-width:701px){
+  body:has(#tablePage[style*="display: block"]){overflow:hidden}
+  #tablePage{height:calc(100svh - 72px);overflow:hidden;display:none}
+  #tablePage[style*="display: block"]{display:flex!important;flex-direction:column}
+  #tablePage>.panel{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-between}
+  .poker-table{flex:1 1 auto;min-height:0;height:auto;max-height:650px}
+  .actions{flex:0 0 auto}
+}
+@media(max-width:700px){
+  #tablePage{height:auto;min-height:calc(100svh - 60px);padding:8px 7px 18px;overflow:visible}
+  #tablePage>.secondary-btn{margin:0 0 7px 4px}
+  #tablePage>.panel{padding:9px 5px 10px}
+  #tablePage .panel-title{padding:0 7px}
+  #tablePage .panel-title h2{font-size:14px}
+  .poker-table{width:min(94vw,430px);height:auto;min-height:0;aspect-ratio:1/1;margin:10px auto 8px;border-width:7px;border-radius:50%;}
+  .table-inner{inset:8px;border-width:1px}
+  .table-name{top:21%;font-size:10px;letter-spacing:2px}
+  .pot{top:31%;font-size:13px}
+  .pot small{font-size:9px;margin-bottom:2px}
+  .board{top:52%;gap:3px;max-width:90%}
+  .playing-card{width:clamp(27px,7.5vw,35px);height:clamp(39px,10.8vw,50px);font-size:clamp(13px,3.8vw,17px);border-radius:5px;border-width:1px}
+  .seat{width:clamp(58px,17vw,72px);min-height:0;height:auto;padding:0;border:0;background:transparent;box-shadow:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;text-align:center;border-radius:0;overflow:visible}
+  .seat .avatar{position:static;transform:none;width:clamp(29px,8vw,36px);height:clamp(29px,8vw,36px);font-size:14px;border-width:2px;margin:0 auto 2px;box-shadow:0 0 0 2px #071426,0 0 9px #e3b95a55}
+  .seat-info{align-items:center;gap:0;background:#071321eF;border:1px solid #a98243;border-radius:7px;padding:2px 3px;width:100%;}
+  .seat strong{font-size:clamp(8px,2.2vw,10px);max-width:100%;margin:0;line-height:1.15;text-align:center}
+  .seat .chip-display{font-size:clamp(7px,1.9vw,9px);padding:0;margin:0;gap:2px}
+  .seat .chip-icon{width:7px;height:7px;border-width:1px}
+  .seat small{font-size:7px}
+  .seat-1{top:3%;left:17%}.seat-2{top:3%;right:17%}
+  .seat-3{top:40%;right:-1%}.seat-4{bottom:3%;right:17%}
+  .seat-5{bottom:3%;left:17%}.seat-6{top:40%;left:-1%}
+  .actions{padding:9px 5px 2px;gap:5px;flex-wrap:wrap;margin-top:3px}
+  .actions button{min-width:0!important;flex:1 1 28%;min-height:42px;padding:8px 5px;font-size:10px;border-radius:9px}
+  .actions input{flex:1 1 28%;width:auto;height:40px;min-width:70px;padding:7px;font-size:11px}
+}
+
 </style>
 </head>
 
@@ -1313,8 +1399,7 @@ function renderSeat(player, index) {
     seat.className = "seat seat-" + (index + 1) + " seat-empty";
     seat.innerHTML = `
       <div class="avatar">＋</div>
-      <strong>СУЛ СУУДАЛ</strong>
-      <small>Нээлттэй</small>
+      <div class="seat-info"><strong>СУЛ СУУДАЛ</strong><small>Нээлттэй</small></div>
     `;
     return;
   }
@@ -1332,12 +1417,11 @@ function renderSeat(player, index) {
 
   seat.innerHTML = `
     <div class="avatar">${escapeHtml(initial)}</div>
-    <strong>${escapeHtml(name)}</strong>
-    <div class="chip-display">
-      <span class="chip-icon"></span>
-      <span>${chips} CHIP</span>
+    <div class="seat-info">
+      <strong>${escapeHtml(name)}</strong>
+      <div class="chip-display"><span class="chip-icon"></span><span>${chips} CHIP</span></div>
+      ${isMe ? '<small class="seat-me">ТАНЫ СУУДАЛ</small>' : ""}
     </div>
-    ${isMe ? '<small style="color:#f6d98e">ТАНЫ СУУДАЛ</small>' : ""}
   `;
 }
 
