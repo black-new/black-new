@@ -734,6 +734,7 @@ body.classic-cards .playing-card.red{color:#d21e28}
 }
 .seat .avatar{position:absolute;left:-19px;top:50%;transform:translateY(-50%);width:54px;height:54px;margin:0;border:3px solid #edc96d;background:radial-gradient(circle at 35% 25%,#b98b39,#101d32 75%);font-size:21px;box-shadow:0 0 0 3px #091321,0 0 17px #e3b95a66}
 .seat-info{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.my-hand-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;margin:8px auto;color:#e9c878;font-size:10px;font-weight:800;letter-spacing:1px}.my-hand{display:flex;justify-content:center;gap:7px;min-height:58px}.seat.is-turn .seat-info{border-color:#f4d37d;box-shadow:0 0 14px #d7a94b88}
 .seat strong{max-width:100%;margin:0;color:#fff;font-size:13px;line-height:1.2}
 .seat small{font-size:9px}
 .seat .chip-display{margin:0;padding:2px 6px;border:0;background:transparent;color:#f4d27e;font-size:12px;white-space:nowrap}
@@ -830,6 +831,7 @@ header{height:72px;min-height:72px;position:relative;}
 .seat{position:absolute;z-index:5;width:132px;min-height:54px;height:54px;padding:5px 6px 5px 34px;display:flex;align-items:center;justify-content:flex-start;gap:4px;border:1px solid #d6ae5c;border-radius:10px;background:linear-gradient(110deg,#071321f5,#14243aef 72%,#050b14f5);box-shadow:0 4px 13px #000c,0 0 8px #d6a84a22;text-align:left;overflow:visible}
 .seat .avatar{position:absolute;left:-17px;top:50%;transform:translateY(-50%);width:43px;height:43px;margin:0;border:2px solid #f0c96c;background:radial-gradient(circle at 35% 25%,#b98b39,#101d32 75%);font-size:17px;box-shadow:0 0 0 2px #091321,0 0 12px #e3b95a66;z-index:6}
 .seat-info{min-width:0;width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.my-hand-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;margin:8px auto;color:#e9c878;font-size:10px;font-weight:800;letter-spacing:1px}.my-hand{display:flex;justify-content:center;gap:7px;min-height:58px}.seat.is-turn .seat-info{border-color:#f4d37d;box-shadow:0 0 14px #d7a94b88}
 .seat strong{max-width:100%;margin:0;color:#fff;font-size:11px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .seat small{font-size:8px;line-height:1.1}
 .seat .chip-display{margin:0;padding:1px 0;border:0;background:transparent;color:#f4d27e;font-size:10px;white-space:nowrap;gap:3px}
@@ -1341,6 +1343,7 @@ body:has(#authScreen:not([style*="display: none"])) {
         <div class="table-name"><span class="table-spade">♠</span> BLACKCLUB</div>
         <div class="pot"><small>POT</small><span id="potAmount">0</span></div>
         <div class="board" id="boardCards"></div>
+        <div class="my-hand-wrap"><small>ТАНЫ ХӨЗӨР</small><div class="my-hand" id="myHandCards"></div></div>
         <div class="seat seat-1" id="seat0"></div>
         <div class="seat seat-2" id="seat1"></div>
         <div class="seat seat-3" id="seat2"></div>
@@ -1867,8 +1870,8 @@ function connectSocket() {
     const text = typeof message === "string"
       ? message
       : message.message || "Мэдэгдэл";
-
-    console.log("BLACKCLUB:", text);
+    console.warn("BLACKCLUB:", text);
+    alert(text);
   });
 }
 
@@ -1938,14 +1941,22 @@ function joinTable(tableId) {
     alert("Сервертэй холбогдоогүй байна. Дахин оролдоно уу.");
     return;
   }
+  const selectedTable = allTables.find(t => String(t.id || t.tableId) === String(tableId));
+  const buyIn = Number(selectedTable?.minBuyIn || 0);
+  if (buyIn && getBalance() < buyIn) {
+    alert(`Энэ ширээнд суухад хамгийн багадаа ${buyIn.toLocaleString("en-US")} CHIP хэрэгтэй. Таны үлдэгдэл ${getBalance().toLocaleString("en-US")} CHIP байна.`);
+    return;
+  }
 
-  socket.emit("table:join", { tableId }, result => {
+  socket.emit("table:join", { tableId, buyIn }, result => {
     if (!result || result.success === false || result.error) {
       alert(result?.message || result?.error || "Ширээнд суухад алдаа гарлаа.");
       return;
     }
 
     currentTable = tableId;
+    if (Number.isFinite(Number(result.walletChips))) user.chips = Number(result.walletChips);
+    updateHeader();
     document.body.classList.add("game-active");
     $("lobbyPage").style.display = "none";
     $("tablePage").style.display = "block";
@@ -2003,86 +2014,50 @@ function getPlayerChips(player) {
     0;
 }
 
-function renderSeat(player, index) {
+function renderSeat(player, index, table = {}) {
   const seat = $("seat" + index);
-
   if (!player) {
     seat.className = "seat seat-" + (index + 1) + " seat-empty";
-    seat.innerHTML = `
-      <div class="avatar">＋</div>
-      <div class="seat-info"><strong>СУЛ СУУДАЛ</strong><small>Нээлттэй</small></div>
-    `;
+    seat.innerHTML = `<div class="avatar">＋</div><div class="seat-info"><strong>СУЛ СУУДАЛ</strong><small>Нээлттэй</small></div>`;
     return;
   }
-
   const name = getPlayerName(player);
   const chips = Number(getPlayerChips(player)).toLocaleString("en-US");
   const initial = name.trim().charAt(0).toUpperCase() || "P";
-
-  const isMe =
-    player.id === user?.id ||
-    player.userId === user?.id ||
-    player.username === user?.username;
-
-  seat.className = "seat seat-" + (index + 1);
-
+  const myUid = user?.uid || user?.id || user?.userId;
+  const isMe = (player.uid || player.id || player.userId) === myUid || player.username === user?.username;
+  const isTurn = Number(table.currentTurn) === index && table.handStarted;
+  seat.className = "seat seat-" + (index + 1) + (isTurn ? " is-turn" : "");
   seat.innerHTML = `
     <div class="avatar">${escapeHtml(initial)}</div>
     <div class="seat-info">
       <strong>${escapeHtml(name)}</strong>
       <div class="chip-display"><span class="chip-icon"></span><span>${chips} CHIP</span></div>
+      ${player.folded ? '<small>FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : '')}
       ${isMe ? '<small class="seat-me">ТАНЫ СУУДАЛ</small>' : ""}
-    </div>
-  `;
+    </div>`;
 }
 
 function renderTable(state) {
   if (!state) return;
-
   const table = state.table || state;
   const players = table.players || state.players || [];
   const seats = table.seats || state.seats || [];
-
-  $("tableTitle").textContent =
-    table.name || table.title || "BLACKCLUB POKER";
-
-  $("tableInfo").textContent =
-    table.type || table.gameType || "";
-
-  $("potAmount").textContent = Number(
-    state.pot ?? table.pot ?? 0
-  ).toLocaleString("en-US");
-
-  const board = state.communityCards ||
-    state.board ||
-    table.communityCards ||
-    [];
-
+  $("tableTitle").textContent = table.name || table.title || "BLACKCLUB POKER";
+  const streetNames = {waiting:"Хүлээж байна",preflop:"Pre-Flop",flop:"Flop",turn:"Turn",river:"River",showdown:"Тоглолт дууссан"};
+  const turnPlayer = players[table.currentTurn];
+  const turnText = table.handStarted && turnPlayer ? ` · Ээлж: ${getPlayerName(turnPlayer)}` : "";
+  const resultText = table.lastResult ? ` · Ялагч: ${(table.lastResult.winners||[]).join(", ")} (${table.lastResult.hand||""})` : "";
+  $("tableInfo").textContent = `${String(table.type||"").toUpperCase()} · ${streetNames[table.street]||table.street||""}${turnText}${resultText}`;
+  $("potAmount").textContent = Number(table.pot ?? state.pot ?? 0).toLocaleString("en-US");
+  const board = table.communityCards || state.communityCards || [];
   $("boardCards").innerHTML = board.map(cardHtml).join("");
-
+  const me = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username);
+  $("myHandCards").innerHTML = (me?.cards || []).map(cardHtml).join("");
   const seatPlayers = Array(6).fill(null);
-
-  if (Array.isArray(seats) && seats.length) {
-    seats.forEach((seat, index) => {
-      if (index < 6) {
-        seatPlayers[index] = seat?.player || seat || null;
-      }
-    });
-  } else if (Array.isArray(players)) {
-    players.forEach((player, index) => {
-      const position = Number.isInteger(player.seat)
-        ? player.seat
-        : index;
-
-      if (position >= 0 && position < 6) {
-        seatPlayers[position] = player;
-      }
-    });
-  }
-
-  seatPlayers.forEach((player, index) => {
-    renderSeat(player, index);
-  });
+  if (Array.isArray(seats) && seats.length) seats.forEach((seat,index)=>{if(index<6)seatPlayers[index]=seat?.player||seat||null;});
+  else if (Array.isArray(players)) players.forEach((player,index)=>{const pos=Number.isInteger(player.seat)?player.seat:index;if(pos>=0&&pos<6)seatPlayers[pos]=player;});
+  seatPlayers.forEach((player,index)=>renderSeat(player,index,table));
 }
 
 function sendAction(action) {
@@ -2106,11 +2081,15 @@ function nextHand() {
 }
 
 function leaveTable() {
-  if (socket && currentTable) {
-    socket.emit("table:leave");
-  }
-
-  showLobby();
+  if (!socket || !currentTable) { showLobby(); return; }
+  socket.emit("table:leave", result => {
+    if (!result || result.success === false) {
+      alert(result?.message || "Ширээнээс гарахад алдаа гарлаа.");
+      return;
+    }
+    refreshMe().catch(() => {});
+    showLobby();
+  });
 }
 
 function escapeHtml(value) {
