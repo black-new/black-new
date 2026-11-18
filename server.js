@@ -1,4 +1,3 @@
-
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -30,6 +29,15 @@ const BANK_INFO = {
   account: process.env.BANK_ACCOUNT || "",
   holder: process.env.BANK_HOLDER || ""
 };
+
+const ALLOWED_BANKS = [
+  "Хаан банк",
+  "Худалдаа хөгжлийн банк",
+  "ХасБанк",
+  "Төрийн банк",
+  "Голомт банк",
+  "Капитрон банк"
+];
 
 // ==========================================
 // FIREBASE
@@ -89,7 +97,8 @@ function cleanUser(data, uid) {
     isAdmin: data.role === "admin" || !!data.isAdmin,
     bankName: data.bankName || "",
     bankAccount: data.bankAccount || "",
-    bankHolder: data.bankHolder || ""
+    bankHolder: data.bankHolder || "",
+    ageConfirmed: data.ageConfirmed === true
   };
 }
 
@@ -192,13 +201,20 @@ function publicRequest(data) {
 // ==========================================
 
 app.post("/api/register", async (req, res) => {
+  let createdUid = null;
+
   try {
-    const username = String(req.body.username || "").trim();
+    const username = normalizeUsername(req.body.username);
     const displayName = String(
       req.body.displayName || username
     ).trim();
     const password = String(req.body.password || "");
     const confirmPassword = req.body.confirmPassword;
+
+    const bankName = String(req.body.bankName || "").trim();
+    const bankAccount = String(req.body.bankAccount || "").trim();
+    const bankHolder = String(req.body.bankHolder || "").trim();
+    const ageConfirmed = req.body.ageConfirmed === true;
 
     if (!validUsername(username)) {
       return res.status(400).json({
@@ -218,8 +234,31 @@ app.post("/api/register", async (req, res) => {
       });
     }
 
-    const normalized = normalizeUsername(username);
-    const usernameRef = db.collection("usernames").doc(normalized);
+    if (!ALLOWED_BANKS.includes(bankName)) {
+      return res.status(400).json({
+        message: "Банкны мэдээллээ зөв сонгоно уу."
+      });
+    }
+
+    if (!/^[0-9]{6,20}$/.test(bankAccount)) {
+      return res.status(400).json({
+        message: "Дансны дугаар 6-20 оронтой байх ёстой."
+      });
+    }
+
+    if (bankHolder.length < 2 || bankHolder.length > 60) {
+      return res.status(400).json({
+        message: "Данс эзэмшигчийн нэр 2-60 тэмдэгт байх ёстой."
+      });
+    }
+
+    if (!ageConfirmed) {
+      return res.status(400).json({
+        message: "18 нас хүрсэн гэдгээ баталгаажуулна уу."
+      });
+    }
+
+    const usernameRef = db.collection("usernames").doc(username);
     const existingUsername = await usernameRef.get();
 
     if (existingUsername.exists) {
@@ -228,43 +267,62 @@ app.post("/api/register", async (req, res) => {
       });
     }
 
-    const email = makeEmail(normalized);
-
     const account = await firebaseRequest("accounts:signUp", {
-      email,
+      email: makeEmail(username),
       password,
       returnSecureToken: true
     });
 
-    const uid = account.localId;
+    createdUid = account.localId;
 
     const userData = {
-      username: normalized,
-      displayName: displayName || normalized,
+      username,
+      displayName: displayName || username,
       chips: 0,
       role: "user",
       isAdmin: false,
-      bankName: "",
-      bankAccount: "",
-      bankHolder: "",
+      bankName,
+      bankAccount,
+      bankHolder,
+      ageConfirmed: true,
+      ageConfirmedAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp()
     };
 
-    const batch = db.batch();
+    await db.runTransaction(async transaction => {
+      const usernameSnap = await transaction.get(usernameRef);
 
-    batch.set(usernameRef, { uid });
-    batch.set(db.collection("users").doc(uid), userData);
+      if (usernameSnap.exists) {
+        throw new Error("Энэ хэрэглэгчийн нэр бүртгэлтэй байна.");
+      }
 
-    await batch.commit();
+      transaction.set(usernameRef, {
+        uid: createdUid,
+        username
+      });
 
-    return res.json({
+      transaction.set(
+        db.collection("users").doc(createdUid),
+        userData
+      );
+    });
+
+    return res.status(201).json({
       success: true,
       token: account.idToken,
       refreshToken: account.refreshToken,
-      user: cleanUser(userData, uid)
+      user: cleanUser(userData, createdUid)
     });
 
   } catch (error) {
+    if (createdUid) {
+      try {
+        await admin.auth().deleteUser(createdUid);
+      } catch (deleteError) {
+        console.error("Firebase хэрэглэгч цэвэрлэхэд алдаа:", deleteError);
+      }
+    }
+
     console.error("REGISTER ERROR:", error);
 
     return res.status(400).json({
@@ -368,7 +426,9 @@ app.post("/api/profile/update", authUser, async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ message: "Мэдээлэл хадгалахад алдаа гарлаа." });
+    res.status(500).json({
+      message: "Мэдээлэл хадгалахад алдаа гарлаа."
+    });
   }
 });
 
@@ -393,11 +453,15 @@ app.post("/api/cashier/deposit", authUser, async (req, res) => {
     const reference = String(req.body.reference || "").trim();
 
     if (!amount) {
-      return res.status(400).json({ message: "Дүн буруу байна." });
+      return res.status(400).json({
+        message: "Дүн буруу байна."
+      });
     }
 
     if (amount > 100000000) {
-      return res.status(400).json({ message: "Дүн хэт их байна." });
+      return res.status(400).json({
+        message: "Дүн хэт их байна."
+      });
     }
 
     const requestRef = db.collection("cashierRequests").doc();
@@ -424,10 +488,11 @@ app.post("/api/cashier/deposit", authUser, async (req, res) => {
 
   } catch (error) {
     console.error("DEPOSIT ERROR:", error);
-    res.status(500).json({ message: "Хүсэлт илгээхэд алдаа гарлаа." });
+    res.status(500).json({
+      message: "Хүсэлт илгээхэд алдаа гарлаа."
+    });
   }
 });
-
 // ==========================================
 // WITHDRAW REQUEST
 // ==========================================
@@ -437,7 +502,9 @@ app.post("/api/cashier/withdraw", authUser, async (req, res) => {
     const amount = validAmount(req.body.amount);
 
     if (!amount) {
-      return res.status(400).json({ message: "Дүн буруу байна." });
+      return res.status(400).json({
+        message: "Дүн буруу байна."
+      });
     }
 
     if (!req.user.bankName ||
@@ -454,7 +521,9 @@ app.post("/api/cashier/withdraw", authUser, async (req, res) => {
     await db.runTransaction(async transaction => {
       const snap = await transaction.get(userRef);
 
-      if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+      if (!snap.exists) {
+        throw new Error("Хэрэглэгч олдсонгүй.");
+      }
 
       const balance = Number(snap.data().chips || 0);
 
@@ -506,7 +575,10 @@ app.get("/api/cashier/history", authUser, async (req, res) => {
       .get();
 
     const requests = snap.docs
-      .map(doc => publicRequest({ id: doc.id, ...doc.data() }))
+      .map(doc => publicRequest({
+        id: doc.id,
+        ...doc.data()
+      }))
       .sort((a, b) => {
         const ta = a.createdAt?.toMillis?.() || 0;
         const tb = b.createdAt?.toMillis?.() || 0;
@@ -516,7 +588,9 @@ app.get("/api/cashier/history", authUser, async (req, res) => {
     res.json({ requests });
 
   } catch (error) {
-    res.status(500).json({ message: "Түүх ачааллахад алдаа гарлаа." });
+    res.status(500).json({
+      message: "Түүх ачааллахад алдаа гарлаа."
+    });
   }
 });
 
@@ -532,13 +606,18 @@ app.get("/api/admin/cashier/list", authUser, authAdmin, async (req, res) => {
       .get();
 
     const requests = snap.docs.map(doc =>
-      publicRequest({ id: doc.id, ...doc.data() })
+      publicRequest({
+        id: doc.id,
+        ...doc.data()
+      })
     );
 
     res.json({ requests });
 
   } catch (error) {
-    res.status(500).json({ message: "Хүсэлтүүдийг ачааллахад алдаа гарлаа." });
+    res.status(500).json({
+      message: "Хүсэлтүүдийг ачааллахад алдаа гарлаа."
+    });
   }
 });
 
@@ -553,7 +632,9 @@ app.post("/api/admin/cashier/decision", authUser, authAdmin, async (req, res) =>
     const note = String(req.body.note || "").trim();
 
     if (!requestId || !["approve", "reject"].includes(decision)) {
-      return res.status(400).json({ message: "Мэдээлэл буруу байна." });
+      return res.status(400).json({
+        message: "Мэдээлэл буруу байна."
+      });
     }
 
     const requestRef = db.collection("cashierRequests").doc(requestId);
@@ -620,17 +701,20 @@ app.post("/api/admin/cashier/decision", authUser, authAdmin, async (req, res) =>
 
 app.get("/api/admin/users", authUser, authAdmin, async (req, res) => {
   try {
-    const snap = await db.collection("users").limit(300).get();
+    const snap = await db.collection("users")
+      .limit(300)
+      .get();
 
     const users = snap.docs.map(doc => {
-      const user = cleanUser(doc.data(), doc.id);
-      return user;
+      return cleanUser(doc.data(), doc.id);
     });
 
     res.json({ users });
 
   } catch (error) {
-    res.status(500).json({ message: "Хэрэглэгчдийн мэдээлэл ачааллахад алдаа гарлаа." });
+    res.status(500).json({
+      message: "Хэрэглэгчдийн мэдээлэл ачааллахад алдаа гарлаа."
+    });
   }
 });
 
@@ -645,7 +729,9 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
     const action = String(req.body.action || "").toLowerCase();
 
     if (!uid || !amount || !["add", "remove"].includes(action)) {
-      return res.status(400).json({ message: "Мэдээлэл буруу байна." });
+      return res.status(400).json({
+        message: "Мэдээлэл буруу байна."
+      });
     }
 
     const userRef = db.collection("users").doc(uid);
@@ -653,19 +739,30 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
     await db.runTransaction(async transaction => {
       const snap = await transaction.get(userRef);
 
-      if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
-
-      const current = Number(snap.data().chips || 0);
-      const next = action === "add" ? current + amount : current - amount;
-
-      if (!Number.isSafeInteger(next) || next < 0) {
-        throw new Error("CHIP үлдэгдэл хүрэлцэхгүй эсвэл дүн хэтэрсэн байна.");
+      if (!snap.exists) {
+        throw new Error("Хэрэглэгч олдсонгүй.");
       }
 
-      transaction.update(userRef, { chips: next });
+      const current = Number(snap.data().chips || 0);
+      const next = action === "add"
+        ? current + amount
+        : current - amount;
+
+      if (!Number.isSafeInteger(next) || next < 0) {
+        throw new Error(
+          "CHIP үлдэгдэл хүрэлцэхгүй эсвэл дүн хэтэрсэн байна."
+        );
+      }
+
+      transaction.update(userRef, {
+        chips: next
+      });
     });
 
-    res.json({ success: true, message: "CHIP амжилттай шинэчлэгдлээ." });
+    res.json({
+      success: true,
+      message: "CHIP амжилттай шинэчлэгдлээ."
+    });
 
   } catch (error) {
     res.status(400).json({
@@ -779,7 +876,10 @@ function getPublicTable(table) {
 }
 
 function sendTableUpdate(table) {
-  io.to("table:" + table.id).emit("table:update", getPublicTable(table));
+  io.to("table:" + table.id).emit(
+    "table:update",
+    getPublicTable(table)
+  );
 }
 
 function sendLobby() {
@@ -894,7 +994,8 @@ function startHand(table) {
   table.street = "preflop";
   table.handNumber += 1;
 
-  table.dealerIndex = (table.dealerIndex + 1) % table.players.length;
+  table.dealerIndex =
+    (table.dealerIndex + 1) % table.players.length;
 
   for (const player of table.players) {
     player.folded = player.chips <= 0 || player.online === false;
@@ -902,7 +1003,10 @@ function startHand(table) {
     player.cards = [];
 
     if (!player.folded) {
-      player.cards.push(table.deck.pop(), table.deck.pop());
+      player.cards.push(
+        table.deck.pop(),
+        table.deck.pop()
+      );
     }
   }
 
@@ -916,8 +1020,15 @@ function startHand(table) {
   const smallBlindPlayer = active[0];
   const bigBlindPlayer = active[1];
 
-  const small = Math.min(table.smallBlind, smallBlindPlayer.chips);
-  const big = Math.min(table.bigBlind, bigBlindPlayer.chips);
+  const small = Math.min(
+    table.smallBlind,
+    smallBlindPlayer.chips
+  );
+
+  const big = Math.min(
+    table.bigBlind,
+    bigBlindPlayer.chips
+  );
 
   smallBlindPlayer.chips -= small;
   smallBlindPlayer.bet = small;
@@ -929,7 +1040,10 @@ function startHand(table) {
 
   table.currentBet = big;
   table.currentTurn = table.players.indexOf(active[0]);
-  table.currentTurn = nextPlayerIndex(table, table.currentTurn - 1);
+  table.currentTurn = nextPlayerIndex(
+    table,
+    table.currentTurn - 1
+  );
 
   sendTableUpdate(table);
   sendLobby();
@@ -953,7 +1067,9 @@ function advanceStreet(table) {
     table.street = "river";
   } else if (table.street === "river") {
     const active = getActivePlayers(table);
-    const winner = active[Math.floor(Math.random() * active.length)];
+    const winner = active[
+      Math.floor(Math.random() * active.length)
+    ];
     finishHand(table, winner);
     return;
   }
@@ -963,19 +1079,26 @@ function advanceStreet(table) {
   }
 
   table.currentBet = 0;
-  table.currentTurn = nextPlayerIndex(table, table.dealerIndex);
+  table.currentTurn = nextPlayerIndex(
+    table,
+    table.dealerIndex
+  );
+
   sendTableUpdate(table);
 }
-
 async function getSocketUser(socket) {
   const token = socket.handshake.auth?.token;
 
-  if (!token) throw new Error("Нэвтрэх шаардлагатай.");
+  if (!token) {
+    throw new Error("Нэвтрэх шаардлагатай.");
+  }
 
   const decoded = await admin.auth().verifyIdToken(token);
   const snap = await db.collection("users").doc(decoded.uid).get();
 
-  if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+  if (!snap.exists) {
+    throw new Error("Хэрэглэгч олдсонгүй.");
+  }
 
   return {
     ...snap.data(),
@@ -994,7 +1117,9 @@ async function refundPlayerChips(uid, amount) {
 }
 
 function removePlayerFromTable(table, uid) {
-  const index = table.players.findIndex(player => player.uid === uid);
+  const index = table.players.findIndex(
+    player => player.uid === uid
+  );
 
   if (index < 0) return false;
 
@@ -1027,7 +1152,9 @@ io.on("connection", socket => {
       });
 
       for (const table of tables.values()) {
-        const player = table.players.find(p => p.uid === user.uid);
+        const player = table.players.find(
+          p => p.uid === user.uid
+        );
 
         if (player) {
           player.online = true;
@@ -1047,14 +1174,17 @@ io.on("connection", socket => {
 
     } catch (error) {
       socket.emit("notice", {
-        message: error.message || "Нэвтрэх эрх шалгахад алдаа гарлаа."
+        message: error.message ||
+          "Нэвтрэх эрх шалгахад алдаа гарлаа."
       });
     }
   });
 
   socket.on("table:join", async (data, callback) => {
     const reply = result => {
-      if (typeof callback === "function") callback(result);
+      if (typeof callback === "function") {
+        callback(result);
+      }
     };
 
     try {
@@ -1062,10 +1192,15 @@ io.on("connection", socket => {
       const table = getTable(data?.tableId);
 
       if (!table) {
-        return reply({ success: false, message: "Ширээ олдсонгүй." });
+        return reply({
+          success: false,
+          message: "Ширээ олдсонгүй."
+        });
       }
 
-      const existing = table.players.find(p => p.uid === user.uid);
+      const existing = table.players.find(
+        p => p.uid === user.uid
+      );
 
       if (existing) {
         existing.online = true;
@@ -1086,7 +1221,9 @@ io.on("connection", socket => {
       }
 
       for (const otherTable of tables.values()) {
-        if (otherTable.players.some(p => p.uid === user.uid)) {
+        if (otherTable.players.some(
+          p => p.uid === user.uid
+        )) {
           return reply({
             success: false,
             message: "Та өөр ширээнд суусан байна."
@@ -1095,7 +1232,10 @@ io.on("connection", socket => {
       }
 
       if (table.players.length >= table.maxPlayers) {
-        return reply({ success: false, message: "Ширээ дүүрсэн байна." });
+        return reply({
+          success: false,
+          message: "Ширээ дүүрсэн байна."
+        });
       }
 
       const buyIn = table.minBuyIn;
@@ -1104,7 +1244,9 @@ io.on("connection", socket => {
       await db.runTransaction(async transaction => {
         const snap = await transaction.get(userRef);
 
-        if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+        if (!snap.exists) {
+          throw new Error("Хэрэглэгч олдсонгүй.");
+        }
 
         const balance = Number(snap.data().chips || 0);
 
@@ -1112,7 +1254,9 @@ io.on("connection", socket => {
           throw new Error("CHIP хүрэлцэхгүй байна.");
         }
 
-        transaction.update(userRef, { chips: balance - buyIn });
+        transaction.update(userRef, {
+          chips: balance - buyIn
+        });
       });
 
       table.players.push({
@@ -1144,7 +1288,8 @@ io.on("connection", socket => {
     } catch (error) {
       reply({
         success: false,
-        message: error.message || "Ширээнд суухад алдаа гарлаа."
+        message: error.message ||
+          "Ширээнд суухад алдаа гарлаа."
       });
     }
   });
@@ -1158,7 +1303,10 @@ io.on("connection", socket => {
       const table = getTable(session.tableId);
       if (!table) return;
 
-      const player = table.players.find(p => p.uid === session.uid);
+      const player = table.players.find(
+        p => p.uid === session.uid
+      );
+
       if (!player) return;
 
       if (table.handStarted) {
@@ -1179,7 +1327,8 @@ io.on("connection", socket => {
 
     } catch (error) {
       socket.emit("notice", {
-        message: error.message || "Ширээнээс гарахад алдаа гарлаа."
+        message: error.message ||
+          "Ширээнээс гарахад алдаа гарлаа."
       });
     }
   });
@@ -1191,48 +1340,74 @@ io.on("connection", socket => {
   socket.on("game:action", async data => {
     try {
       const session = socketUsers.get(socket.id);
+
       if (!session?.tableId) return;
 
       const table = getTable(session.tableId);
+
       if (!table || !table.handStarted) return;
 
-      const player = table.players.find(p => p.uid === session.uid);
+      const player = table.players.find(
+        p => p.uid === session.uid
+      );
+
       if (!player || player.folded) return;
 
       const turnPlayer = table.players[table.currentTurn];
 
       if (!turnPlayer || turnPlayer.uid !== session.uid) {
-        socket.emit("notice", { message: "Одоо таны ээлж биш байна." });
+        socket.emit("notice", {
+          message: "Одоо таны ээлж биш байна."
+        });
         return;
       }
 
-      const action = String(data?.action || "").toLowerCase();
+      const action = String(
+        data?.action || ""
+      ).toLowerCase();
+
       const amount = validAmount(data?.amount);
 
       if (action === "fold") {
         player.folded = true;
+
       } else if (action === "check") {
         if (player.bet < table.currentBet) {
-          socket.emit("notice", { message: "Check хийх боломжгүй. Call эсвэл Fold хийнэ үү." });
+          socket.emit("notice", {
+            message: "Check хийх боломжгүй. Call эсвэл Fold хийнэ үү."
+          });
           return;
         }
+
       } else if (action === "call") {
-        const difference = Math.max(0, table.currentBet - player.bet);
-        const paid = Math.min(difference, player.chips);
+        const difference = Math.max(
+          0,
+          table.currentBet - player.bet
+        );
+
+        const paid = Math.min(
+          difference,
+          player.chips
+        );
 
         player.chips -= paid;
         player.bet += paid;
         table.pot += paid;
+
       } else if (action === "raise") {
         if (!amount || amount <= table.currentBet) {
-          socket.emit("notice", { message: "Raise дүн буруу байна." });
+          socket.emit("notice", {
+            message: "Raise дүн буруу байна."
+          });
           return;
         }
 
         const needed = amount - player.bet;
 
         if (needed > player.chips) {
-          socket.emit("notice", { message: "CHIP хүрэлцэхгүй байна." });
+          socket.emit("notice", {
+            message: "CHIP хүрэлцэхгүй байна."
+          });
           return;
         }
 
@@ -1240,8 +1415,11 @@ io.on("connection", socket => {
         player.bet = amount;
         table.pot += needed;
         table.currentBet = amount;
+
       } else {
-        socket.emit("notice", { message: "Үйлдэл буруу байна." });
+        socket.emit("notice", {
+          message: "Үйлдэл буруу байна."
+        });
         return;
       }
 
@@ -1252,7 +1430,10 @@ io.on("connection", socket => {
         return;
       }
 
-      table.currentTurn = nextPlayerIndex(table, table.currentTurn);
+      table.currentTurn = nextPlayerIndex(
+        table,
+        table.currentTurn
+      );
 
       sendTableUpdate(table);
       sendLobby();
@@ -1270,9 +1451,11 @@ io.on("connection", socket => {
 
   socket.on("game:next", () => {
     const session = socketUsers.get(socket.id);
+
     if (!session?.tableId) return;
 
     const table = getTable(session.tableId);
+
     if (!table) return;
 
     if (!table.handStarted) {
@@ -1297,7 +1480,9 @@ io.on("connection", socket => {
       const table = getTable(session.tableId);
 
       if (table) {
-        const player = table.players.find(p => p.uid === session.uid);
+        const player = table.players.find(
+          p => p.uid === session.uid
+        );
 
         if (player) {
           player.online = false;
@@ -1333,5 +1518,7 @@ app.get("/health", (req, res) => {
 // ==========================================
 
 server.listen(PORT, () => {
-  console.log(`BLACKCLUB Poker server running on port ${PORT}`);
+  console.log(
+    `BLACKCLUB Poker server running on port ${PORT}`
+  );
 });
