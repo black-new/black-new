@@ -873,6 +873,7 @@ function getPublicTable(table, viewerUid = null) {
     minBuyIn: table.minBuyIn,
     maxBuyIn: table.maxBuyIn,
     maxPlayers: table.maxPlayers,
+    turnDeadline: table.turnDeadline || null,
     players: table.players.map((player, index) => ({
       id: player.uid,
       uid: player.uid,
@@ -880,7 +881,7 @@ function getPublicTable(table, viewerUid = null) {
       displayName: player.displayName,
       chips: player.chips,
       bet: player.bet || 0,
-      seat: index,
+      seat: Number.isInteger(player.seat) ? player.seat : index,
       online: player.online !== false,
       folded: !!player.folded,
       allIn: !!player.allIn,
@@ -898,23 +899,37 @@ function getPublicTable(table, viewerUid = null) {
 }
 
 function scheduleTurnTimeout(table) {
+  const expectedUid = table.handStarted && table.currentTurn >= 0
+    ? table.players[table.currentTurn]?.uid
+    : null;
+  if (!expectedUid) {
+    if (table.turnTimer) clearTimeout(table.turnTimer);
+    table.turnTimer = null;
+    table.turnTimerUid = null;
+    table.turnTimerHand = null;
+    table.turnDeadline = null;
+    return;
+  }
+  if (table.turnTimer && table.turnTimerUid === expectedUid && table.turnTimerHand === table.handNumber && table.turnDeadline) return;
   if (table.turnTimer) clearTimeout(table.turnTimer);
-  table.turnTimer = null;
-  if (!table.handStarted || table.currentTurn < 0) return;
-  const expectedUid = table.players[table.currentTurn]?.uid;
-  if (!expectedUid) return;
+  table.turnTimerUid = expectedUid;
+  table.turnTimerHand = table.handNumber;
+  table.turnDeadline = Date.now() + 30 * 1000;
   const expectedHand = table.handNumber;
   table.turnTimer = setTimeout(() => {
     if (!table.handStarted || table.handNumber !== expectedHand) return;
     const current = table.players[table.currentTurn];
     if (!current || current.uid !== expectedUid || current.folded || current.allIn) return;
-    // 5 минутэд үйлдэл хийгээгүй бол автоматаар FOLD хийнэ. Тоглогч ширээндээ үлдэнэ.
     current.folded = true;
     current.acted = true;
     current.lastAction = "timeout-fold";
+    table.turnTimer = null;
+    table.turnTimerUid = null;
+    table.turnTimerHand = null;
+    table.turnDeadline = null;
     advanceTurnOrStreet(table);
-    io.to("table:" + table.id).emit("notice", { message: `${current.displayName || current.username} — 5 минутын хугацаа дууссан тул автоматаар FOLD боллоо. Та ширээндээ үлдлээ.` });
-  }, 5 * 60 * 1000);
+    io.to("table:" + table.id).emit("notice", { message: `${current.displayName || current.username} — 30 секундын хугацаа дууссан тул автоматаар FOLD боллоо. Та ширээндээ үлдлээ.` });
+  }, 30 * 1000);
   if (typeof table.turnTimer.unref === "function") table.turnTimer.unref();
 }
 
@@ -1202,13 +1217,10 @@ function removePlayerFromTable(table, uid) {
 
   table.players.splice(index, 1);
 
-  if (table.currentTurn >= table.players.length) {
-    table.currentTurn = 0;
-  }
-
-  if (table.dealerIndex >= table.players.length) {
-    table.dealerIndex = 0;
-  }
+  if (table.currentTurn > index) table.currentTurn--;
+  if (table.currentTurn >= table.players.length) table.currentTurn = table.players.length ? 0 : -1;
+  if (table.dealerIndex > index) table.dealerIndex--;
+  if (table.dealerIndex >= table.players.length) table.dealerIndex = table.players.length ? 0 : -1;
 
   return true;
 }
@@ -1255,71 +1267,70 @@ io.on("connection", socket => {
   });
 
   socket.on("table:join", async (data, callback) => {
-    const reply = result => {
-      if (typeof callback === "function") callback(result);
-    };
-
+    const reply = result => { if (typeof callback === "function") callback(result); };
     try {
       const user = await getSocketUser(socket);
       const table = getTable(data?.tableId);
-
-      if (!table) {
-        return reply({ success: false, message: "Ширээ олдсонгүй." });
-      }
+      if (!table) return reply({ success: false, message: "Ширээ олдсонгүй." });
 
       const existing = table.players.find(p => p.uid === user.uid);
-
-      if (existing) {
-        existing.online = true;
-
-        socketUsers.set(socket.id, {
-          uid: user.uid,
-          tableId: table.id
-        });
-
-        socket.join("table:" + table.id);
-        sendTableUpdate(table);
-        sendLobby();
-
-        return reply({
-          success: true,
-          table: getPublicTable(table, user.uid),
-          buyIn: existing.chips,
-          walletChips: Number(user.chips || 0)
-        });
-      }
-
-      for (const otherTable of tables.values()) {
-        if (otherTable.players.some(p => p.uid === user.uid)) {
-          return reply({
-            success: false,
-            message: "Та өөр ширээнд суусан байна."
-          });
+      if (!existing) {
+        for (const otherTable of tables.values()) {
+          if (otherTable.players.some(p => p.uid === user.uid)) {
+            return reply({ success: false, message: "Та өөр ширээнд суусан байна." });
+          }
         }
+      } else {
+        existing.online = true;
       }
 
-      if (table.players.length >= table.maxPlayers) {
-        return reply({ success: false, message: "Ширээ дүүрсэн байна." });
-      }
+      socketUsers.set(socket.id, { uid: user.uid, tableId: table.id });
+      socket.join("table:" + table.id);
+      sendTableUpdate(table);
+      sendLobby();
+      reply({
+        success: true,
+        seated: !!existing,
+        table: getPublicTable(table, user.uid),
+        walletChips: Number(user.chips || 0),
+        minBuyIn: table.minBuyIn,
+        maxBuyIn: table.maxBuyIn
+      });
+    } catch (error) {
+      reply({ success: false, message: error.message || "Ширээ нээхэд алдаа гарлаа." });
+    }
+  });
+
+  socket.on("table:sit", async (data, callback) => {
+    const reply = result => { if (typeof callback === "function") callback(result); };
+    try {
+      const session = socketUsers.get(socket.id);
+      if (!session?.tableId) return reply({ success: false, message: "Эхлээд ширээнд орно уу." });
+      const user = await getSocketUser(socket);
+      const table = getTable(session.tableId);
+      if (!table) return reply({ success: false, message: "Ширээ олдсонгүй." });
+      const existing = table.players.find(p => p.uid === user.uid);
+      if (existing) return reply({ success: true, table: getPublicTable(table, user.uid), walletChips: Number(user.chips || 0) });
+      if (table.handStarted) return reply({ success: false, message: "Одоогийн гар дууссаны дараа суудлаа сонгоно уу." });
+
+      const seat = Number(data?.seat);
+      if (!Number.isInteger(seat) || seat < 0 || seat >= table.maxPlayers) return reply({ success: false, message: "Суудлын дугаар буруу байна." });
+      if (table.players.some(p => (Number.isInteger(p.seat) ? p.seat : -1) === seat)) return reply({ success: false, message: "Энэ суудлыг өөр тоглогч эзэлсэн байна." });
+      if (table.players.length >= table.maxPlayers) return reply({ success: false, message: "Ширээ дүүрсэн байна." });
 
       const requestedBuyIn = Number(data?.buyIn);
       const buyIn = Number.isSafeInteger(requestedBuyIn) && requestedBuyIn > 0
         ? Math.min(table.maxBuyIn, Math.max(table.minBuyIn, requestedBuyIn))
         : table.minBuyIn;
       const userRef = db.collection("users").doc(user.uid);
-
+      let walletAfter = 0;
       await db.runTransaction(async transaction => {
         const snap = await transaction.get(userRef);
-
         if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
-
         const balance = Number(snap.data().chips || 0);
-
-        if (!Number.isSafeInteger(balance) || balance < buyIn) {
-          throw new Error("CHIP хүрэлцэхгүй байна.");
-        }
-
-        transaction.update(userRef, { chips: balance - buyIn, activeTable: table.id, tableStack: buyIn });
+        if (!Number.isSafeInteger(balance) || balance < buyIn) throw new Error("CHIP хүрэлцэхгүй байна.");
+        walletAfter = balance - buyIn;
+        transaction.update(userRef, { chips: walletAfter, activeTable: table.id, tableStack: buyIn });
       });
 
       table.players.push({
@@ -1327,6 +1338,7 @@ io.on("connection", socket => {
         username: user.username || "Player",
         displayName: user.displayName || user.username || "Player",
         chips: buyIn,
+        seat,
         bet: 0,
         folded: false,
         online: true,
@@ -1335,33 +1347,13 @@ io.on("connection", socket => {
         allIn: false,
         totalBet: 0
       });
-
-      socketUsers.set(socket.id, {
-        uid: user.uid,
-        tableId: table.id
-      });
-
-      socket.join("table:" + table.id);
-
-      if (!table.handStarted && table.players.filter(p => p.online !== false && p.chips > 0).length >= 2) {
-        startHand(table);
-      } else {
-        sendTableUpdate(table);
-      }
+      table.players.sort((a, b) => (Number.isInteger(a.seat) ? a.seat : 99) - (Number.isInteger(b.seat) ? b.seat : 99));
+      if (!table.handStarted && table.players.filter(p => p.online !== false && p.chips > 0).length >= 2) startHand(table);
+      else sendTableUpdate(table);
       sendLobby();
-
-      reply({
-        success: true,
-        table: getPublicTable(table, user.uid),
-        buyIn,
-        walletChips: Number(user.chips || 0) - buyIn
-      });
-
+      reply({ success: true, table: getPublicTable(table, user.uid), buyIn, walletChips: walletAfter });
     } catch (error) {
-      reply({
-        success: false,
-        message: error.message || "Ширээнд суухад алдаа гарлаа."
-      });
+      reply({ success: false, message: error.message || "Суудал сонгоход алдаа гарлаа." });
     }
   });
 
@@ -1373,12 +1365,13 @@ io.on("connection", socket => {
       const table = getTable(session.tableId);
       if (!table) return reply({ success: false, message: "Ширээ олдсонгүй." });
       const player = table.players.find(p => p.uid === session.uid);
-      if (!player) return reply({ success: false, message: "Тоглогчийн суудал олдсонгүй." });
-      if (table.handStarted) {
+      if (player && table.handStarted) {
         return reply({ success: false, message: "Тоглолт дууссаны дараа ширээнээс гараарай." });
       }
-      await refundPlayerChips(session.uid, player.chips);
-      removePlayerFromTable(table, session.uid);
+      if (player) {
+        await refundPlayerChips(session.uid, player.chips);
+        removePlayerFromTable(table, session.uid);
+      }
       socket.leave("table:" + table.id);
       socketUsers.delete(socket.id);
       sendTableUpdate(table);
@@ -1435,6 +1428,8 @@ io.on("connection", socket => {
   socket.on("game:next", () => {
     const session=socketUsers.get(socket.id); if(!session?.tableId) return;
     const table=getTable(session.tableId); if(!table) return;
+    const player = table.players.find(p => p.uid === session.uid);
+    if (!player) { socket.emit("notice", { message: "Дараагийн гар эхлүүлэхийн тулд эхлээд суудлаа сонгоно уу." }); return; }
     if(table.handStarted){socket.emit("notice",{message:"Одоогийн гар дуусаагүй байна."});return;}
     startHand(table);
   });

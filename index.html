@@ -1159,6 +1159,71 @@ body:has(#authScreen:not([style*="display: none"])) {
  .seat .seat-cards .playing-card{width:17px;height:25px;min-width:17px;font-size:9px}
 }
 
+/* BLACKCLUB table refresh: calm, realistic felt and readable player seats */
+.poker-table{background:radial-gradient(ellipse at 50% 44%,#17613b 0%,#0c4a2d 58%,#07351f 100%)!important;box-shadow:inset 0 0 0 3px #d8bd80,inset 0 0 0 8px #123c29,inset 0 0 55px #001b10,0 9px 30px #000d,0 0 12px #b28a45!important}
+.table-inner{border-color:#b99b62!important;box-shadow:0 0 10px #d6c08a33!important}
+.seat{width:138px!important;height:78px!important;min-height:78px!important;padding:25px 7px 5px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-end!important;gap:2px!important;border:1px solid #8b754f!important;border-radius:8px!important;background:linear-gradient(180deg,#17201bfa,#080e0bf7)!important;box-shadow:0 4px 12px #000b!important;text-align:center!important}
+.seat .avatar{position:absolute!important;left:50%!important;top:-17px!important;transform:translateX(-50%)!important;width:44px!important;height:44px!important;border:2px solid #c6ad78!important;background:radial-gradient(circle at 35% 25%,#5b655c,#111914 76%)!important;color:#f1eee4!important;font-size:17px!important;box-shadow:0 0 0 2px #07140d,0 2px 9px #000a!important;z-index:7!important}
+.seat-info{width:100%!important;min-width:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:2px!important;padding:4px 4px 3px!important;border:1px solid #354238!important;border-radius:5px!important;background:linear-gradient(180deg,#101914,#080d0a)!important}
+.seat strong{max-width:100%!important;font-size:11px!important;color:#f0eee6!important}
+.seat .chip-display{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;margin:0!important;padding:2px 4px!important;border:0!important;border-radius:3px!important;background:#171f19!important;color:#d8bd80!important;font-size:10px!important}
+.seat .chip-icon{width:9px!important;height:9px!important;border:1px solid #e0c98e!important;background:#9b7a3d!important}
+.seat.is-me{width:158px!important;height:91px!important;min-height:91px!important;padding-top:31px!important;border-color:#d4b36d!important;box-shadow:0 0 0 1px #d4b36d44,0 5px 16px #000c!important}
+.seat.is-me .avatar{width:50px!important;height:50px!important;top:-20px!important;font-size:20px!important}
+.seat.is-me .seat-info{padding:5px 5px 4px!important}
+.seat.is-me .seat strong{font-size:12px!important}
+.seat.is-turn .avatar{border:3px solid #f0444b!important;box-shadow:0 0 0 3px #30080b,0 0 15px #f0444bcc!important;animation:turnPulse 1s ease-in-out infinite alternate}
+@keyframes turnPulse{from{filter:brightness(.9)}to{filter:brightness(1.35)}}
+.turn-clock{display:inline-block!important;min-width:31px;padding:2px 5px!important;border-radius:4px!important;background:#9f2028!important;color:#fff!important;font-size:10px!important;font-weight:900!important;line-height:1!important}
+.folded-label{color:#ff6268!important;font-weight:900!important}
+.seat .seat-cards{position:absolute!important;z-index:12!important;left:50%!important;top:-49px!important;transform:translateX(-50%)!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;gap:2px!important;width:76px!important;height:45px!important;pointer-events:none!important}
+.seat .seat-cards .playing-card{width:23px!important;height:34px!important;min-width:23px!important;padding:2px!important;font-size:11px!important;line-height:1!important;border:1px solid #c8c2b4!important;border-radius:4px!important;box-shadow:0 2px 6px #000b!important}
+.seat .seat-cards .playing-card b{font-size:1em!important}
+.seat .seat-cards .playing-card + .playing-card{margin-left:-5px!important}
+.seat.is-me .seat-cards{top:-58px!important;width:100px!important;height:52px!important}
+.seat.is-me .seat-cards .playing-card{width:31px!important;height:45px!important;min-width:31px!important;font-size:15px!important;border-radius:5px!important}
+.playing-card{position:relative!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-start!important;gap:1px!important;padding:4px 5px!important;color:#fff!important;border:1px solid #d9d2c3!important;text-shadow:0 1px 2px #0008!important;font-family:Georgia,serif!important}
+.playing-card span{font-size:.72em!important;font-weight:900!important;line-height:1!important}
+.playing-card b{align-self:center!important;font-size:1.25em!important;line-height:1!important;margin-top:1px!important}
+.playing-card.clubs{background:linear-gradient(145deg,#287443,#124b2b 65%,#0b351f)!important;color:#fff!important;border-color:#9eb6a2!important}
+.playing-card.spades{background:linear-gradient(145deg,#333735,#171b19 65%,#080a09)!important;color:#fff!important;border-color:#aeb2ad!important}
+.playing-card.diamonds{background:linear-gradient(145deg,#356ba9,#174777 65%,#0d2f54)!important;color:#fff!important;border-color:#a9bed4!important}
+.playing-card.hearts{background:linear-gradient(145deg,#a83a3d,#792125 65%,#4a1217)!important;color:#fff!important;border-color:#d4aaaa!important}
+.playing-card.card-back,.seat .seat-cards .card-back{background:repeating-linear-gradient(45deg,#171a18 0 4px,#9b7b43 4px 5px,#171a18 5px 9px)!important;border:1px solid #c8a967!important;box-shadow:inset 0 0 0 2px #0b0d0c,0 2px 5px #000b!important}
+.actions button{min-height:62px!important;height:62px!important;min-width:105px!important;font-size:15px!important}
+.actions .fold-btn{background:linear-gradient(145deg,#a72a32,#65151d)!important;border:1px solid #e05a60!important;color:#fff!important;box-shadow:0 3px 10px #0008!important}
+.seat-choose{width:100%;height:100%;min-height:68px;border:1px dashed #b99b62;border-radius:8px;background:linear-gradient(180deg,#14251a,#08130c);color:#e7d4a6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:800}
+.seat-choose .empty-head{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:1px solid #8f8a73;color:#d4c59e;font-size:18px}
+.seat-choose strong{font-size:10px!important;color:#e7d4a6!important}
+.seat-choose small{font-size:8px!important;color:#9eac9d!important}
+.seat-empty{background:transparent!important;border:0!important;box-shadow:none!important}
+.seat-empty .avatar,.seat-empty .seat-info{display:none!important}
+@media(max-width:900px){
+ .actions button{min-height:58px!important;height:58px!important;font-size:13px!important}
+ .seat{width:126px!important;height:75px!important;min-height:75px!important}
+ .seat.is-me{width:146px!important;height:86px!important;min-height:86px!important}
+}
+@media(max-width:650px){
+ .poker-table{width:min(102vw,calc(100svh - 176px))!important;max-width:none!important;border-width:7px!important}
+ .seat{width:clamp(68px,19vw,82px)!important;height:67px!important;min-height:67px!important;padding:20px 2px 3px!important;border-radius:6px!important}
+ .seat .avatar{width:36px!important;height:36px!important;top:-13px!important;font-size:14px!important}
+ .seat-info{padding:3px 2px 2px!important;gap:1px!important}
+ .seat strong{font-size:clamp(8px,2.3vw,10px)!important}
+ .seat .chip-display{font-size:clamp(7px,2vw,9px)!important;padding:2px 1px!important}
+ .seat .chip-icon{width:7px!important;height:7px!important}
+ .seat small{font-size:7px!important}
+ .seat.is-me{width:clamp(82px,22vw,94px)!important;height:78px!important;min-height:78px!important;padding-top:23px!important}
+ .seat.is-me .avatar{width:41px!important;height:41px!important;top:-16px!important}
+ .seat .seat-cards{top:-38px!important;width:58px!important;height:34px!important}
+ .seat .seat-cards .playing-card{width:18px!important;height:27px!important;min-width:18px!important;font-size:9px!important;padding:2px!important}
+ .seat.is-me .seat-cards{top:-45px!important;width:78px!important;height:40px!important}
+ .seat.is-me .seat-cards .playing-card{width:24px!important;height:35px!important;min-width:24px!important;font-size:12px!important}
+ .seat-1{top:3%;left:14%}.seat-2{top:3%;right:14%}
+ .seat-3{top:40%;right:-1%}.seat-4{bottom:3%;right:14%}
+ .seat-5{bottom:3%;left:14%}.seat-6{top:40%;left:-1%}
+ .actions button{min-height:43px!important;height:43px!important;font-size:11px!important}
+}
+
 </style>
 </head>
 
@@ -1379,7 +1444,7 @@ body:has(#authScreen:not([style*="display: none"])) {
         <div class="dealer-button" aria-hidden="true">D</div>
       </div>
       <div class="actions">
-        <button class="secondary-btn" onclick="sendAction('fold')">FOLD</button>
+        <button class="secondary-btn fold-btn" onclick="sendAction('fold')">FOLD</button>
         <button class="secondary-btn" onclick="sendAction('check')">CHECK</button>
         <button class="secondary-btn" onclick="sendAction('call')">CALL</button>
         <label class="raise-field"><span>Raise Amount</span><input id="raiseAmount" type="number" min="1" placeholder="250000"></label>
@@ -1400,6 +1465,7 @@ let filter = "all";
 let currentTable = null;
 let lastState = null;
 let autoNextScheduledHand = -1;
+let turnCountdownTimer = null;
 
 const $ = id => document.getElementById(id);
 
@@ -1546,7 +1612,7 @@ function openAccountSection(section) {
       </div>
       <div style="color:#e8bd62;font-weight:bold;margin-top:16px">Тоглолтын тохиргоо</div>
       <label style="display:flex;align-items:center;gap:10px;margin-top:10px;color:#e7edf5"><input id="autoNextHandToggle" type="checkbox" onchange="setAutoNextHand(this.checked)"> Гар дуусмагц дараагийн гарыг автоматаар эхлүүлэх</label>
-      <p style="color:#9babbc;font-size:12px;margin-top:14px">Таны сонголт энэ төхөөрөмж дээр хадгалагдана. Ээлжийн хугацаа 5 минут; хугацаа дуусвал автоматаар FOLD хийгээд ширээнд үлдэнэ.</p>
+      <p style="color:#9babbc;font-size:12px;margin-top:14px">Таны сонголт энэ төхөөрөмж дээр хадгалагдана. Ээлжийн хугацаа 30 секунд; хугацаа дуусвал автоматаар FOLD хийгээд ширээнд үлдэнэ.</p>
     `;
     setTimeout(markSelectedThemes,0);
   }
@@ -2002,7 +2068,7 @@ function renderTables() {
       <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(game)} · ${players}/${maxPlayers} тоглогч</p></div>
       <div class="lobby-table-meta"><small>БОOЦОО</small>${stakes}</div>
       <div class="lobby-table-meta"><small>СУУДАЛ</small><span class="lobby-table-status">● ${players < maxPlayers ? "Сул суудалтай" : "Дүүрсэн"}</span></div>
-      <button class="gold-btn" ${players >= maxPlayers ? "disabled" : ""}>${players >= maxPlayers ? "ДҮҮРСЭН" : "ШИРЭЭНД СУУХ"}</button>
+      <button class="gold-btn" ${players >= maxPlayers ? "disabled" : ""}>${players >= maxPlayers ? "ДҮҮРСЭН" : "ШИРЭЭ ҮЗЭХ"}</button>
     `;
     const joinButton = card.querySelector("button");
     if (players < maxPlayers) joinButton.onclick = () => joinTable(id);
@@ -2014,94 +2080,113 @@ function joinTable(tableId) {
     alert("Сервертэй холбогдоогүй байна. Дахин оролдоно уу.");
     return;
   }
-  const selectedTable = allTables.find(t => String(t.id || t.tableId) === String(tableId));
-  const buyIn = Number(selectedTable?.minBuyIn || 0);
-  if (buyIn && getBalance() < buyIn) {
-    alert(`Энэ ширээнд суухад хамгийн багадаа ${buyIn.toLocaleString("en-US")} CHIP хэрэгтэй. Таны үлдэгдэл ${getBalance().toLocaleString("en-US")} CHIP байна.`);
-    return;
-  }
-
-  socket.emit("table:join", { tableId, buyIn }, result => {
+  socket.emit("table:join", { tableId, watch: true }, result => {
     if (!result || result.success === false || result.error) {
-      alert(result?.message || result?.error || "Ширээнд суухад алдаа гарлаа.");
+      alert(result?.message || result?.error || "Ширээ нээхэд алдаа гарлаа.");
       return;
     }
-
     currentTable = tableId;
-    if (Number.isFinite(Number(result.walletChips))) user.chips = Number(result.walletChips);
+    if (Number.isFinite(Number(result.walletChips)) && user) user.chips = Number(result.walletChips);
     updateHeader();
     document.body.classList.add("game-active");
     $("lobbyPage").style.display = "none";
     $("tablePage").style.display = "block";
-
-    if (result && result.table) {
+    if (result.table) {
       lastState = result.table;
       renderTable(result.table);
-    } else if (result && result.state) {
-      lastState = result.state;
-      renderTable(result.state);
+    }
+    if (!result.seated) {
+      const min = Number(result.minBuyIn || result.table?.minBuyIn || 0);
+      const max = Number(result.maxBuyIn || result.table?.maxBuyIn || 0);
+      console.info(`Сул суудлаа сонгоно уу. Buy-in: ${min.toLocaleString()}–${max.toLocaleString()} CHIP`);
+    }
+  });
+}
+
+function sitAtSeat(seatIndex) {
+  if (!socket || !socket.connected || !currentTable || !lastState) return;
+  const table = lastState.table || lastState;
+  const players = table.players || [];
+  const myUid = user?.uid || user?.id || user?.userId;
+  const alreadySeated = players.some(p => (p.uid || p.id || p.userId) === myUid || p.username === user?.username);
+  if (alreadySeated) return;
+  if (table.handStarted) {
+    alert("Одоогийн гар дууссаны дараа суудлаа сонгоорой.");
+    return;
+  }
+  const min = Number(table.minBuyIn || 0);
+  const max = Number(table.maxBuyIn || min);
+  let buyIn = min;
+  const entered = prompt(`Суудал ${seatIndex + 1}
+Buy-in оруулна уу (${min.toLocaleString()}–${max.toLocaleString()} CHIP):`, String(min));
+  if (entered === null) return;
+  buyIn = Math.floor(Number(String(entered).replace(/,/g, "")));
+  if (!Number.isSafeInteger(buyIn) || buyIn < min || buyIn > max) {
+    alert(`Buy-in ${min.toLocaleString()}–${max.toLocaleString()} CHIP байх ёстой.`);
+    return;
+  }
+  if (buyIn > getBalance()) {
+    alert("Таны CHIP хүрэлцэхгүй байна. Касс хэсгээс цэнэглэнэ үү.");
+    return;
+  }
+  socket.emit("table:sit", { seat: seatIndex, buyIn }, result => {
+    if (!result || result.success === false) {
+      alert(result?.message || "Суудал авахад алдаа гарлаа.");
+      return;
+    }
+    if (Number.isFinite(Number(result.walletChips)) && user) user.chips = Number(result.walletChips);
+    updateHeader();
+    if (result.table) {
+      lastState = result.table;
+      renderTable(result.table);
     }
   });
 }
 
 function cardHtml(card) {
   if (!card) return "";
-
   const rank = card.rank || card.value || "";
-  const suit = card.suit || "";
-
-  const red = ["♥", "♦", "hearts", "diamonds", "heart", "diamond"]
-    .includes(String(suit).toLowerCase());
-
-  const symbols = {
-    hearts: "♥",
-    heart: "♥",
-    diamonds: "♦",
-    diamond: "♦",
-    clubs: "♣",
-    club: "♣",
-    spades: "♠",
-    spade: "♠"
+  const rawSuit = String(card.suit || "").toLowerCase();
+  const suitMap = {
+    "♥":"hearts", "heart":"hearts", "hearts":"hearts",
+    "♦":"diamonds", "diamond":"diamonds", "diamonds":"diamonds",
+    "♣":"clubs", "club":"clubs", "clubs":"clubs",
+    "♠":"spades", "spade":"spades", "spades":"spades"
   };
-
-  const symbol = symbols[String(suit).toLowerCase()] || suit;
-
-  return `<div class="playing-card deal-animate ${red ? "red" : ""}">
-    ${escapeHtml(String(rank))}${escapeHtml(String(symbol))}
-  </div>`;
+  const suitClass = suitMap[rawSuit] || "spades";
+  const symbols = {hearts:"♥",diamonds:"♦",clubs:"♣",spades:"♠"};
+  const symbol = symbols[suitClass];
+  return `<div class="playing-card ${suitClass} deal-animate"><span>${escapeHtml(String(rank))}</span><b>${symbol}</b></div>`;
 }
 
 function playerPocketHtml(player, table, isMe) {
   if (!table?.handStarted) return "";
   const cards = Array.isArray(player?.cards) ? player.cards : [];
   const count = String(table.type || "").toLowerCase().includes("omaha") ? 4 : 2;
-  // Хувийн хөзрийг зөвхөн эзэнд нь, эсвэл showdown үед л нүүрээр харуулна.
   const mayReveal = cards.length > 0 && (isMe || table.street === "showdown");
   if (mayReveal) return `<div class="seat-cards">${cards.map(cardHtml).join("")}</div>`;
-  return `<div class="seat-cards">${Array.from({length:count},()=>'<div class="playing-card card-back deal-animate" aria-label="Нууц хөзөр"></div>').join("")}</div>`;
+  return `<div class="seat-cards">${Array.from({length:count},()=>'<div class="playing-card card-back deal-animate"></div>').join("")}</div>`;
 }
 
 function getPlayerName(player) {
-  return player?.username ||
-    player?.name ||
-    player?.user?.username ||
-    player?.user?.name ||
-    "Тоглогч";
+  return player?.displayName || player?.username || player?.name || player?.user?.username || "Тоглогч";
 }
-
 function getPlayerChips(player) {
-  return player?.chips ??
-    player?.stack ??
-    player?.balance ??
-    player?.chipCount ??
-    0;
+  return player?.chips ?? player?.stack ?? player?.balance ?? player?.chipCount ?? 0;
 }
 
-function renderSeat(player, index, table = {}) {
-  const seat = $("seat" + index);
+function renderSeat(player, seatIndex, table = {}, playerIndex = -1) {
+  const seat = $("seat" + seatIndex);
+  if (!seat) return;
   if (!player) {
-    seat.className = "seat seat-" + (index + 1) + " seat-empty";
-    seat.innerHTML = `<div class="avatar">＋</div><div class="seat-info"><strong>СУЛ СУУДАЛ</strong><small>Нээлттэй</small></div>`;
+    const maxPlayers = Number(table.maxPlayers || 6);
+    const myUid = user?.uid || user?.id || user?.userId;
+    const seated = (table.players || []).some(p => (p.uid || p.id || p.userId) === myUid || p.username === user?.username);
+    const canChoose = !seated && seatIndex < maxPlayers;
+    seat.className = "seat seat-" + (seatIndex + 1) + " seat-empty";
+    seat.innerHTML = canChoose
+      ? `<button class="seat-choose" onclick="sitAtSeat(${seatIndex})"><span class="empty-head">＋</span><strong>СУЛ СУУДАЛ</strong><small>СОНГОХ</small></button>`
+      : `<div class="avatar empty-avatar">＋</div><div class="seat-info"><strong>СУЛ СУУДАЛ</strong><small>Нээлттэй</small></div>`;
     return;
   }
   const name = getPlayerName(player);
@@ -2109,28 +2194,39 @@ function renderSeat(player, index, table = {}) {
   const initial = name.trim().charAt(0).toUpperCase() || "P";
   const myUid = user?.uid || user?.id || user?.userId;
   const isMe = (player.uid || player.id || player.userId) === myUid || player.username === user?.username;
-  const isTurn = Number(table.currentTurn) === index && table.handStarted;
-  seat.className = "seat seat-" + (index + 1) + (isTurn ? " is-turn" : "");
+  const turnPlayer = (table.players || [])[Number(table.currentTurn)];
+  const isTurn = !!table.handStarted && !!turnPlayer && (turnPlayer.uid || turnPlayer.id) === (player.uid || player.id);
+  seat.className = "seat seat-" + (seatIndex + 1) + (isTurn ? " is-turn" : "") + (isMe ? " is-me" : "");
+  const timer = isTurn && table.turnDeadline ? `<small class="turn-clock" data-turn-clock="1">${Math.max(0,Math.ceil((Number(table.turnDeadline)-Date.now())/1000))}s</small>` : "";
   seat.innerHTML = `
     ${playerPocketHtml(player, table, isMe)}
     <div class="avatar">${escapeHtml(initial)}</div>
     <div class="seat-info">
       <strong>${escapeHtml(name)}</strong>
       <div class="chip-display"><span class="chip-icon"></span><span>${chips} CHIP</span></div>
-      ${player.folded ? '<small>FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : (table.handStarted ? '<small class="seat-dealt">ХӨЗӨР ТАРААСАН</small>' : ''))}
+      ${timer}
+      ${player.folded ? '<small class="folded-label">FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : "")}
       ${isMe ? '<small class="seat-me">ТАНЫ СУУДАЛ</small>' : ""}
     </div>`;
+}
+
+function updateTurnCountdown() {
+  const table = lastState?.table || lastState;
+  if (!table?.handStarted || !table.turnDeadline) return;
+  const seconds = Math.max(0, Math.ceil((Number(table.turnDeadline) - Date.now()) / 1000));
+  document.querySelectorAll('[data-turn-clock="1"]').forEach(el => { el.textContent = `${seconds}s`; });
 }
 
 function renderTable(state) {
   if (!state) return;
   const table = state.table || state;
   const players = table.players || state.players || [];
-  if (!table.handStarted && table.street === "showdown" && localStorage.getItem('blackclub_auto_next_hand') === 'true' && currentTable && autoNextScheduledHand !== Number(table.handNumber || 0)) {
+  const myUidForActions = user?.uid || user?.id || user?.userId;
+  const isSeatedHere = players.some(p => (p.uid || p.id || p.userId) === myUidForActions || p.username === user?.username);
+  if (!table.handStarted && table.street === "showdown" && isSeatedHere && localStorage.getItem('blackclub_auto_next_hand') === 'true' && currentTable && autoNextScheduledHand !== Number(table.handNumber || 0)) {
     autoNextScheduledHand = Number(table.handNumber || 0);
     setTimeout(() => { if (currentTable && !table.handStarted && localStorage.getItem('blackclub_auto_next_hand') === 'true' && socket?.connected) nextHand(); }, 5000);
   }
-  const seats = table.seats || state.seats || [];
   $("tableTitle").textContent = table.name || table.title || "BLACKCLUB POKER";
   const streetNames = {waiting:"Хүлээж байна",preflop:"Pre-Flop",flop:"Flop",turn:"Turn",river:"River",showdown:"Тоглолт дууссан"};
   const turnPlayer = players[table.currentTurn];
@@ -2138,19 +2234,29 @@ function renderTable(state) {
   const resultText = table.lastResult ? ` · Ялагч: ${(table.lastResult.winners||[]).join(", ")} (${table.lastResult.hand||""})` : "";
   const myCards = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username)?.cards || [];
   const requiredCards = String(table.type||"").toLowerCase().includes("omaha") ? 4 : 2;
-  const dealStatus = table.handStarted
-    ? (myCards.length >= requiredCards ? ` · ХӨЗӨР ТАРААСАН ✓ (${myCards.length})` : " · ХӨЗӨР ТАРААСАН · ТАНЫ ХӨЗӨР ИРЭЭГҮЙ")
-    : (table.street === "showdown" ? " · Гар дууссан · NEXT HAND хүлээж байна" : ` · ${players.length < 2 ? "2+ ТОГЛОГЧ ХҮЛЭЭЖ БАЙНА" : "ДАРААГИЙН ГАР ЭХЛЭХИЙГ ХҮЛЭЭЖ БАЙНА"}`);
+  const me = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username);
+  const dealStatus = me
+    ? (table.handStarted ? (myCards.length >= requiredCards ? ` · ХӨЗӨР ТАРААСАН ✓ (${myCards.length})` : " · ХӨЗӨР ТАРААСАН · ТАНЫ ХӨЗӨР ИРЭЭГҮЙ") : (table.street === "showdown" ? " · Гар дууссан · NEXT HAND хүлээж байна" : " · СУУДАЛ АВСАН"))
+    : " · СУЛ СУУДЛАА СОНГОНО УУ";
   $("tableInfo").textContent = `${String(table.type||"").toUpperCase()} · ${streetNames[table.street]||table.street||""}${dealStatus}${turnText}${resultText}`;
   $("potAmount").textContent = Number(table.pot ?? state.pot ?? 0).toLocaleString("en-US");
   const board = table.communityCards || state.communityCards || [];
   $("boardCards").innerHTML = board.map(cardHtml).join("");
-  const me = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username);
   $("myHandCards").innerHTML = (me?.cards || []).map(cardHtml).join("");
   const seatPlayers = Array(6).fill(null);
-  if (Array.isArray(seats) && seats.length) seats.forEach((seat,index)=>{if(index<6)seatPlayers[index]=seat?.player||seat||null;});
-  else if (Array.isArray(players)) players.forEach((player,index)=>{const pos=Number.isInteger(player.seat)?player.seat:index;if(pos>=0&&pos<6)seatPlayers[pos]=player;});
-  seatPlayers.forEach((player,index)=>renderSeat(player,index,table));
+  if (Array.isArray(players)) players.forEach((player,index)=>{
+    const pos = Number.isInteger(player.seat) ? player.seat : index;
+    if(pos>=0 && pos<6) seatPlayers[pos]=player;
+  });
+  seatPlayers.forEach((player,index)=>renderSeat(player,index,table,player ? players.indexOf(player) : -1));
+  const isMyTurn = !!table.handStarted && !!turnPlayer && ((turnPlayer.uid || turnPlayer.id || turnPlayer.userId) === myUidForActions || turnPlayer.username === user?.username);
+  const actionButtons = document.querySelectorAll(".actions button");
+  actionButtons.forEach((button, index) => {
+    if (index === actionButtons.length - 1) button.disabled = !isSeatedHere || !!table.handStarted || table.street !== "showdown";
+    else button.disabled = !isMyTurn;
+  });
+  updateTurnCountdown();
+  if (!turnCountdownTimer) turnCountdownTimer = setInterval(updateTurnCountdown, 250);
 }
 
 function sendAction(action) {
