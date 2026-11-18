@@ -1122,6 +1122,18 @@ body:has(#authScreen:not([style*="display: none"])) {
 .bc-status{display:inline-block;padding:4px 8px;border-radius:20px;background:#26384b;color:#e8d29a;margin-top:6px}
 .bc-actions{display:flex;gap:8px;margin-top:9px}.bc-actions button{flex:1;border:0;border-radius:6px;padding:8px;font-weight:bold}.bc-approve{background:#1c8055;color:white}.bc-reject{background:#873c45;color:white}
 
+
+.admin-user-card{border:1px solid #2a3b4e;border-radius:10px;padding:13px;margin:10px 0;background:#091421}
+.admin-user-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.admin-user-name{color:#f3d28b;font-weight:700;font-size:14px}
+.admin-user-meta{color:#91a2b5;font-size:11px;margin-top:4px;overflow-wrap:anywhere}
+.admin-user-balance{color:#e8bd62;font-weight:800;font-size:16px;white-space:nowrap}
+.admin-chip-controls{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.admin-chip-controls input{min-width:120px;flex:1;background:#101f30;color:#fff;border:1px solid #354a60;border-radius:7px;padding:9px}
+.admin-chip-controls button{border:0;border-radius:7px;padding:9px 13px;font-weight:700;cursor:pointer}
+.admin-chip-add{background:#1c8055;color:#fff}.admin-chip-remove{background:#873c45;color:#fff}
+.admin-users-search{width:100%;box-sizing:border-box;background:#101f30;color:#fff;border:1px solid #354a60;border-radius:8px;padding:11px;margin:8px 0 12px}
+
 </style>
 </head>
 
@@ -1215,6 +1227,9 @@ body:has(#authScreen:not([style*="display: none"])) {
     </button>
     <button class="menu-item" id="adminCashierMenu" style="display:none" onclick="openAccountSection('adminCashier')">
       <span class="menu-item-icon">♛</span> Админ касс
+    </button>
+    <button class="menu-item" id="adminUsersMenu" style="display:none" onclick="openAccountSection('adminUsers')">
+      <span class="menu-item-icon">♟</span> Хэрэглэгчид / CHIP удирдах
     </button>
     <button class="menu-item" onclick="openAccountSection('history')">
       <span class="menu-item-icon">◷</span> Тоглоомын түүх
@@ -1410,6 +1425,7 @@ function updateHeader() {
   if ($("lobbyWelcomeName")) $("lobbyWelcomeName").textContent = name;
   if ($("lobbyBalance")) $("lobbyBalance").textContent = balance;
   if ($("adminCashierMenu")) $("adminCashierMenu").style.display = user?.isAdmin ? "flex" : "none";
+  if ($("adminUsersMenu")) $("adminUsersMenu").style.display = user?.isAdmin ? "flex" : "none";
 }
 
 function toggleAccountMenu() {
@@ -1523,6 +1539,13 @@ function openAccountSection(section) {
     loadAdminCashier();
   }
 
+  if (section === "adminUsers") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "ХЭРЭГЛЭГЧИД / CHIP УДИРДАХ";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Хэрэглэгчийн CHIP үлдэгдлийг харах, CHIP нэмэх эсвэл хасах боломжтой. Өөрчлөлт сервер дээр хадгалагдана.</div><input class="admin-users-search" id="adminUsersSearch" placeholder="Нэрээр хайх..." oninput="filterAdminUsers()"><div id="adminUsersList">Хэрэглэгчид ачаалж байна...</div></div>';
+    loadAdminUsers();
+  }
+
   $("accountSection").classList.add("open");
 }
 
@@ -1567,9 +1590,62 @@ async function loadAdminCashier() {
     $("adminCashierList").innerHTML = list.length ? list.map(r => `<div class="bc-request"><strong>${r.type === "deposit" ? "Цэнэглэх" : "Татах"} · ${Number(r.amount).toLocaleString()} CHIP</strong><br>Хэрэглэгч: ${escapeHtml(r.username || r.displayName || "-")}<br>Данс: ${escapeHtml(r.bankName || "-")} ${escapeHtml(r.bankAccount || "")} ${escapeHtml(r.bankHolder || "")}<br>Баримт: ${escapeHtml(r.reference || "-")}<div class="bc-actions"><button class="bc-approve" onclick="decideCashier('${r.id}','approve')">Зөвшөөрөх</button><button class="bc-reject" onclick="decideCashier('${r.id}','reject')">Татгалзах</button></div></div>`).join("") : '<div class="bc-note">Хүлээгдэж буй хүсэлт алга.</div>';
   } catch(e) { showMessage("adminCashierList", e.message); }
 }
+let cachedAdminUsers = [];
+
+async function loadAdminUsers() {
+  const target = $("adminUsersList");
+  if (!user?.isAdmin) { if (target) target.textContent = "Админ эрх шаардлагатай."; return; }
+  try {
+    const data = await apiGet("/api/admin/users");
+    cachedAdminUsers = Array.isArray(data.users) ? data.users : [];
+    renderAdminUsers(cachedAdminUsers);
+  } catch (error) {
+    showMessage("adminUsersList", error.message);
+  }
+}
+
+function renderAdminUsers(users) {
+  const target = $("adminUsersList");
+  if (!target) return;
+  if (!users.length) { target.innerHTML = '<div class="bc-note">Хэрэглэгч олдсонгүй.</div>'; return; }
+  target.innerHTML = users.map((u) => {
+    const uid = String(u.uid || u.id || "");
+    const name = String(u.displayName || u.username || "Нэргүй хэрэглэгч");
+    const username = String(u.username || "-");
+    const chips = Number(u.chips ?? u.balance ?? 0);
+    return `<div class="admin-user-card" data-uid="${escapeHtml(uid)}">
+      <div class="admin-user-top"><div><div class="admin-user-name">${escapeHtml(name)} ${u.isAdmin ? "· ADMIN" : ""}</div><div class="admin-user-meta">@${escapeHtml(username)}<br>ID: ${escapeHtml(uid)}</div></div><div class="admin-user-balance">${(Number.isFinite(chips) ? chips : 0).toLocaleString("en-US")} CHIP</div></div>
+      <div class="admin-chip-controls"><input class="admin-chip-amount" type="number" min="1" step="1" placeholder="CHIP дүн"><button class="admin-chip-add" onclick="changeAdminChips(this,'add')">+ НЭМЭХ</button><button class="admin-chip-remove" onclick="changeAdminChips(this,'remove')">− ХАСАХ</button></div>
+    </div>`;
+  }).join("");
+}
+
+function filterAdminUsers() {
+  const query = String($("adminUsersSearch")?.value || "").trim().toLowerCase();
+  const filtered = cachedAdminUsers.filter(u => `${u.username || ""} ${u.displayName || ""} ${u.uid || u.id || ""}`.toLowerCase().includes(query));
+  renderAdminUsers(filtered);
+}
+
+async function changeAdminChips(button, action) {
+  if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+  const card = button?.closest(".admin-user-card");
+  const uid = card?.dataset.uid || "";
+  const amount = Number(card?.querySelector(".admin-chip-amount")?.value);
+  if (!uid) { alert("Хэрэглэгчийн ID олдсонгүй."); return; }
+  if (!Number.isSafeInteger(amount) || amount <= 0) { alert("1-ээс их бүхэл CHIP дүн оруулна уу."); return; }
+  const verb = action === "add" ? "нэмэх" : "хасах";
+  if (!confirm(`${amount.toLocaleString("en-US")} CHIP ${verb} үү?`)) return;
+  try {
+    const result = await api("/api/admin/chips", { uid, amount, action });
+    alert(result.message || "CHIP шинэчлэгдлээ.");
+    await loadAdminUsers();
+    await refreshMe();
+  } catch (error) { alert(error.message); }
+}
+
 async function decideCashier(requestId, decision) {
   const note = decision === "reject" ? (prompt("Татгалзсан шалтгаан (заавал биш):") || "") : "";
-  try { const r = await api("/api/admin/cashier/decision", { requestId, decision, note }); alert(r.message || "Шийдвэр хадгалагдлаа."); loadAdminCashier(); }
+  try { const r = await api("/api/admin/cashier/decision", { requestId, decision, adminNote: note }); alert(r.message || "Шийдвэр хадгалагдлаа."); loadAdminCashier(); }
   catch(e) { alert(e.message); }
 }
 
