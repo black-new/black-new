@@ -1451,6 +1451,12 @@ body:has(#authScreen:not([style*="display: none"])) {
         <button class="gold-btn" onclick="sendAction('raise')">RAISE</button>
         <button class="gold-btn next-hand" onclick="nextHand()">NEXT HAND</button>
       </div>
+      <section class="cashier-card" id="tableChatPanel" style="margin-top:10px;padding:10px">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><strong>BLACKCLUB CHAT</strong><select id="chatMode" style="max-width:145px"><option value="table">Ширээний чат</option><option value="global">Нийтийн чат</option><option value="support">Админд бичих</option></select><button class="bc-action" style="width:auto;padding:6px 10px" onclick="loadChatHistory()">ШИНЭЧЛЭХ</button></div>
+        <div id="chatMessages" style="height:105px;overflow:auto;background:#07111d;border:1px solid #263d57;border-radius:8px;padding:7px;margin:7px 0;font-size:12px"></div>
+        <div style="display:flex;gap:6px"><input id="chatInput" maxlength="300" placeholder="Мессеж бичих..." style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')sendChatMessage()"><button class="gold-btn" onclick="sendChatMessage()">ИЛГЭЭХ</button></div>
+        <div id="bankDisplay" class="bc-note" style="margin-top:7px"></div>
+      </section>
     </section>
   </section>
 </main>
@@ -1587,12 +1593,8 @@ function openAccountSection(section) {
 
   if (section === "history") {
     title.textContent = "ТОГЛООМЫН ТҮҮХ";
-
-    content.innerHTML = `
-      <div class="history-empty">
-        Одоогоор тоглоомын түүхийн мэдээлэл алга байна.
-      </div>
-    `;
+    content.innerHTML = `<div class="cashier-card"><div class="bc-note">Таны оролцсон сүүлийн гарууд. Хөзөр, нийт pot, rake болон ялагчийн мэдээлэл.</div><div id="myHandHistory">Түүх ачаалж байна...</div></div>`;
+    loadMyHandHistory();
   }
 
   if (section === "settings") {
@@ -1619,13 +1621,13 @@ function openAccountSection(section) {
 
   if (section === "cashier") {
     title.textContent = "КАСС / CHIP ЦЭНЭГЛЭХ";
-    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Мөнгөө шилжүүлсний дараа дүн болон гүйлгээний утга/баримтын дугаараа оруулж хүсэлт илгээнэ. Админ баталсны дараа CHIP нэмэгдэнэ.</div><div id="cashierBankInfo" class="bc-note">Кассын мэдээлэл ачаалж байна...</div><label class="bc-field">Цэнэглэх CHIP дүн<input id="depositAmount" type="number" min="1000" placeholder="Жишээ: 10000"></label><label class="bc-field">Гүйлгээний утга / баримтын дугаар<input id="depositReference" maxlength="120" placeholder="Гүйлгээний утга"></label><button class="bc-action" onclick="submitDeposit()">ЦЭНЭГЛЭХ ХҮСЭЛТ ИЛГЭЭХ</button><div id="cashierMessage" class="bc-note"></div></div><div class="cashier-card"><h3>Миний кассын хүсэлтүүд</h3><div id="cashierHistory">Ачаалж байна...</div></div>';
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Мөнгөө шилжүүлсний дараа дүн болон гүйлгээний утга/баримтын дугаараа оруулж хүсэлт илгээнэ. Админ баталсны дараа CHIP нэмэгдэнэ.</div><div id="cashierBankInfo" class="bc-note">Кассын мэдээлэл ачаалж байна...</div><label class="bc-field">Цэнэглэх CHIP дүн (доод хэмжээ 5,000)<input id="depositAmount" type="number" min="5000" placeholder="Жишээ: 10000"></label><label class="bc-field">Гүйлгээний утга / баримтын дугаар<input id="depositReference" maxlength="120" placeholder="Гүйлгээний утга"></label><button class="bc-action" onclick="submitDeposit()">ЦЭНЭГЛЭХ ХҮСЭЛТ ИЛГЭЭХ</button><div id="cashierMessage" class="bc-note"></div></div><div class="cashier-card"><h3>Миний кассын хүсэлтүүд</h3><div id="cashierHistory">Ачаалж байна...</div></div>';
     loadCashierInfo(); loadCashierHistory();
   }
 
   if (section === "withdraw") {
     title.textContent = "CHIP ТАТАХ";
-    content.innerHTML = `<div class="cashier-card"><div class="bc-note">Татахын тулд банкны мэдээллээ профайлд хадгалсан байх шаардлагатай. Хүсэлт илгээхэд CHIP түр хасагдаж, татгалзвал буцаан нэмэгдэнэ.</div><label class="bc-field">Татах CHIP дүн<input id="withdrawAmount" type="number" min="1000" placeholder="Дүн"></label><button class="bc-action" onclick="submitWithdraw()">ТАТАХ ХҮСЭЛТ ИЛГЭЭХ</button><div id="withdrawMessage" class="bc-note"></div></div>`;
+    content.innerHTML = `<div class="cashier-card"><div class="bc-note">Татахын тулд банкны мэдээллээ профайлд хадгалсан байх шаардлагатай. Хүсэлт илгээхэд CHIP түр хасагдаж, татгалзвал буцаан нэмэгдэнэ.</div><label class="bc-field">Татах CHIP дүн (доод хэмжээ 10,000)<input id="withdrawAmount" type="number" min="10000" placeholder="Дүн"></label><button class="bc-action" onclick="submitWithdraw()">ТАТАХ ХҮСЭЛТ ИЛГЭЭХ</button><div id="withdrawMessage" class="bc-note"></div></div>`;
   }
 
   if (section === "account") {
@@ -1641,8 +1643,11 @@ function openAccountSection(section) {
         <button class="bc-action" onclick="openAccountSection('adminCashier')">АДМИН КАСС · ХҮСЭЛТҮҮД</button>
         <button class="bc-action" onclick="openAccountSection('adminUsers')">ХЭРЭГЛЭГЧИД · CHIP / BLOCK УДИРДАХ</button>
         <button class="bc-action" onclick="openAccountSection('adminTables')">LIVE ШИРЭЭ · БҮХ ХӨЗӨР ХАРАХ</button>
+        <div class="cashier-card"><h3>ЧАТНЫ УДИРДЛАГА</h3><div id="adminChatSettings">Ачаалж байна...</div></div>
+        <div class="cashier-card"><h3>RAKE / JACKPOT УДИРДЛАГА</h3><div id="adminCasinoSettings">Ачаалж байна...</div><div id="adminCasinoReport" class="bc-note"></div></div>
         <button class="bc-action bc-secondary" onclick="closeAccountSection()">ӨӨРӨӨ ШИРЭЭНД СУУХ · LOBBY</button>
       </div>`;
+    setTimeout(()=>{renderChatAdmin();renderCasinoAdmin();}, 0);
   }
 
   if (section === "adminCashier") {
@@ -1735,12 +1740,13 @@ function renderAdminUsers(users) {
     return `<div class="admin-user-card" data-uid="${escapeHtml(uid)}">
       <div class="admin-user-top"><div><div class="admin-user-name">${escapeHtml(name)} ${u.isAdmin ? "· ADMIN" : ""}</div><div class="admin-user-meta">@${escapeHtml(username)}<br>ID: ${escapeHtml(uid)}</div></div><div class="admin-user-balance">${(Number.isFinite(chips) ? chips : 0).toLocaleString("en-US")} CHIP</div></div>
       <div class="admin-chip-controls"><input class="admin-chip-amount" type="number" min="1" step="1" placeholder="CHIP дүн"><button class="admin-chip-add" onclick="changeAdminChips(this,'add')">+ НЭМЭХ</button><button class="admin-chip-remove" onclick="changeAdminChips(this,'remove')">− ХАСАХ</button></div>
-      ${u.isAdmin ? '<div class="bc-note">Админ бүртгэл</div>' : `<div class="admin-chip-controls"><button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button></div>`}
+      ${u.isAdmin ? '<div class="bc-note">Админ бүртгэл</div>' : `<div class="admin-chip-controls"><button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button><button class="admin-chip-remove" onclick="setChatMuted('${escapeHtml(uid)}',${u.chatMuted ? 'false' : 'true'})">${u.chatMuted ? 'ЧАТ НЭЭХ' : 'ЧАТ MUTE'}</button></div>`}
       ${u.blocked ? '<div class="bc-status">BLOCKED · НЭВТРЭХ ЭРХ ХААЛТТАЙ</div>' : ''}
     </div>`;
   }).join("");
 }
 
+async function setChatMuted(uid, muted){ try{await api("/api/admin/chat/mute",{uid,muted}); alert(muted?"Хэрэглэгчийн чат хаагдлаа.":"Хэрэглэгчийн чат нээгдлээ."); await loadAdminUsers();}catch(e){alert(e.message);} }
 async function setAdminUserBlocked(uid, blocked) {
   if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
   const action = blocked ? "хаах" : "нээх";
@@ -2004,6 +2010,9 @@ function connectSocket() {
     lastState = state;
     renderTable(state);
   });
+  socket.on("chat:history", rows => { const box=$("chatMessages"); if(box){box.innerHTML="";(rows||[]).forEach(addChatLine);} });
+  socket.on("chat:message", addChatLine);
+  socket.on("chat:settings", s => { if(s.enabled===false) addChatLine({username:"SYSTEM",text:"Админ чатыг түр хаалаа."}); });
 
   socket.on("notice", message => {
     const text = typeof message === "string"
@@ -2013,6 +2022,17 @@ function connectSocket() {
     alert(text);
   });
 }
+
+function addChatLine(m) { const box=$("chatMessages"); if(!box)return; const line=document.createElement("div"); line.style.margin="3px 0"; const who=document.createElement("b"); who.textContent=(m.username||"Тоглогч")+": "; const msg=document.createElement("span"); msg.textContent=m.text||""; line.append(who,msg); box.appendChild(line); box.scrollTop=box.scrollHeight; }
+function loadChatHistory(){ if(!socket?.connected)return; socket.emit("chat:history",{mode:$("chatMode")?.value||"table"}); }
+function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const mode=$("chatMode")?.value||"table"; socket.emit("chat:send",{mode,tableId:currentTable,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
+async function loadChatSettings(){ try{const r=await apiGet("/api/chat/settings"); const b=r.bank||{}; if($("bankDisplay"))$("bankDisplay").textContent=b.account?`Төлбөрийн данс: ${b.name||""} · ${b.account} · ${b.holder||""}`:"Төлбөрийн дансны мэдээлэл тохируулаагүй.";}catch(e){} }
+function renderChatAdmin(){ const el=$("adminChatSettings"); if(!el)return; apiGet("/api/chat/settings").then(r=>{el.innerHTML=`<label class="bc-field"><input type="checkbox" id="adminChatEnabled" ${r.enabled?"checked":""}> Чат нээлттэй</label><div class="bc-note">Банкны өмнөх тохиргоо өөрчлөгдөхгүй.</div><button class="bc-action" onclick="saveChatAdmin()">ЧАТНЫ ТӨЛӨВ ХАДГАЛАХ</button>`;}).catch(e=>el.textContent=e.message); }
+async function saveChatAdmin(){ try{await api("/api/admin/chat/settings",{enabled:$("adminChatEnabled").checked}); alert("Чатны төлөв хадгалагдлаа.");}catch(e){alert(e.message);} }
+async function renderCasinoAdmin(){const el=$("adminCasinoSettings");if(!el)return;try{const d=await apiGet("/api/admin/casino/settings");const v=d.settings||{};el.innerHTML=`<label class="bc-field">Rake хувь (%)<input id="casinoRakePercent" type="number" min="0" max="10" step="0.1" value="${Number(v.rakePercent??3)}"></label><label class="bc-field">Rake дээд хязгаар (BB)<input id="casinoRakeCap" type="number" min="0" max="20" step="0.1" value="${Number(v.rakeCapBB??3)}"></label><label class="bc-field">Jackpot-д орох rake-ийн хувь (%)<input id="casinoJackpotPercent" type="number" min="0" max="10" step="0.1" value="${Number(v.jackpotRakePercent??0.5)}"></label><button class="bc-action" onclick="saveCasinoAdmin()">RAKE / JACKPOT ХАДГАЛАХ</button><button class="bc-action" onclick="loadCasinoReport()">ТАЙЛАН ШИНЭЧЛЭХ</button>`;await loadCasinoReport();}catch(e){el.textContent=e.message;}}
+async function saveCasinoAdmin(){try{const v={rakePercent:Number($("casinoRakePercent").value),rakeCapBB:Number($("casinoRakeCap").value),jackpotRakePercent:Number($("casinoJackpotPercent").value)};await api("/api/admin/casino/settings",v);alert("Rake / Jackpot тохиргоо хадгалагдлаа.");await loadCasinoReport();}catch(e){alert(e.message);}}
+async function loadCasinoReport(){const el=$("adminCasinoReport");if(!el)return;try{const d=await apiGet("/api/admin/casino/report");el.textContent=`Сүүлийн бүртгэлүүд · Нийт rake: ${Number(d.totalRake||0).toLocaleString()} CHIP · Jackpot-д нэмсэн: ${Number(d.totalJackpot||0).toLocaleString()} CHIP · Гүйлгээ: ${(d.rows||[]).length}`;}catch(e){el.textContent=e.message;}}
+async function loadMyHandHistory(){const el=$("myHandHistory");if(!el)return;try{const d=await apiGet("/api/history/hands");const rows=d.hands||[];el.innerHTML=rows.length?rows.map(h=>`<div class="bc-request"><strong>${escapeHtml(h.tableName||h.tableId||"Ширээ")} · Гар #${Number(h.handNumber||0)}</strong><br>${escapeHtml(h.gameType||"texas").toUpperCase()} · Pot ${Number(h.grossPot||0).toLocaleString()} · Rake ${Number(h.rake||0).toLocaleString()} CHIP<br>Ширээний хөзөр: ${(h.communityCards||[]).map(c=>escapeHtml(typeof c==="string"?c:`${c.rank||c.value||""}${c.suit||""}`)).join(" ")||"-"}<br>Ялагч: ${(h.winners||[]).map(w=>escapeHtml(w.username||"Тоглогч")).join(", ")||"-"}<br>Таны хөзөр: ${((h.players||[]).find(p=>p.uid===user?.uid)?.cards||[]).map(c=>escapeHtml(typeof c==="string"?c:`${c.rank||c.value||""}${c.suit||""}`)).join(" ")||"-"}</div>`).join(""):'<div class="bc-note">Одоогоор таны оролцсон гарын түүх алга.</div>';}catch(e){el.textContent=e.message;}}
 
 function setFilter(value, button) {
   filter = value;
@@ -2095,6 +2115,7 @@ function joinTable(tableId) {
       lastState = result.table;
       renderTable(result.table);
     }
+    setTimeout(()=>{loadChatHistory();loadChatSettings();},150);
     if (!result.seated) {
       const min = Number(result.minBuyIn || result.table?.minBuyIn || 0);
       const max = Number(result.maxBuyIn || result.table?.maxBuyIn || 0);
@@ -2231,7 +2252,7 @@ function renderTable(state) {
   const streetNames = {waiting:"Хүлээж байна",preflop:"Pre-Flop",flop:"Flop",turn:"Turn",river:"River",showdown:"Тоглолт дууссан"};
   const turnPlayer = players[table.currentTurn];
   const turnText = table.handStarted && turnPlayer ? ` · Ээлж: ${getPlayerName(turnPlayer)}` : "";
-  const resultText = table.lastResult ? ` · Ялагч: ${(table.lastResult.winners||[]).join(", ")} (${table.lastResult.hand||""})` : "";
+  const resultText = table.lastResult ? ` · Ялагч: ${(table.lastResult.winners||[]).join(", ")} (${table.lastResult.hand||""}) · Rake: ${Number(table.lastResult.rake||0).toLocaleString()} CHIP` : "";
   const myCards = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username)?.cards || [];
   const requiredCards = String(table.type||"").toLowerCase().includes("omaha") ? 4 : 2;
   const me = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username);

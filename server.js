@@ -18,6 +18,14 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const MIN_DEPOSIT = Math.max(5000, Number(process.env.MIN_DEPOSIT || 5000));
+const MIN_WITHDRAW = Math.max(10000, Number(process.env.MIN_WITHDRAW || 10000));
+const DEFAULT_RAKE_PERCENT = Math.min(10, Math.max(0, Number(process.env.RAKE_PERCENT || 3)));
+const DEFAULT_RAKE_CAP_BB = Math.max(0, Number(process.env.RAKE_CAP_BB || 3));
+const DEFAULT_JACKPOT_RAKE_PERCENT = Math.min(10, Math.max(0, Number(process.env.JACKPOT_RAKE_PERCENT || 0.5)));
+const casinoSettings = { rakePercent: DEFAULT_RAKE_PERCENT, rakeCapBB: DEFAULT_RAKE_CAP_BB, jackpotRakePercent: DEFAULT_JACKPOT_RAKE_PERCENT };
+const chatSettings = { enabled: true, modes: ["table", "global", "support"] };
+const chatRate = new Map();
 const FIREBASE_WEB_API_KEY = process.env.FIREBASE_WEB_API_KEY || "";
 const ADMIN_UIDS = (process.env.ADMIN_UIDS || "")
   .split(",")
@@ -65,6 +73,7 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
+db.collection("casinoSettings").doc("main").get().then(snap => { if (snap.exists) { const v=snap.data()||{}; for (const k of ["rakePercent","rakeCapBB","jackpotRakePercent"]) if (Number.isFinite(Number(v[k]))) casinoSettings[k]=Number(v[k]); if (typeof v.chatEnabled === "boolean") chatSettings.enabled=v.chatEnabled; } }).catch(err=>console.error("Casino settings load:",err));
 
 // ==========================================
 // COMMON HELPERS
@@ -99,7 +108,8 @@ function cleanUser(data, uid) {
     bankAccount: data.bankAccount || "",
     bankHolder: data.bankHolder || "",
     ageConfirmed: data.ageConfirmed === true,
-    blocked: data.blocked === true
+    blocked: data.blocked === true,
+    chatMuted: data.chatMuted === true
   };
 }
 
@@ -183,6 +193,69 @@ function authAdmin(req, res, next) {
 
   next();
 }
+
+app.get("/api/history/hands", authUser, async (req, res) => {
+  try {
+    const snap = await db.collection("handHistory").orderBy("createdAt", "desc").limit(100).get();
+    const hands = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(h => (h.players || []).some(p => p.uid === req.user.uid));
+    res.json({ hands: hands.slice(0, 50) });
+  } catch (error) { res.status(500).json({ message: "Гарын түүх уншиж чадсангүй." }); }
+});
+
+// ==========================================
+// CASINO RAKE / JACKPOT SETTINGS & REPORTS
+// ==========================================
+app.get("/api/admin/casino/settings", authUser, authAdmin, (req, res) => {
+  res.json({ settings: { ...casinoSettings } });
+});
+app.post("/api/admin/casino/settings", authUser, authAdmin, async (req, res) => {
+  try {
+    const rakePercent = Number(req.body?.rakePercent);
+    const rakeCapBB = Number(req.body?.rakeCapBB);
+    const jackpotRakePercent = Number(req.body?.jackpotRakePercent);
+    if (![rakePercent, rakeCapBB, jackpotRakePercent].every(Number.isFinite) || rakePercent < 0 || rakePercent > 10 || rakeCapBB < 0 || rakeCapBB > 20 || jackpotRakePercent < 0 || jackpotRakePercent > 10) {
+      return res.status(400).json({ message: "Rake тохиргооны утга буруу байна." });
+    }
+    Object.assign(casinoSettings, { rakePercent, rakeCapBB, jackpotRakePercent });
+    await db.collection("casinoSettings").doc("main").set({ ...casinoSettings, updatedAt: FieldValue.serverTimestamp(), updatedBy: req.user.uid }, { merge: true });
+    res.json({ ok: true, settings: { ...casinoSettings } });
+  } catch (error) { res.status(500).json({ message: "Тохиргоо хадгалж чадсангүй." }); }
+});
+// ADMIN CHAT CONTROLS: chat on/off, user mute/unmute, and account display settings.
+app.get("/api/chat/settings", authUser, async (req,res) => {
+  try { const snap=await db.collection("casinoSettings").doc("main").get(); const v=snap.data()||{}; res.json({enabled:chatSettings.enabled, bank:{name:v.bankName||BANK_INFO.name,account:v.bankAccount||BANK_INFO.account,holder:v.bankHolder||BANK_INFO.holder}}); }
+  catch(e){res.status(500).json({message:"Чатын тохиргоо уншиж чадсангүй."});}
+});
+app.post("/api/admin/chat/settings", authUser, authAdmin, async (req,res) => {
+  try {
+    const enabled=req.body?.enabled;
+    if(typeof enabled!=="boolean") return res.status(400).json({message:"Chat төлөв буруу байна."});
+    chatSettings.enabled=enabled;
+    // Зөвхөн чатны төлөвийг хадгална. Банкны өмнөх тохиргоонд хүрэхгүй.
+    await db.collection("casinoSettings").doc("main").set({chatEnabled:enabled,chatUpdatedAt:FieldValue.serverTimestamp(),chatUpdatedBy:req.user.uid},{merge:true});
+    io.emit("chat:settings",{enabled});
+    res.json({ok:true,enabled});
+  } catch(e){res.status(500).json({message:"Чатын тохиргоо хадгалж чадсангүй."});}
+});
+app.post("/api/admin/chat/mute", authUser, authAdmin, async (req,res) => {
+  try {
+    const uid=String(req.body?.uid||"").trim(), muted=req.body?.muted;
+    if(!uid||typeof muted!=="boolean") return res.status(400).json({message:"Хэрэглэгч эсвэл төлөв буруу байна."});
+    if(ADMIN_UIDS.includes(uid)) return res.status(403).json({message:"Админыг энэ аргаар mute хийхгүй."});
+    await db.collection("users").doc(uid).set({chatMuted:muted,chatMutedBy:req.user.uid,chatMutedAt:FieldValue.serverTimestamp()},{merge:true});
+    res.json({ok:true,muted});
+  } catch(e){res.status(500).json({message:"Chat эрх өөрчилж чадсангүй."});}
+});
+
+app.get("/api/admin/casino/report", authUser, authAdmin, async (req, res) => {
+  try {
+    const snap = await db.collection("rakeLedger").orderBy("createdAt", "desc").limit(200).get();
+    const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const totalRake = rows.reduce((n, x) => n + Number(x.rake || 0), 0);
+    const totalJackpot = rows.reduce((n, x) => n + Number(x.jackpotContribution || 0), 0);
+    res.json({ totalRake, totalJackpot, rows });
+  } catch (error) { res.status(500).json({ message: "Rake тайлан уншиж чадсангүй." }); }
+});
 
 function publicRequest(data) {
   return {
@@ -441,10 +514,10 @@ app.post("/api/profile/update", authUser, async (req, res) => {
 // ==========================================
 
 app.get("/api/cashier/info", authUser, async (req, res) => {
-  res.json({
-    bank: BANK_INFO,
-    chips: Number(req.user.chips || 0)
-  });
+  try {
+    const snap=await db.collection("casinoSettings").doc("main").get(); const v=snap.data()||{};
+    res.json({ bank:{name:v.bankName||BANK_INFO.name,account:v.bankAccount||BANK_INFO.account,holder:v.bankHolder||BANK_INFO.holder}, chips:Number(req.user.chips||0) });
+  } catch(e) { res.status(500).json({message:"Банкны мэдээлэл авахад алдаа гарлаа."}); }
 });
 
 // ==========================================
@@ -458,6 +531,10 @@ app.post("/api/cashier/deposit", authUser, async (req, res) => {
 
     if (!amount) {
       return res.status(400).json({ message: "Дүн буруу байна." });
+    }
+
+    if (amount < MIN_DEPOSIT) {
+      return res.status(400).json({ message: `Цэнэглэх доод хэмжээ ${MIN_DEPOSIT.toLocaleString()} CHIP байна.` });
     }
 
     if (amount > 100000000) {
@@ -502,6 +579,9 @@ app.post("/api/cashier/withdraw", authUser, async (req, res) => {
 
     if (!amount) {
       return res.status(400).json({ message: "Дүн буруу байна." });
+    }
+    if (amount < MIN_WITHDRAW) {
+      return res.status(400).json({ message: `Татан авах доод хэмжээ ${MIN_WITHDRAW.toLocaleString()} CHIP байна.` });
     }
 
     if (!req.user.bankName ||
@@ -1071,17 +1151,21 @@ function persistStacks(table) {
   return batch.commit();
 }
 function finishHand(table, forcedWinner = null) {
+  if (!table.handStarted) return; // Давхар settle хийхээс хамгаална.
   if (table.turnTimer) clearTimeout(table.turnTimer);
   table.turnTimer = null;
   const active = getActivePlayers(table);
   if (!active.length) return;
+  const grossPot = Math.max(0, Number(table.pot || 0));
+  const rakeEligible = (table.communityCards || []).length >= 3;
+  const rake = rakeEligible ? Math.min(grossPot, Math.floor(grossPot * casinoSettings.rakePercent / 100), Math.floor(Number(table.bigBlind || 0) * casinoSettings.rakeCapBB)) : 0;
+  const jackpotContribution = Math.floor(rake * casinoSettings.jackpotRakePercent / 100);
   let winners = forcedWinner ? [forcedWinner] : [];
   let winningScore = null;
-  const pot = table.pot;
+  let rakeRemaining = rake;
   if (forcedWinner) {
-    forcedWinner.chips += pot;
+    forcedWinner.chips += grossPot - rake;
   } else {
-    // All-in үед үүссэн side pot-уудыг тус тусад нь үнэлнэ.
     const levels = [...new Set(table.players.map(p => Number(p.totalBet || 0)).filter(n => n > 0))].sort((a,b)=>a-b);
     let previous = 0;
     for (const level of levels) {
@@ -1091,25 +1175,43 @@ function finishHand(table, forcedWinner = null) {
       if (!layer) continue;
       const eligible = contributors.filter(p => !p.folded);
       if (!eligible.length) continue;
+      // Rake is allocated proportionally across side-pot layers.
+      const layerRake = grossPot > 0 ? Math.min(rakeRemaining, Math.floor(rake * layer / grossPot)) : 0;
+      rakeRemaining -= layerRake;
       let best = null, layerWinners = [];
       for (const player of eligible) {
         const score = evaluatePlayer(table, player);
         if (!best || compareScores(score,best)>0) { best=score; layerWinners=[player]; }
         else if (compareScores(score,best)===0) layerWinners.push(player);
       }
-      const share=Math.floor(layer/layerWinners.length); let rem=layer-share*layerWinners.length;
+      const netLayer = Math.max(0, layer - layerRake);
+      const share=Math.floor(netLayer/layerWinners.length); let rem=netLayer-share*layerWinners.length;
       layerWinners.forEach(p=>{p.chips+=share+(rem-->0?1:0);});
       winners=[...new Set([...winners,...layerWinners])];
       if (!winningScore || (best && compareScores(best,winningScore)>0)) winningScore=best;
     }
+    // Any rounding remainder is deducted from total awards, not minted back.
+    if (rakeRemaining > 0 && winners.length) {
+      const take = Math.min(rakeRemaining, ...winners.map(p => p.chips));
+      winners[0].chips = Math.max(0, winners[0].chips - take);
+    }
   }
-  table.lastResult = { winners: winners.map(p=>p.username), hand: winningScore ? handName(winningScore) : "Бусад нь бууж өгсөн", pot };
+  const handRecord = { tableId: table.id, tableName: table.name || table.id, handNumber: table.handNumber || 0, gameType: table.type || "texas", street: table.street, communityCards: (table.communityCards || []).map(c=>({...c})), players: table.players.map(p=>({ uid:p.uid, username:p.username, cards:(p.cards||[]).map(c=>({...c})), totalBet:Number(p.totalBet||0), folded:!!p.folded })), winners: winners.map(p=>({ uid:p.uid, username:p.username })), hand: winningScore ? handName(winningScore) : "Бусад нь бууж өгсөн", grossPot, rake, jackpotContribution, netPot:grossPot-rake, createdAt: FieldValue.serverTimestamp() };
+  table.lastResult = { winners: winners.map(p=>p.username), hand: handRecord.hand, pot: grossPot-rake, rake };
   table.pot = 0; table.currentBet = 0; table.handStarted = false; table.street = "showdown"; table.currentTurn = -1;
-  table.communityCards = table.communityCards || [];
   for (const player of table.players) { player.bet=0; player.acted=false; player.allIn=false; player.cards=player.cards||[]; }
-  persistStacks(table).catch(err=>console.error("Poker stack persistence:",err));
+  // Persist stack, immutable hand history and rake ledger. Rake is recorded once per settled hand.
+  const batch = db.batch();
+  batch.set(db.collection("handHistory").doc(`${table.id}_${table.handNumber || Date.now()}`), handRecord);
+  if (rake > 0) batch.set(db.collection("rakeLedger").doc(`${table.id}_${table.handNumber || Date.now()}`), { tableId:table.id, handNumber:table.handNumber||0, grossPot, rake, jackpotContribution, rakePercent:casinoSettings.rakePercent, createdAt:FieldValue.serverTimestamp() });
+  for (const player of table.players) batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  batch.commit().then(async()=>{
+    if (jackpotContribution > 0) await db.collection("casinoStats").doc("global").set({ jackpotPool:FieldValue.increment(jackpotContribution), totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
+    else if (rake > 0) await db.collection("casinoStats").doc("global").set({ totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
+  }).catch(err=>console.error("Hand/rake persistence:",err));
   sendTableUpdate(table); sendLobby();
 }
+
 function bettingRoundComplete(table) {
   const eligible = table.players.filter(p => !p.folded && !p.allIn && p.chips > 0);
   if (!eligible.length) return true;
@@ -1230,6 +1332,36 @@ function removePlayerFromTable(table, uid) {
 // ==========================================
 
 io.on("connection", socket => {
+  socket.on("chat:history", async (data={}) => {
+    try {
+      const user=await getSocketUser(socket); const mode=["table","global","support"].includes(data.mode)?data.mode:"table";
+      const snap=await db.collection("chatMessages").where("mode","==",mode).limit(100).get();
+      let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+      const isAdmin=ADMIN_UIDS.includes(user.uid)||user.role==="admin"||user.isAdmin===true;
+      if(mode==="support"&&!isAdmin) rows=rows.filter(m=>m.uid===user.uid);
+      if(mode==="table") { const tid=String(data.tableId||""); rows=rows.filter(m=>m.tableId===tid); }
+      socket.emit("chat:history",rows.slice(-80).reverse());
+    } catch(e){ socket.emit("notice",{message:e.message||"Чат ачаалж чадсангүй."}); }
+  });
+  socket.on("chat:send", async (data={}, callback) => {
+    const reply=v=>{if(typeof callback==="function")callback(v);};
+    try {
+      const user=await getSocketUser(socket); const uref=db.collection("users").doc(user.uid); const usnap=await uref.get();
+      if(!chatSettings.enabled && user.role!=="admin" && !user.isAdmin && !ADMIN_UIDS.includes(user.uid)) return reply({ok:false,message:"Админ чатыг түр хаасан байна."});
+      if(usnap.data()?.chatMuted===true) return reply({ok:false,message:"Таны чат бичих эрхийг админ түр хаасан байна."});
+      const now=Date.now(), prev=chatRate.get(user.uid)||[]; const recent=prev.filter(t=>now-t<10000);
+      if(recent.length>=5 || (recent.length && now-recent[recent.length-1]<1200)) return reply({ok:false,message:"Хэт олон мессеж илгээлээ. Түр хүлээнэ үү."});
+      const text=String(data.text||"").trim().slice(0,300); if(!text) return reply({ok:false,message:"Мессеж хоосон байна."});
+      const mode=["table","global","support"].includes(data.mode)?data.mode:"table";
+      const tableId=mode==="table"?String(data.tableId||""):"";
+      if(mode==="table" && (!tableId || !socketUsers.get(socket.id)?.tableId || socketUsers.get(socket.id).tableId!==tableId)) return reply({ok:false,message:"Энэ ширээний чатад холбогдоогүй байна."});
+      recent.push(now); chatRate.set(user.uid,recent);
+      const msg={uid:user.uid,username:String(user.displayName||user.username||"Тоглогч").slice(0,24),text,mode,tableId,createdAt:FieldValue.serverTimestamp()};
+      const ref=await db.collection("chatMessages").add(msg); const out={id:ref.id,...msg,createdAt:Date.now()};
+      if(mode==="table") io.to("table:"+tableId).emit("chat:message",out); else if(mode==="global") io.emit("chat:message",out); else io.to("admins").emit("chat:message",out);
+      reply({ok:true});
+    } catch(e){reply({ok:false,message:e.message||"Мессеж илгээж чадсангүй."});}
+  });
 
   socket.on("lobby:get", async () => {
     try {
@@ -1239,6 +1371,7 @@ io.on("connection", socket => {
         uid: user.uid,
         tableId: null
       });
+      if (user.role === "admin" || user.isAdmin === true || ADMIN_UIDS.includes(user.uid)) socket.join("admins");
 
       for (const table of tables.values()) {
         const player = table.players.find(p => p.uid === user.uid);
