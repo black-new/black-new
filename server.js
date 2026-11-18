@@ -94,11 +94,12 @@ function cleanUser(data, uid) {
     displayName: data.displayName || data.username || "",
     chips: Number(data.chips || 0),
     role: data.role || "user",
-    isAdmin: data.role === "admin" || !!data.isAdmin,
+    isAdmin: data.role === "admin" || !!data.isAdmin || ADMIN_UIDS.includes(String(uid || data.uid || "")),
     bankName: data.bankName || "",
     bankAccount: data.bankAccount || "",
     bankHolder: data.bankHolder || "",
-    ageConfirmed: data.ageConfirmed === true
+    ageConfirmed: data.ageConfirmed === true,
+    blocked: data.blocked === true
   };
 }
 
@@ -159,6 +160,8 @@ async function authUser(req, res, next) {
       ...snap.data(),
       uid: decoded.uid
     };
+
+    if (snap.data().blocked === true) return res.status(403).json({ message: "Энэ бүртгэлийг админ түр хаасан байна." });
 
     req.userRef = userRef;
     next();
@@ -691,6 +694,64 @@ app.get("/api/admin/users", authUser, authAdmin, async (req, res) => {
 });
 
 // ==========================================
+// ADMIN: LIVE TABLE MONITOR (ADMIN ONLY)
+// ==========================================
+app.get("/api/admin/tables", authUser, authAdmin, async (req, res) => {
+  try {
+    const liveTables = [...tables.values()].map(table => ({
+      id: table.id, name: table.name, type: table.type, street: table.street,
+      handStarted: !!table.handStarted, handNumber: table.handNumber || 0,
+      pot: table.pot || 0, currentBet: table.currentBet || 0,
+      currentTurn: table.currentTurn || 0,
+      players: table.players.map((p, index) => ({
+        uid: p.uid, username: p.username, displayName: p.displayName,
+        chips: p.chips, bet: p.bet || 0, folded: !!p.folded,
+        online: p.online !== false, allIn: !!p.allIn, cards: p.cards || [], seat: index
+      })),
+      communityCards: table.communityCards || []
+    }));
+    res.json({ tables: liveTables });
+  } catch (error) {
+    res.status(500).json({ message: "Ширээний мэдээлэл авахад алдаа гарлаа." });
+  }
+});
+
+// ==========================================
+// ADMIN: BLOCK / UNBLOCK ACCOUNT
+// ==========================================
+app.post("/api/admin/user/block", authUser, authAdmin, async (req, res) => {
+  try {
+    const uid = String(req.body.uid || "");
+    const blocked = req.body.blocked === true;
+    if (!uid) return res.status(400).json({ message: "Хэрэглэгчийн ID дутуу байна." });
+    if (uid === req.user.uid) return res.status(400).json({ message: "Өөрийн админ бүртгэлийг хаах боломжгүй." });
+    const ref = db.collection("users").doc(uid);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ message: "Хэрэглэгч олдсонгүй." });
+    const target = snap.data() || {};
+    if (target.role === "admin" || target.isAdmin === true || ADMIN_UIDS.includes(uid)) {
+      return res.status(403).json({ message: "Админ бүртгэлийг энэ хэсгээс хаах боломжгүй." });
+    }
+    await ref.set({ blocked, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    try { await admin.auth().updateUser(uid, { disabled: blocked }); }
+    catch (authError) {
+      if (authError.code !== "auth/user-not-found") throw authError;
+    }
+    if (blocked) {
+      for (const [socketId, session] of socketUsers.entries()) {
+        if (session.uid === uid) {
+          const targetSocket = io.sockets.sockets.get(socketId);
+          if (targetSocket) targetSocket.disconnect(true);
+        }
+      }
+    }
+    res.json({ success: true, message: blocked ? "Бүртгэл хаагдлаа." : "Бүртгэлийн эрх сэргээгдлээ." });
+  } catch (error) {
+    res.status(400).json({ message: error.message || "Бүртгэлийн төлөв өөрчлөхөд алдаа гарлаа." });
+  }
+});
+
+// ==========================================
 // ADMIN: ADD / REMOVE CHIPS
 // ==========================================
 
@@ -1081,6 +1142,7 @@ async function getSocketUser(socket) {
   const snap = await db.collection("users").doc(decoded.uid).get();
 
   if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+  if (snap.data().blocked === true) throw new Error("Энэ бүртгэлийг админ түр хаасан байна.");
 
   return {
     ...snap.data(),

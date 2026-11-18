@@ -740,6 +740,7 @@ body.classic-cards .playing-card.red{color:#d21e28}
 .seat .chip-display{margin:0;padding:2px 6px;border:0;background:transparent;color:#f4d27e;font-size:12px;white-space:nowrap}
 .seat .chip-icon{width:10px;height:10px}
 .seat .seat-me{color:#f6d98e;font-weight:bold}
+.seat .seat-dealt{color:#8ee2b4;font-weight:800}
 .seat-empty{opacity:.78}
 .seat-1{top:3%;left:23%}.seat-2{top:3%;right:23%}
 .seat-3{top:43%;right:1%}.seat-4{bottom:3%;right:23%}
@@ -1227,6 +1228,9 @@ body:has(#authScreen:not([style*="display: none"])) {
     <button class="menu-item" onclick="openAccountSection('withdraw')">
       <span class="menu-item-icon">⇧</span> CHIP татах
     </button>
+    <button class="menu-item" id="adminHomeMenu" style="display:none" onclick="openAccountSection('adminHome')">
+      <span class="menu-item-icon">⚙</span> Админ тохиргоо
+    </button>
     <button class="menu-item" id="adminCashierMenu" style="display:none" onclick="openAccountSection('adminCashier')">
       <span class="menu-item-icon">♛</span> Админ касс
     </button>
@@ -1427,6 +1431,7 @@ function updateHeader() {
   if ($("sideAvatar")) $("sideAvatar").textContent = initial;
   if ($("lobbyWelcomeName")) $("lobbyWelcomeName").textContent = name;
   if ($("lobbyBalance")) $("lobbyBalance").textContent = balance;
+  if ($("adminHomeMenu")) $("adminHomeMenu").style.display = user?.isAdmin ? "flex" : "none";
   if ($("adminCashierMenu")) $("adminCashierMenu").style.display = user?.isAdmin ? "flex" : "none";
   if ($("adminUsersMenu")) $("adminUsersMenu").style.display = user?.isAdmin ? "flex" : "none";
 }
@@ -1536,10 +1541,30 @@ function openAccountSection(section) {
     content.innerHTML += `<div class="cashier-card"><h3>Профайл / Банкны мэдээлэл</h3><label class="bc-field">Тоглоомын нэр<input id="profileDisplayName" maxlength="18" value="${escapeHtml(user?.displayName || getUsername())}"></label><label class="bc-field">Банкны нэр<input id="profileBankName" value="${escapeHtml(user?.bankName || "")}" placeholder="Хаан банк гэх мэт"></label><label class="bc-field">Дансны дугаар<input id="profileBankAccount" value="${escapeHtml(user?.bankAccount || "")}" placeholder="Дансны дугаар"></label><label class="bc-field">Данс эзэмшигчийн нэр<input id="profileBankHolder" value="${escapeHtml(user?.bankHolder || "")}" placeholder="Овог нэр"></label><button class="bc-action" onclick="saveProfile()">МЭДЭЭЛЭЛ ХАДГАЛАХ</button><div id="profileMessage" class="bc-note"></div></div>`;
   }
 
+  if (section === "adminHome") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "АДМИН ТОХИРГОО";
+    content.innerHTML = `
+      <div class="cashier-card">
+        <div class="bc-note">Админы үндсэн удирдлага. Одоо байгаа касс болон CHIP удирдлагын тохиргоо хэвээр хадгалагдсан.</div>
+        <button class="bc-action" onclick="openAccountSection('adminCashier')">АДМИН КАСС · ХҮСЭЛТҮҮД</button>
+        <button class="bc-action" onclick="openAccountSection('adminUsers')">ХЭРЭГЛЭГЧИД · CHIP / BLOCK УДИРДАХ</button>
+        <button class="bc-action" onclick="openAccountSection('adminTables')">LIVE ШИРЭЭ · БҮХ ХӨЗӨР ХАРАХ</button>
+        <button class="bc-action bc-secondary" onclick="closeAccountSection()">ӨӨРӨӨ ШИРЭЭНД СУУХ · LOBBY</button>
+      </div>`;
+  }
+
   if (section === "adminCashier") {
     title.textContent = "АДМИН КАСС";
     content.innerHTML = '<div class="cashier-card"><div class="bc-note">Хүлээгдэж буй цэнэглэх болон татах хүсэлтүүд.</div><div id="adminCashierList">Ачаалж байна...</div></div>';
     loadAdminCashier();
+  }
+
+  if (section === "adminTables") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "LIVE ШИРЭЭ / ТОГЛОЛТЫН ХЯНАЛТ";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Админ бүх ширээний тоглогч, CHIP, бооцоо, ээлж болон хөзрийг бодит цагт хянана. Өөрөө тоглох бол энэ цонхыг хаагаад Lobby-оос ширээ сонгоно.</div><button class="bc-action" onclick="loadAdminTables()">↻ ШИНЭЧЛЭХ</button><div id="adminTablesList">Ширээ ачаалж байна...</div></div>';
+    loadAdminTables();
   }
 
   if (section === "adminUsers") {
@@ -1619,8 +1644,31 @@ function renderAdminUsers(users) {
     return `<div class="admin-user-card" data-uid="${escapeHtml(uid)}">
       <div class="admin-user-top"><div><div class="admin-user-name">${escapeHtml(name)} ${u.isAdmin ? "· ADMIN" : ""}</div><div class="admin-user-meta">@${escapeHtml(username)}<br>ID: ${escapeHtml(uid)}</div></div><div class="admin-user-balance">${(Number.isFinite(chips) ? chips : 0).toLocaleString("en-US")} CHIP</div></div>
       <div class="admin-chip-controls"><input class="admin-chip-amount" type="number" min="1" step="1" placeholder="CHIP дүн"><button class="admin-chip-add" onclick="changeAdminChips(this,'add')">+ НЭМЭХ</button><button class="admin-chip-remove" onclick="changeAdminChips(this,'remove')">− ХАСАХ</button></div>
+      ${u.isAdmin ? '<div class="bc-note">Админ бүртгэл</div>' : `<div class="admin-chip-controls"><button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button></div>`}
+      ${u.blocked ? '<div class="bc-status">BLOCKED · НЭВТРЭХ ЭРХ ХААЛТТАЙ</div>' : ''}
     </div>`;
   }).join("");
+}
+
+async function setAdminUserBlocked(uid, blocked) {
+  if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+  const action = blocked ? "хаах" : "нээх";
+  if (!confirm(`Энэ хэрэглэгчийн бүртгэлийг ${action} уу?`)) return;
+  try {
+    const result = await api("/api/admin/user/block", { uid, blocked });
+    alert(result.message || "Бүртгэлийн төлөв шинэчлэгдлээ.");
+    await loadAdminUsers();
+  } catch (error) { alert(error.message); }
+}
+
+async function loadAdminTables() {
+  const target = $("adminTablesList");
+  if (!target || !user?.isAdmin) return;
+  try {
+    const data = await apiGet("/api/admin/tables");
+    const tables = data.tables || [];
+    target.innerHTML = tables.map(t => `<div class="cashier-card"><h3>${escapeHtml(t.name || t.id)} · ${escapeHtml(t.type || '')}</h3><div class="bc-note">Төлөв: ${t.handStarted ? 'ХӨЗӨР ТАРААСАН · ' + escapeHtml(t.street || '') : 'ХҮЛЭЭЖ БАЙНА'} | Гар #${Number(t.handNumber || 0)}<br>Pot: ${Number(t.pot || 0).toLocaleString()} CHIP · Одоогийн бооцоо: ${Number(t.currentBet || 0).toLocaleString()} CHIP</div><div class="bc-request"><strong>Нийтийн хөзөр:</strong> ${(t.communityCards || []).map(c => escapeHtml(String(c))).join('  ') || 'Одоогоор тараагаагүй'}</div>${(t.players || []).map((p,i) => `<div class="bc-request"><strong>${i+1}. ${escapeHtml(p.displayName || p.username || 'Тоглогч')}</strong> · ${p.online ? 'ONLINE' : 'OFFLINE'}${p.folded ? ' · FOLD' : ''}${p.allIn ? ' · ALL-IN' : ''}<br>CHIP: ${Number(p.chips || 0).toLocaleString()} · Бооцоо: ${Number(p.bet || 0).toLocaleString()}<br><strong>Хувийн хөзөр:</strong> ${(p.cards || []).map(c => escapeHtml(String(c))).join('  ') || (t.handStarted ? 'Нуугдсан / хараахан тараагаагүй' : 'Гар эхлээгүй')} ${t.handStarted && !p.folded && p.cards?.length ? '' : ''}</div>`).join('') || '<div class="bc-note">Суудалд тоглогч алга.</div>'}</div>`).join('') || '<div class="bc-note">Ширээ олдсонгүй.</div>';
+  } catch (error) { target.textContent = error.message; }
 }
 
 function filterAdminUsers() {
@@ -2033,7 +2081,7 @@ function renderSeat(player, index, table = {}) {
     <div class="seat-info">
       <strong>${escapeHtml(name)}</strong>
       <div class="chip-display"><span class="chip-icon"></span><span>${chips} CHIP</span></div>
-      ${player.folded ? '<small>FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : '')}
+      ${player.folded ? '<small>FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : (table.handStarted ? '<small class="seat-dealt">ХӨЗӨР ТАРААСАН</small>' : ''))}
       ${isMe ? '<small class="seat-me">ТАНЫ СУУДАЛ</small>' : ""}
     </div>`;
 }
@@ -2048,7 +2096,12 @@ function renderTable(state) {
   const turnPlayer = players[table.currentTurn];
   const turnText = table.handStarted && turnPlayer ? ` · Ээлж: ${getPlayerName(turnPlayer)}` : "";
   const resultText = table.lastResult ? ` · Ялагч: ${(table.lastResult.winners||[]).join(", ")} (${table.lastResult.hand||""})` : "";
-  $("tableInfo").textContent = `${String(table.type||"").toUpperCase()} · ${streetNames[table.street]||table.street||""}${turnText}${resultText}`;
+  const myCards = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username)?.cards || [];
+  const requiredCards = String(table.type||"").toLowerCase().includes("omaha") ? 4 : 2;
+  const dealStatus = table.handStarted
+    ? (myCards.length >= requiredCards ? ` · ХӨЗӨР ТАРААСАН ✓ (${myCards.length})` : " · ХӨЗӨР ТАРААСАН · ТАНЫ ХӨЗӨР ИРЭЭГҮЙ")
+    : (table.street === "showdown" ? " · Гар дууссан · NEXT HAND хүлээж байна" : ` · ${players.length < 2 ? "2+ ТОГЛОГЧ ХҮЛЭЭЖ БАЙНА" : "ДАРААГИЙН ГАР ЭХЛЭХИЙГ ХҮЛЭЭЖ БАЙНА"}`);
+  $("tableInfo").textContent = `${String(table.type||"").toUpperCase()} · ${streetNames[table.street]||table.street||""}${dealStatus}${turnText}${resultText}`;
   $("potAmount").textContent = Number(table.pot ?? state.pot ?? 0).toLocaleString("en-US");
   const board = table.communityCards || state.communityCards || [];
   $("boardCards").innerHTML = board.map(cardHtml).join("");
