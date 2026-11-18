@@ -1226,6 +1226,7 @@ body:has(#authScreen:not([style*="display: none"])) {
 
 
 /* Floating chat: isolated from poker table layout */
+#chatLauncher{display:none}
 .chat-launcher{position:fixed;right:22px;bottom:22px;z-index:1200;display:flex;align-items:center;gap:9px;padding:9px 16px 9px 9px;border:1px solid #c49a4c;border-radius:28px;background:linear-gradient(135deg,#172b26,#081711);color:#f3d28b;font-weight:800;letter-spacing:1px;box-shadow:0 8px 28px #000b}
 .chat-launcher-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,#f0d28a,#94652a);color:#142018;font-size:21px}
 .chat-launcher i{width:8px;height:8px;border-radius:50%;background:#55dc8b;display:none}
@@ -1296,7 +1297,6 @@ body:has(#authScreen:not([style*="display: none"])) {
 .poker-table[data-max-players="9"] .seat-7{top:auto!important;right:auto!important;bottom:28%!important;left:1%!important;transform:none!important}
 .poker-table[data-max-players="9"] .seat-8{top:28%!important;right:auto!important;bottom:auto!important;left:1%!important;transform:none!important}
 .poker-table[data-max-players="9"] .seat-9{top:auto!important;right:auto!important;bottom:1%!important;left:50%!important;transform:translateX(-50%)!important}
-.poker-table[data-max-players="6"] .seat-6{left:3%!important;right:auto!important}
 .table-rewards{position:absolute!important;z-index:20!important;top:5%!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;display:flex!important;flex-direction:row!important;gap:6px!important;pointer-events:none!important}
 .reward-pill{min-width:112px;padding:5px 9px;border-radius:8px;background:rgba(4,15,25,.94);border:1px solid #b88a3d;box-shadow:0 3px 10px #0008;text-align:center;white-space:nowrap;line-height:1.15}
 .reward-pill b{font-size:10px;letter-spacing:.45px}.reward-pill span{display:block;color:#d9e5f5;font-size:8px;margin-top:2px}
@@ -1311,7 +1311,7 @@ body:has(#authScreen:not([style*="display: none"])) {
 @media(max-width:700px){
  .poker-table[data-max-players="9"] .seat{width:clamp(52px,14vw,64px)!important;min-height:0!important;padding:2px!important}.poker-table[data-max-players="9"] .seat .avatar{width:clamp(25px,7vw,31px)!important;height:clamp(25px,7vw,31px)!important;font-size:12px!important}.poker-table[data-max-players="9"] .seat .seat-info{padding:2px 1px!important}.poker-table[data-max-players="9"] .seat strong{font-size:clamp(6px,1.7vw,8px)!important}.poker-table[data-max-players="9"] .seat .chip-display{font-size:clamp(5px,1.5vw,7px)!important;white-space:normal!important}
  .poker-table[data-max-players="9"] .seat-1{top:4%!important;left:16%!important}.poker-table[data-max-players="9"] .seat-2{top:4%!important;right:16%!important}.poker-table[data-max-players="9"] .seat-3{top:28%!important;right:0!important}.poker-table[data-max-players="9"] .seat-4{bottom:28%!important;right:0!important}.poker-table[data-max-players="9"] .seat-5{bottom:4%!important;right:16%!important}.poker-table[data-max-players="9"] .seat-6{bottom:4%!important;left:16%!important}.poker-table[data-max-players="9"] .seat-7{bottom:28%!important;left:0!important}.poker-table[data-max-players="9"] .seat-8{top:28%!important;left:0!important}.poker-table[data-max-players="9"] .seat-9{bottom:1%!important;left:50%!important;transform:translateX(-50%)!important}
- .poker-table[data-max-players="6"] .seat-6{left:2%!important}.table-rewards{top:5%!important;gap:3px!important}.reward-pill{min-width:0;padding:3px 5px;border-radius:6px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.buyin-dialog{padding:16px}.buyin-head h3{font-size:15px}
+ .poker-table[data-max-players="6"] .seat-6{left:1%!important}.table-rewards{top:5%!important;gap:3px!important}.reward-pill{min-width:0;padding:3px 5px;border-radius:6px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.buyin-dialog{padding:16px}.buyin-head h3{font-size:15px}
 }
 
 </style>
@@ -1542,8 +1542,10 @@ body:has(#authScreen:not([style*="display: none"])) {
         <button class="secondary-btn" onclick="sendAction('call')">CALL</button>
         <label class="raise-field"><span>Raise Amount</span><input id="raiseAmount" type="number" min="1" placeholder="250000"></label>
         <button class="gold-btn" onclick="sendAction('raise')">RAISE</button>
-        <button class="gold-btn next-hand" onclick="nextHand()">NEXT HAND</button>
       </div>
+    </section>
+  </section>
+</main>
       <button id="chatLauncher" class="chat-launcher" type="button" onclick="toggleTableChat(true)" aria-label="Чат нээх"><span class="chat-launcher-avatar">♟</span><span>CHAT</span><i id="chatUnreadDot"></i></button>
       <section class="cashier-card table-chat-float" id="tableChatPanel" aria-label="BLACKCLUB чат">
         <div class="chat-float-head"><strong><span class="chat-head-mark">♠</span> BLACKCLUB CHAT</strong><div class="chat-head-actions"><button id="chatClearButton" type="button" style="display:none" onclick="clearAllChats()" title="Бүх чатыг устгах" aria-label="Бүх чатыг устгах">⌫</button><button type="button" onclick="minimizeTableChat()" title="Жижигрүүлэх" aria-label="Жижигрүүлэх">−</button><button type="button" onclick="toggleTableChat(false)" title="Хаах" aria-label="Хаах">×</button></div></div>
@@ -1552,9 +1554,6 @@ body:has(#authScreen:not([style*="display: none"])) {
         <div class="chat-compose"><input id="chatInput" maxlength="300" placeholder="Мессеж бичих..." onkeydown="if(event.key==='Enter')sendChatMessage()"><button class="gold-btn" onclick="sendChatMessage()">➤</button></div>
         <div id="bankDisplay" class="bc-note" style="margin-top:5px"></div>
       </section>
-    </section>
-  </section>
-</main>
 <div class="buyin-overlay" id="buyInModal" role="dialog" aria-modal="true" aria-labelledby="buyInTitle">
   <div class="buyin-dialog">
     <div class="buyin-head"><div><small>BLACKCLUB POKER</small><h3 id="buyInTitle">СУУДАЛ АВАХ</h3><span id="buyInBlind"></span></div><button type="button" onclick="closeBuyInModal()" aria-label="Хаах">×</button></div>
@@ -2063,6 +2062,8 @@ function logout() {
   $("authScreen").style.display = "flex";
   $("lobbyPage").style.display = "none";
   $("tablePage").style.display = "none";
+  if($("chatLauncher")) $("chatLauncher").style.display="none";
+  if($("tableChatPanel")) $("tableChatPanel").classList.remove("chat-open","chat-minimized");
   $("authMessage").textContent = "";
 }
 
@@ -2072,6 +2073,8 @@ function showLobby() {
   // block гэж inline оноосноор хоёр хэсэг давхарлан/буруу байрлаж байсан.
   $("lobbyPage").style.display = "grid";
   $("tablePage").style.display = "none";
+  const launcher=$("chatLauncher"); if(launcher) launcher.style.display="flex";
+  if($("chatMode")) $("chatMode").value="global";
   currentTable = null;
 
   if (socket && socket.connected) {
@@ -2093,6 +2096,8 @@ function connectSocket() {
 
   socket.on("connect", () => {
     socket.emit("lobby:get");
+    // Нэвтэрсний дараах нүүр хуудсанд нийтийн чатны түүхийг шууд бэлдэнэ.
+    if (!currentTable && $("chatMode")) { $("chatMode").value="global"; loadChatHistory(); }
   });
 
   socket.on("connect_error", error => {
@@ -2141,8 +2146,8 @@ function minimizeTableChat(){
   panel.classList.remove("chat-open","chat-minimized");launcher.style.display="flex";
 }
 function addChatLine(m) { const box=$("chatMessages"); if(!box)return; const line=document.createElement("div"); line.style.margin="3px 0"; const who=document.createElement("b"); who.textContent=(m.username||"Тоглогч")+": "; const msg=document.createElement("span"); msg.textContent=m.text||""; line.append(who,msg); box.appendChild(line); box.scrollTop=box.scrollHeight; }
-function loadChatHistory(){ if(!socket?.connected)return; socket.emit("chat:history",{mode:$("chatMode")?.value||"table"}); }
-function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const mode=$("chatMode")?.value||"table"; socket.emit("chat:send",{mode,tableId:currentTable,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
+function loadChatHistory(){ if(!socket?.connected)return; socket.emit("chat:history",{mode:$("chatMode")?.value||(currentTable?"table":"global")}); }
+function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const mode=$("chatMode")?.value||(currentTable?"table":"global"); socket.emit("chat:send",{mode,tableId:currentTable,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
 function clearAllChats(){
   if(!user?.isAdmin){alert("Зөвхөн админ чат устгах эрхтэй.");return;}
   if(!socket?.connected){alert("Сервертэй холбогдоогүй байна.");return;}
@@ -2235,11 +2240,13 @@ function joinTable(tableId) {
       return;
     }
     currentTable = tableId;
+    if($("chatMode")) $("chatMode").value="table";
     if (Number.isFinite(Number(result.walletChips)) && user) user.chips = Number(result.walletChips);
     updateHeader();
     document.body.classList.add("game-active");
     $("lobbyPage").style.display = "none";
     $("tablePage").style.display = "block";
+    if($("chatLauncher")) $("chatLauncher").style.display="flex";
     if (result.table) {
       lastState = result.table;
       renderTable(result.table);
@@ -2385,9 +2392,13 @@ function renderTable(state) {
   const players = table.players || state.players || [];
   const myUidForActions = user?.uid || user?.id || user?.userId;
   const isSeatedHere = players.some(p => (p.uid || p.id || p.userId) === myUidForActions || p.username === user?.username);
-  if (!table.handStarted && table.street === "showdown" && isSeatedHere && localStorage.getItem('blackclub_auto_next_hand') === 'true' && currentTable && autoNextScheduledHand !== Number(table.handNumber || 0)) {
+  if (!table.handStarted && table.street === "showdown" && isSeatedHere && currentTable && autoNextScheduledHand !== Number(table.handNumber || 0)) {
     autoNextScheduledHand = Number(table.handNumber || 0);
-    setTimeout(() => { if (currentTable && !table.handStarted && localStorage.getItem('blackclub_auto_next_hand') === 'true' && socket?.connected) nextHand(); }, 5000);
+    const finishedHand = Number(table.handNumber || 0);
+    setTimeout(() => {
+      const latest = lastState?.table || lastState;
+      if (currentTable && latest && !latest.handStarted && latest.street === "showdown" && Number(latest.handNumber || 0) === finishedHand && socket?.connected) nextHand();
+    }, 5000);
   }
   $("tableTitle").textContent = table.name || table.title || "BLACKCLUB POKER";
   const streetNames = {waiting:"Хүлээж байна",preflop:"Pre-Flop",flop:"Flop",turn:"Turn",river:"River",showdown:"Тоглолт дууссан"};
@@ -2398,7 +2409,7 @@ function renderTable(state) {
   const requiredCards = String(table.type||"").toLowerCase().includes("omaha") ? 4 : 2;
   const me = players.find(p => (p.uid||p.id||p.userId) === (user?.uid||user?.id||user?.userId) || p.username === user?.username);
   const dealStatus = me
-    ? (table.handStarted ? (myCards.length >= requiredCards ? ` · ХӨЗӨР ТАРААСАН ✓ (${myCards.length})` : " · ХӨЗӨР ТАРААСАН · ТАНЫ ХӨЗӨР ИРЭЭГҮЙ") : (table.street === "showdown" ? " · Гар дууссан · NEXT HAND хүлээж байна" : " · СУУДАЛ АВСАН"))
+    ? (table.handStarted ? (myCards.length >= requiredCards ? ` · ХӨЗӨР ТАРААСАН ✓ (${myCards.length})` : " · ХӨЗӨР ТАРААСАН · ТАНЫ ХӨЗӨР ИРЭЭГҮЙ") : (table.street === "showdown" ? " · Гар дууссан" : " · СУУДАЛ АВСАН"))
     : " · СУЛ СУУДЛАА СОНГОНО УУ";
   $("tableInfo").textContent = `${String(table.type||"").toUpperCase()} · ${streetNames[table.street]||table.street||""}${dealStatus}${turnText}${resultText}`;
   $("potAmount").textContent = Number(table.pot ?? state.pot ?? 0).toLocaleString("en-US");
@@ -2426,10 +2437,7 @@ function renderTable(state) {
   seatPlayers.forEach((player,index)=>renderSeat(player,index,table,player ? players.indexOf(player) : -1));
   const isMyTurn = !!table.handStarted && !!turnPlayer && ((turnPlayer.uid || turnPlayer.id || turnPlayer.userId) === myUidForActions || turnPlayer.username === user?.username);
   const actionButtons = document.querySelectorAll(".actions button");
-  actionButtons.forEach((button, index) => {
-    if (index === actionButtons.length - 1) button.disabled = !isSeatedHere || !!table.handStarted || table.street !== "showdown";
-    else button.disabled = !isMyTurn;
-  });
+  actionButtons.forEach(button => { button.disabled = !isMyTurn; });
   updateTurnCountdown();
   if (!turnCountdownTimer) turnCountdownTimer = setInterval(updateTurnCountdown, 250);
 }

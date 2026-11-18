@@ -1587,7 +1587,7 @@ io.on("connection", socket => {
     const table=getTable(session.tableId); if(!table) return;
     const player = table.players.find(p => p.uid === session.uid);
     if (!player) { socket.emit("notice", { message: "Дараагийн гар эхлүүлэхийн тулд эхлээд суудлаа сонгоно уу." }); return; }
-    if(table.handStarted){socket.emit("notice",{message:"Одоогийн гар дуусаагүй байна."});return;}
+    if(table.handStarted){return;}
     startHand(table);
   });
 
