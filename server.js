@@ -1,7 +1,7 @@
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
-const bcrypt = require("bcryptjs");
 const admin = require("firebase-admin");
 const { Server } = require("socket.io");
 
@@ -24,9 +24,13 @@ if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
   throw new Error("FIREBASE_SERVICE_ACCOUNT тохируулаагүй байна.");
 }
 
-const serviceAccount = JSON.parse(
-  process.env.FIREBASE_SERVICE_ACCOUNT
-);
+let serviceAccount;
+
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} catch (e) {
+  throw new Error("FIREBASE_SERVICE_ACCOUNT JSON буруу байна.");
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -55,6 +59,10 @@ async function firebaseRequest(action, data) {
     throw new Error("Firebase API key тохируулаагүй байна.");
   }
 
+  if (typeof fetch !== "function") {
+    throw new Error("Node.js 18 буюу түүнээс дээш хувилбар шаардлагатай.");
+  }
+
   const url =
     `https://identitytoolkit.googleapis.com/v1/accounts:${action}` +
     `?key=${FIREBASE_WEB_API_KEY}`;
@@ -67,21 +75,33 @@ async function firebaseRequest(action, data) {
     body: JSON.stringify(data)
   });
 
-  const result = await response.json();
+  let result;
+
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error("Firebase серверээс зөв хариу ирсэнгүй.");
+  }
 
   if (!response.ok) {
+    const code = result.error?.message || "";
+
     const messages = {
       EMAIL_EXISTS: "Энэ хэрэглэгчийн нэр бүртгэлтэй байна.",
       INVALID_PASSWORD: "Нууц үг буруу байна.",
       EMAIL_NOT_FOUND: "Хэрэглэгч олдсонгүй.",
-      INVALID_LOGIN_CREDENTIALS: "Нэр эсвэл нууц үг буруу байна.",
-      WEAK_PASSWORD: "Нууц үг хэт богино байна."
+      INVALID_LOGIN_CREDENTIALS: "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна.",
+      WEAK_PASSWORD: "Нууц үг дор хаяж 8 тэмдэгт байна.",
+      OPERATION_NOT_ALLOWED: "Firebase Authentication дээр Email/Password нэвтрэлтийг идэвхжүүлнэ үү.",
+      API_KEY_INVALID: "Firebase API key буруу байна.",
+      INVALID_API_KEY: "Firebase API key буруу байна.",
+      TOO_MANY_ATTEMPTS_TRY_LATER: "Олон удаа оролдсон байна. Түр хүлээнэ үү."
     };
 
+    console.error("Firebase authentication error:", code);
+
     throw new Error(
-      messages[result.error?.message] ||
-      result.error?.message ||
-      "Firebase хүсэлт амжилтгүй."
+      messages[code] || "Firebase алдаа: " + code
     );
   }
 
@@ -92,7 +112,7 @@ function validAmount(value) {
   const amount = Math.floor(Number(value));
 
   if (
-    !Number.isFinite(amount) ||
+    !Number.isSafeInteger(amount) ||
     amount < 1000 ||
     amount > 100000000
   ) {
@@ -104,9 +124,7 @@ function validAmount(value) {
 
 async function authUser(req, res, next) {
   try {
-    const header = String(
-      req.headers.authorization || ""
-    );
+    const header = String(req.headers.authorization || "");
 
     const token = header.startsWith("Bearer ")
       ? header.slice(7)
@@ -170,6 +188,7 @@ function cleanUser(u) {
     isAdmin: ADMIN_UIDS.has(u.uid)
   };
 }
+
 // ===============================
 // REGISTER
 // ===============================
@@ -187,6 +206,7 @@ app.post("/api/register", async (req, res) => {
     ).trim();
 
     const password = String(req.body.password || "");
+
     const confirmPassword = String(
       req.body.confirmPassword || ""
     );
@@ -216,15 +236,9 @@ app.post("/api/register", async (req, res) => {
       });
     }
 
-    if (password !== confirmPassword) {
+    if (confirmPassword && password !== confirmPassword) {
       return res.status(400).json({
         message: "Нууц үг таарахгүй байна."
-      });
-    }
-
-    if (!bankName || !bankAccount || !bankHolder || !phone) {
-      return res.status(400).json({
-        message: "Банкны мэдээлэл болон утсаа бүрэн оруулна уу."
       });
     }
 
@@ -247,6 +261,18 @@ app.post("/api/register", async (req, res) => {
 
     const userRef = db.collection("users").doc(createdUid);
 
+    const newUser = {
+      uid: createdUid,
+      username,
+      displayName,
+      chips: 0,
+      bankName,
+      bankAccount,
+      bankHolder,
+      phone,
+      createdAt: FieldValue.serverTimestamp()
+    };
+
     await db.runTransaction(async tx => {
       const check = await tx.get(usernameRef);
 
@@ -259,31 +285,15 @@ app.post("/api/register", async (req, res) => {
         username
       });
 
-      tx.set(userRef, {
-        uid: createdUid,
-        username,
-        displayName,
-        chips: 0,
-        bankName,
-        bankAccount,
-        bankHolder,
-        phone,
-        createdAt: FieldValue.serverTimestamp()
-      });
+      tx.set(userRef, newUser);
     });
 
     res.json({
       success: true,
       token: account.idToken,
       user: cleanUser({
-        uid: createdUid,
-        username,
-        displayName,
-        chips: 0,
-        bankName,
-        bankAccount,
-        bankHolder,
-        phone
+        ...newUser,
+        uid: createdUid
       })
     });
 
@@ -291,8 +301,8 @@ app.post("/api/register", async (req, res) => {
     if (createdUid) {
       try {
         await auth.deleteUser(createdUid);
-      } catch (err) {
-        console.error("Register cleanup:", err);
+      } catch (cleanupError) {
+        console.error("Register cleanup:", cleanupError);
       }
     }
 
@@ -305,7 +315,6 @@ app.post("/api/register", async (req, res) => {
     });
   }
 });
-
 
 // ===============================
 // LOGIN
@@ -360,7 +369,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-
 // ===============================
 // CURRENT USER
 // ===============================
@@ -381,12 +389,13 @@ app.get("/api/me", authUser, async (req, res) => {
     });
 
   } catch (e) {
+    console.error("Current user:", e);
+
     res.status(500).json({
       message: "Хэрэглэгчийн мэдээлэл авахад алдаа гарлаа."
     });
   }
 });
-
 
 // ===============================
 // UPDATE PROFILE
@@ -405,12 +414,6 @@ app.post("/api/profile/update", authUser, async (req, res) => {
     if (displayName.length < 2 || displayName.length > 18) {
       return res.status(400).json({
         message: "Тоглоомын нэр 2-18 тэмдэгт байна."
-      });
-    }
-
-    if (!bankName || !bankAccount || !bankHolder || !phone) {
-      return res.status(400).json({
-        message: "Банкны мэдээлэл болон утсаа бүрэн оруулна уу."
       });
     }
 
@@ -443,6 +446,7 @@ app.post("/api/profile/update", authUser, async (req, res) => {
     });
   }
 });
+
 // ===============================
 // CASHIER HELPERS
 // ===============================
@@ -467,7 +471,6 @@ function publicRequest(d) {
   };
 }
 
-
 // ===============================
 // CASHIER INFO
 // ===============================
@@ -482,12 +485,13 @@ app.get("/api/cashier/info", authUser, async (req, res) => {
       user: cleanUser(req.user)
     });
   } catch (e) {
+    console.error("Cashier info:", e);
+
     res.status(500).json({
-      message: "Кассны мэдээлэл авахад алдаа гарлаа."
+      message: "Кассын мэдээлэл авахад алдаа гарлаа."
     });
   }
 });
-
 
 // ===============================
 // DEPOSIT REQUEST
@@ -496,6 +500,7 @@ app.get("/api/cashier/info", authUser, async (req, res) => {
 app.post("/api/cashier/deposit", authUser, async (req, res) => {
   try {
     const amount = validAmount(req.body.amount);
+
     const reference = String(req.body.reference || "")
       .trim()
       .slice(0, 120);
@@ -555,7 +560,6 @@ app.post("/api/cashier/deposit", authUser, async (req, res) => {
     });
   }
 });
-
 
 // ===============================
 // WITHDRAW REQUEST
@@ -627,7 +631,6 @@ app.post("/api/cashier/withdraw", authUser, async (req, res) => {
   }
 });
 
-
 // ===============================
 // USER CASHIER HISTORY
 // ===============================
@@ -663,6 +666,7 @@ app.get("/api/cashier/history", authUser, async (req, res) => {
     });
   }
 });
+
 // ===============================
 // ADMIN CASHIER LIST
 // ===============================
@@ -702,7 +706,6 @@ app.get(
     }
   }
 );
-
 
 // ===============================
 // ADMIN CASHIER DECISION
@@ -793,7 +796,6 @@ app.post(
   }
 );
 
-
 // ===============================
 // ADMIN USER LIST
 // ===============================
@@ -836,7 +838,6 @@ app.get(
     }
   }
 );
-
 
 // ===============================
 // ADMIN CHIP ADJUSTMENT
@@ -902,15 +903,48 @@ app.post(
     }
   }
 );
+
 // =====================================
 // POKER TABLE SYSTEM
 // =====================================
 
 const TABLE_CONFIG = [
-  { id: "table1", name: "BEGINNER", smallBlind: 50, bigBlind: 100, minBuyIn: 1000, maxBuyIn: 10000, maxPlayers: 6 },
-  { id: "table2", name: "SILVER", smallBlind: 100, bigBlind: 200, minBuyIn: 2000, maxBuyIn: 20000, maxPlayers: 6 },
-  { id: "table3", name: "GOLD", smallBlind: 500, bigBlind: 1000, minBuyIn: 10000, maxBuyIn: 100000, maxPlayers: 6 },
-  { id: "table4", name: "BLACK", smallBlind: 1000, bigBlind: 2000, minBuyIn: 20000, maxBuyIn: 200000, maxPlayers: 6 }
+  {
+    id: "table1",
+    name: "BEGINNER",
+    smallBlind: 50,
+    bigBlind: 100,
+    minBuyIn: 1000,
+    maxBuyIn: 10000,
+    maxPlayers: 6
+  },
+  {
+    id: "table2",
+    name: "SILVER",
+    smallBlind: 100,
+    bigBlind: 200,
+    minBuyIn: 2000,
+    maxBuyIn: 20000,
+    maxPlayers: 6
+  },
+  {
+    id: "table3",
+    name: "GOLD",
+    smallBlind: 500,
+    bigBlind: 1000,
+    minBuyIn: 10000,
+    maxBuyIn: 100000,
+    maxPlayers: 6
+  },
+  {
+    id: "table4",
+    name: "BLACK",
+    smallBlind: 1000,
+    bigBlind: 2000,
+    minBuyIn: 20000,
+    maxBuyIn: 200000,
+    maxPlayers: 6
+  }
 ];
 
 const tables = new Map();
@@ -943,6 +977,7 @@ function getPublicTable(table) {
     minBuyIn: table.minBuyIn,
     maxBuyIn: table.maxBuyIn,
     maxPlayers: table.maxPlayers,
+
     players: table.players.map(player => ({
       id: player.uid,
       username: player.username,
@@ -955,6 +990,7 @@ function getPublicTable(table) {
       isDealer: !!player.isDealer,
       isTurn: table.currentTurn === player.uid
     })),
+
     communityCards: table.communityCards,
     pot: table.pot,
     currentTurn: table.currentTurn,
@@ -1006,10 +1042,12 @@ function removePlayerFromTable(socket, notify = true) {
     }
   }
 
-  socket.leave(info.tableId);
+  if (info.tableId) {
+    socket.leave(info.tableId);
+  }
+
   socketUsers.delete(socket.id);
 }
-
 
 // =====================================
 // SOCKET CONNECTION
@@ -1033,12 +1071,13 @@ io.on("connection", socket => {
       sendLobby();
 
     } catch (e) {
+      console.error("Lobby authentication:", e.message);
+
       socket.emit("notice", {
         message: "Нэвтрэх мэдээлэл хүчингүй байна."
       });
     }
   });
-
 
   // ===================================
   // JOIN TABLE
@@ -1169,7 +1208,6 @@ io.on("connection", socket => {
     }
   });
 
-
   // ===================================
   // LEAVE TABLE
   // ===================================
@@ -1211,7 +1249,6 @@ io.on("connection", socket => {
     }
   });
 
-
   // ===================================
   // DISCONNECT
   // ===================================
@@ -1238,11 +1275,13 @@ io.on("connection", socket => {
   });
 
 });
-// =====================================
-// POKER GAME HELPERS
-// =====================================
+
+ // =====================================
+ // POKER GAME HELPERS
+ // =====================================
 
 const SUITS = ["♠", "♥", "♦", "♣"];
+
 const RANKS = [
   "2", "3", "4", "5", "6", "7", "8",
   "9", "10", "J", "Q", "K", "A"
@@ -1362,7 +1401,6 @@ function finishHand(table) {
   sendTableUpdate(table);
 }
 
-
 // =====================================
 // GAME ACTION
 // =====================================
@@ -1469,7 +1507,6 @@ io.on("connection", socket => {
     }
   });
 
-
   // ===================================
   // NEXT HAND
   // ===================================
@@ -1494,7 +1531,6 @@ io.on("connection", socket => {
 
 });
 
-
 // =====================================
 // HEALTH CHECK
 // =====================================
@@ -1510,7 +1546,6 @@ app.get("/health", (req, res) => {
     time: new Date().toISOString()
   });
 });
-
 
 // =====================================
 // START SERVER
