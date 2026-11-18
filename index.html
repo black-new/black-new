@@ -1253,6 +1253,40 @@ body:has(#authScreen:not([style*="display: none"])) {
 .bc-replay-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .bc-replay-actions button{background:#18283a;color:#f5f0e5;border:1px solid #53677c;border-radius:8px;padding:8px 12px}
 
+/* BLACKCLUB 9-SEAT TABLES + BLIND-SCALED CHIP DISPLAY */
+body:not(.authenticated) #chatLauncher,body:not(.authenticated) #tableChatPanel{display:none!important}
+.reward-pill:not(.active){display:none}
+.poker-table[data-max-players="9"] .table-rewards{right:10%;top:25%;}
+.chat-launcher{cursor:pointer}
+
+.chip-stack{display:inline-flex;align-items:center;position:relative;width:10px;height:9px;flex:0 0 10px}
+.chip-stack i{position:absolute;left:0;width:8px;height:3px;border:1px solid #fff0c5;border-radius:50%;background:linear-gradient(90deg,#c38d35,#f1d17b);box-shadow:0 1px 2px #0009}
+.chip-stack i:nth-child(1){top:0;background:linear-gradient(90deg,#2f8d68,#70d0a4)}
+.chip-stack i:nth-child(2){top:3px;background:linear-gradient(90deg,#b23b45,#ef7c83)}
+.chip-stack i:nth-child(3){top:6px;background:linear-gradient(90deg,#315f9b,#7fb5ef)}
+.table-rewards{position:absolute;right:3.5%;top:29%;z-index:4;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.reward-pill{display:flex;flex-direction:column;gap:1px;min-width:88px;padding:5px 7px;border-radius:7px;background:#061321eF;border:1px solid #b88a3d;box-shadow:0 3px 10px #0008;font-size:9px;line-height:1.15;text-align:center;white-space:nowrap}
+.reward-pill b{font-size:9px;letter-spacing:.4px}.reward-pill span{color:#d9e5f5;font-size:8px}
+.reward-pill.jackpot b{color:#f4d477}.reward-pill.badbeat b{color:#ff929a}.reward-pill.smart b{color:#83dfbd}
+.poker-table[data-max-players="9"] .seat-1{top:2%;left:43%;transform:translateX(-50%)}
+.poker-table[data-max-players="9"] .seat-2{top:9%;right:17%}
+.poker-table[data-max-players="9"] .seat-3{top:34%;right:1%}
+.poker-table[data-max-players="9"] .seat-4{bottom:15%;right:7%}
+.poker-table[data-max-players="9"] .seat-5{bottom:2%;right:29%}
+.poker-table[data-max-players="9"] .seat-6{bottom:2%;left:29%}
+.poker-table[data-max-players="9"] .seat-7{bottom:15%;left:7%}
+.poker-table[data-max-players="9"] .seat-8{top:34%;left:1%}
+.poker-table[data-max-players="9"] .seat-9{top:9%;left:17%}
+.poker-table[data-max-players="9"] .table-rewards{right:10%;top:25%}
+@media(max-width:700px){
+ .table-rewards{right:2%;top:27%;gap:3px}.reward-pill{min-width:57px;padding:3px 4px;border-radius:5px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.chip-stack{width:7px;height:7px;flex-basis:7px}.chip-stack i{width:6px;height:2px}
+ .poker-table[data-max-players="9"] .seat{width:clamp(53px,15vw,65px)!important}
+ .poker-table[data-max-players="9"] .seat-1{top:1%;left:50%;transform:translateX(-50%)}
+ .poker-table[data-max-players="9"] .seat-2{top:8%;right:10%}.poker-table[data-max-players="9"] .seat-3{top:30%;right:0%}
+ .poker-table[data-max-players="9"] .seat-4{bottom:24%;right:0%}.poker-table[data-max-players="9"] .seat-5{bottom:5%;right:12%}
+ .poker-table[data-max-players="9"] .seat-6{bottom:5%;left:12%}.poker-table[data-max-players="9"] .seat-7{bottom:24%;left:0%}
+ .poker-table[data-max-players="9"] .seat-8{top:30%;left:0%}.poker-table[data-max-players="9"] .seat-9{top:8%;left:10%}
+}
 </style>
 </head>
 
@@ -1472,9 +1506,9 @@ body:has(#authScreen:not([style*="display: none"])) {
         <div class="seat seat-6" id="seat5"></div>
         <div class="dealer-button" aria-hidden="true">D</div>
         <aside class="table-rewards" aria-label="Шагналын сан">
-          <div class="reward-pill jackpot"><b>♛ JACKPOT</b><span id="jackpotPoolValue">POOL</span></div>
-          <div class="reward-pill badbeat"><b>♥ BAD BEAT</b><span>REWARD</span></div>
-          <div class="reward-pill smart"><b>✦ SMART</b><span>REWARD</span></div>
+          <div class="reward-pill jackpot active" aria-live="polite"><b>♛ JACKPOT</b><span id="jackpotPoolValue">POOL</span></div>
+          <div class="reward-pill badbeat" aria-live="polite"><b>♥ BAD BEAT</b><span>REWARD</span></div>
+          <div class="reward-pill smart" aria-live="polite"><b>✦ SMART</b><span>REWARD</span></div>
         </aside>
       </div>
       <div class="actions">
@@ -1485,17 +1519,18 @@ body:has(#authScreen:not([style*="display: none"])) {
         <button class="gold-btn" onclick="sendAction('raise')">RAISE</button>
         <button class="gold-btn next-hand" onclick="nextHand()">NEXT HAND</button>
       </div>
+
+    </section>
+  </section>
+</main>
       <button id="chatLauncher" class="chat-launcher" type="button" onclick="toggleTableChat(true)" aria-label="Чат нээх"><span class="chat-launcher-avatar">♟</span><span>CHAT</span><i id="chatUnreadDot"></i></button>
       <section class="cashier-card table-chat-float" id="tableChatPanel" aria-label="BLACKCLUB чат">
         <div class="chat-float-head"><strong><span class="chat-head-mark">♠</span> BLACKCLUB CHAT</strong><div class="chat-head-actions"><button type="button" onclick="minimizeTableChat()" title="Жижигрүүлэх" aria-label="Жижигрүүлэх">−</button><button type="button" onclick="toggleTableChat(false)" title="Хаах" aria-label="Хаах">×</button></div></div>
-        <div class="chat-float-tools"><select id="chatMode"><option value="table">Ширээний чат</option><option value="global">Нийтийн чат</option><option value="support">Админд бичих</option></select><button class="bc-action" type="button" onclick="loadChatHistory()">↻</button></div>
+        <div class="chat-float-tools"><select id="chatMode" onchange="loadChatHistory()"><option value="global">Нийтийн чат</option><option value="table">Ширээний чат</option><option value="support">Админд бичих</option></select><button class="bc-action" type="button" onclick="loadChatHistory()">↻</button></div>
         <div id="chatMessages"></div>
         <div class="chat-compose"><input id="chatInput" maxlength="300" placeholder="Мессеж бичих..." onkeydown="if(event.key==='Enter')sendChatMessage()"><button class="gold-btn" onclick="sendChatMessage()">➤</button></div>
         <div id="bankDisplay" class="bc-note" style="margin-top:5px"></div>
       </section>
-    </section>
-  </section>
-</main>
 <script>
 const SERVER_URL = "https://black-new.onrender.com";
 
@@ -1942,6 +1977,7 @@ async function register() {
 }
 
 function acceptLogin(result) {
+  startRewardCycle();
   token = result.token || result.user?.token || "";
   user = result.user || result;
 
@@ -1951,14 +1987,17 @@ function acceptLogin(result) {
   }
 
   localStorage.setItem("blackclub_token", token);
+  document.body.classList.add("authenticated");
   $("authScreen").style.display = "none";
 
   updateHeader();
   connectSocket();
   showLobby();
+  setTimeout(()=>{loadChatSettings();loadChatHistory();},300);
 }
 
 async function boot() {
+  startRewardCycle();
   if (!token) {
     $("authScreen").style.display = "flex";
     return;
@@ -1968,11 +2007,13 @@ async function boot() {
     const result = await api("/api/me");
     user = result.user || result;
 
+    document.body.classList.add("authenticated");
     $("authScreen").style.display = "none";
     updateHeader();
 
     connectSocket();
     showLobby();
+    setTimeout(()=>{loadChatSettings();loadChatHistory();},300);
   } catch (error) {
     localStorage.removeItem("blackclub_token");
     token = "";
@@ -1987,6 +2028,8 @@ function logout() {
   token = "";
   user = null;
   currentTable = null;
+  document.body.classList.remove("authenticated");
+  toggleTableChat(false);
 
   closeAccountMenu();
   closeAccountSection();
@@ -2004,6 +2047,7 @@ function showLobby() {
   $("lobbyPage").style.display = "grid";
   $("tablePage").style.display = "none";
   currentTable = null;
+  if ($("chatMode")) $("chatMode").value = "global";
 
   if (socket && socket.connected) {
     socket.emit("lobby:get");
@@ -2024,6 +2068,9 @@ function connectSocket() {
 
   socket.on("connect", () => {
     socket.emit("lobby:get");
+    if (document.body.classList.contains("authenticated")) {
+      setTimeout(()=>{loadChatSettings();loadChatHistory();},150);
+    }
   });
 
   socket.on("connect_error", error => {
@@ -2071,8 +2118,16 @@ function minimizeTableChat(){
   panel.classList.remove("chat-open","chat-minimized");launcher.style.display="flex";
 }
 function addChatLine(m) { const box=$("chatMessages"); if(!box)return; const line=document.createElement("div"); line.style.margin="3px 0"; const who=document.createElement("b"); who.textContent=(m.username||"Тоглогч")+": "; const msg=document.createElement("span"); msg.textContent=m.text||""; line.append(who,msg); box.appendChild(line); box.scrollTop=box.scrollHeight; }
-function loadChatHistory(){ if(!socket?.connected)return; socket.emit("chat:history",{mode:$("chatMode")?.value||"table"}); }
-function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const mode=$("chatMode")?.value||"table"; socket.emit("chat:send",{mode,tableId:currentTable,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
+function loadChatHistory(){ if(!socket?.connected)return; const selected=$("chatMode")?.value||"global"; const mode=(!currentTable&&selected==="table")?"global":selected; socket.emit("chat:history",{mode,tableId:currentTable||undefined}); }
+function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const selected=$("chatMode")?.value||"global"; const mode=(!currentTable&&selected==="table")?"global":selected; socket.emit("chat:send",{mode,tableId:currentTable||undefined,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
+let rewardCycleTimer = null;
+function startRewardCycle(){
+  if(rewardCycleTimer) return;
+  const pills=[...document.querySelectorAll(".table-rewards .reward-pill")];
+  if(pills.length<2) return;
+  let active=0;
+  rewardCycleTimer=setInterval(()=>{pills[active]?.classList.remove("active");active=(active+1)%pills.length;pills[active]?.classList.add("active");},3500);
+}
 async function loadCasinoPools(){try{const d=await apiGet("/api/casino/pools");const el=$("jackpotPoolValue");if(el)el.textContent=`${Number(d.jackpotPool||0).toLocaleString("en-US")} CHIP`;}catch(e){}}
 async function loadChatSettings(){ try{const r=await apiGet("/api/chat/settings"); const b=r.bank||{}; if($("bankDisplay"))$("bankDisplay").textContent=b.account?`Төлбөрийн данс: ${b.name||""} · ${b.account} · ${b.holder||""}`:"Төлбөрийн дансны мэдээлэл тохируулаагүй.";}catch(e){} }
 function renderChatAdmin(){ const el=$("adminChatSettings"); if(!el)return; apiGet("/api/chat/settings").then(r=>{el.innerHTML=`<label class="bc-field"><input type="checkbox" id="adminChatEnabled" ${r.enabled?"checked":""}> Чат нээлттэй</label><div class="bc-note">Банкны өмнөх тохиргоо өөрчлөгдөхгүй.</div><button class="bc-action" onclick="saveChatAdmin()">ЧАТНЫ ТӨЛӨВ ХАДГАЛАХ</button>`;}).catch(e=>el.textContent=e.message); }
@@ -2158,6 +2213,7 @@ function joinTable(tableId) {
       return;
     }
     currentTable = tableId;
+    if ($("chatMode")) $("chatMode").value = "table";
     if (Number.isFinite(Number(result.walletChips)) && user) user.chips = Number(result.walletChips);
     updateHeader();
     document.body.classList.add("game-active");
@@ -2394,33 +2450,3 @@ boot();
 
 </body>
 </html>
-
-/* BLACKCLUB 9-SEAT TABLES + BLIND-SCALED CHIP DISPLAY */
-.chip-stack{display:inline-flex;align-items:center;position:relative;width:10px;height:9px;flex:0 0 10px}
-.chip-stack i{position:absolute;left:0;width:8px;height:3px;border:1px solid #fff0c5;border-radius:50%;background:linear-gradient(90deg,#c38d35,#f1d17b);box-shadow:0 1px 2px #0009}
-.chip-stack i:nth-child(1){top:0;background:linear-gradient(90deg,#2f8d68,#70d0a4)}
-.chip-stack i:nth-child(2){top:3px;background:linear-gradient(90deg,#b23b45,#ef7c83)}
-.chip-stack i:nth-child(3){top:6px;background:linear-gradient(90deg,#315f9b,#7fb5ef)}
-.table-rewards{position:absolute;right:3.5%;top:29%;z-index:4;display:flex;flex-direction:column;gap:5px;pointer-events:none}
-.reward-pill{display:flex;flex-direction:column;gap:1px;min-width:88px;padding:5px 7px;border-radius:7px;background:#061321eF;border:1px solid #b88a3d;box-shadow:0 3px 10px #0008;font-size:9px;line-height:1.15;text-align:center;white-space:nowrap}
-.reward-pill b{font-size:9px;letter-spacing:.4px}.reward-pill span{color:#d9e5f5;font-size:8px}
-.reward-pill.jackpot b{color:#f4d477}.reward-pill.badbeat b{color:#ff929a}.reward-pill.smart b{color:#83dfbd}
-.poker-table[data-max-players="9"] .seat-1{top:2%;left:43%;transform:translateX(-50%)}
-.poker-table[data-max-players="9"] .seat-2{top:9%;right:17%}
-.poker-table[data-max-players="9"] .seat-3{top:34%;right:1%}
-.poker-table[data-max-players="9"] .seat-4{bottom:15%;right:7%}
-.poker-table[data-max-players="9"] .seat-5{bottom:2%;right:29%}
-.poker-table[data-max-players="9"] .seat-6{bottom:2%;left:29%}
-.poker-table[data-max-players="9"] .seat-7{bottom:15%;left:7%}
-.poker-table[data-max-players="9"] .seat-8{top:34%;left:1%}
-.poker-table[data-max-players="9"] .seat-9{top:9%;left:17%}
-.poker-table[data-max-players="9"] .table-rewards{right:3%;top:26%}
-@media(max-width:700px){
- .table-rewards{right:2%;top:27%;gap:3px}.reward-pill{min-width:57px;padding:3px 4px;border-radius:5px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.chip-stack{width:7px;height:7px;flex-basis:7px}.chip-stack i{width:6px;height:2px}
- .poker-table[data-max-players="9"] .seat{width:clamp(53px,15vw,65px)!important}
- .poker-table[data-max-players="9"] .seat-1{top:1%;left:50%;transform:translateX(-50%)}
- .poker-table[data-max-players="9"] .seat-2{top:8%;right:10%}.poker-table[data-max-players="9"] .seat-3{top:30%;right:0%}
- .poker-table[data-max-players="9"] .seat-4{bottom:24%;right:0%}.poker-table[data-max-players="9"] .seat-5{bottom:5%;right:12%}
- .poker-table[data-max-players="9"] .seat-6{bottom:5%;left:12%}.poker-table[data-max-players="9"] .seat-7{bottom:24%;left:0%}
- .poker-table[data-max-players="9"] .seat-8{top:30%;left:0%}.poker-table[data-max-players="9"] .seat-9{top:8%;left:10%}
-}
