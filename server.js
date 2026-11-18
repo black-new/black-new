@@ -8,6 +8,9 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: "1mb" }));
+
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -15,224 +18,197 @@ const io = new Server(server, {
   }
 });
 
-app.use(cors());
-app.use(express.json({ limit: "1mb" }));
-
 const PORT = process.env.PORT || 3000;
+const FIREBASE_WEB_API_KEY = process.env.FIREBASE_WEB_API_KEY || "";
+const ADMIN_UIDS = (process.env.ADMIN_UIDS || "")
+  .split(",")
+  .map(x => x.trim())
+  .filter(Boolean);
 
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  throw new Error("FIREBASE_SERVICE_ACCOUNT тохируулаагүй байна.");
-}
+const BANK_INFO = {
+  name: process.env.BANK_NAME || "",
+  account: process.env.BANK_ACCOUNT || "",
+  holder: process.env.BANK_HOLDER || ""
+};
 
-let serviceAccount;
+// ==========================================
+// FIREBASE
+// ==========================================
 
-try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-} catch (e) {
-  throw new Error("FIREBASE_SERVICE_ACCOUNT JSON буруу байна.");
-}
+if (!admin.apps.length) {
+  const serviceAccountText = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
-
-const db = admin.firestore();
-const auth = admin.auth();
-const FieldValue = admin.firestore.FieldValue;
-
-const ADMIN_UIDS = new Set(
-  String(process.env.ADMIN_UIDS || "")
-    .split(",")
-    .map(x => x.trim())
-    .filter(Boolean)
-);
-
-const FIREBASE_WEB_API_KEY =
-  process.env.FIREBASE_WEB_API_KEY || "";
-
-function makeEmail(username) {
-  return `${username}@blackclub.local`;
-}
-
-async function firebaseRequest(action, data) {
-  if (!FIREBASE_WEB_API_KEY) {
-    throw new Error("Firebase API key тохируулаагүй байна.");
+  if (!serviceAccountText) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT тохируулаагүй байна.");
   }
 
-  if (typeof fetch !== "function") {
-    throw new Error("Node.js 18 буюу түүнээс дээш хувилбар шаардлагатай.");
-  }
-
-  const url =
-    `https://identitytoolkit.googleapis.com/v1/accounts:${action}` +
-    `?key=${FIREBASE_WEB_API_KEY}`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  });
-
-  let result;
+  let serviceAccount;
 
   try {
-    result = await response.json();
-  } catch {
-    throw new Error("Firebase серверээс зөв хариу ирсэнгүй.");
+    serviceAccount = JSON.parse(serviceAccountText);
+  } catch (error) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT JSON буруу байна.");
   }
 
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+}
+
+const db = admin.firestore();
+const FieldValue = admin.firestore.FieldValue;
+
+// ==========================================
+// COMMON HELPERS
+// ==========================================
+
+function makeEmail(username) {
+  return String(username).trim().toLowerCase() + "@blackclub.local";
+}
+
+function normalizeUsername(username) {
+  return String(username || "").trim().toLowerCase();
+}
+
+function validUsername(username) {
+  return /^[a-zA-Z0-9_]{3,20}$/.test(String(username || ""));
+}
+
+function validAmount(value) {
+  const amount = Number(value);
+  return Number.isSafeInteger(amount) && amount > 0 ? amount : 0;
+}
+
+function cleanUser(data, uid) {
+  return {
+    uid: uid || data.uid,
+    username: data.username || "",
+    displayName: data.displayName || data.username || "",
+    chips: Number(data.chips || 0),
+    role: data.role || "user",
+    isAdmin: data.role === "admin" || !!data.isAdmin,
+    bankName: data.bankName || "",
+    bankAccount: data.bankAccount || "",
+    bankHolder: data.bankHolder || ""
+  };
+}
+
+async function firebaseRequest(endpoint, body) {
+  if (!FIREBASE_WEB_API_KEY) {
+    throw new Error("FIREBASE_WEB_API_KEY тохируулаагүй байна.");
+  }
+
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/${endpoint}?key=${FIREBASE_WEB_API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }
+  );
+
+  const result = await response.json();
+
   if (!response.ok) {
-    const code = result.error?.message || "";
+    const code = result?.error?.message || "AUTH_ERROR";
 
     const messages = {
       EMAIL_EXISTS: "Энэ хэрэглэгчийн нэр бүртгэлтэй байна.",
-      INVALID_PASSWORD: "Нууц үг буруу байна.",
-      EMAIL_NOT_FOUND: "Хэрэглэгч олдсонгүй.",
+      INVALID_PASSWORD: "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна.",
+      EMAIL_NOT_FOUND: "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна.",
       INVALID_LOGIN_CREDENTIALS: "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна.",
-      WEAK_PASSWORD: "Нууц үг дор хаяж 8 тэмдэгт байна.",
-      OPERATION_NOT_ALLOWED: "Firebase Authentication дээр Email/Password нэвтрэлтийг идэвхжүүлнэ үү.",
-      API_KEY_INVALID: "Firebase API key буруу байна.",
-      INVALID_API_KEY: "Firebase API key буруу байна.",
-      TOO_MANY_ATTEMPTS_TRY_LATER: "Олон удаа оролдсон байна. Түр хүлээнэ үү."
+      WEAK_PASSWORD: "Нууц үг дор хаяж 6 тэмдэгт байх ёстой.",
+      USER_DISABLED: "Энэ бүртгэл идэвхгүй байна."
     };
 
-    console.error("Firebase authentication error:", code);
-
-    throw new Error(
-      messages[code] || "Firebase алдаа: " + code
-    );
+    throw new Error(messages[code] || "Нэвтрэлт амжилтгүй боллоо.");
   }
 
   return result;
 }
 
-function validAmount(value) {
-  const amount = Math.floor(Number(value));
-
-  if (
-    !Number.isSafeInteger(amount) ||
-    amount < 1000 ||
-    amount > 100000000
-  ) {
-    return 0;
-  }
-
-  return amount;
-}
-
 async function authUser(req, res, next) {
   try {
-    const header = String(req.headers.authorization || "");
-
+    const header = req.headers.authorization || "";
     const token = header.startsWith("Bearer ")
       ? header.slice(7)
       : "";
 
     if (!token) {
-      return res.status(401).json({
-        message: "Нэвтэрнэ үү."
-      });
+      return res.status(401).json({ message: "Нэвтрэх шаардлагатай." });
     }
 
-    const decoded = await auth.verifyIdToken(token);
+    const decoded = await admin.auth().verifyIdToken(token);
+    const userRef = db.collection("users").doc(decoded.uid);
+    const snap = await userRef.get();
 
-    const userSnap = await db
-      .collection("users")
-      .doc(decoded.uid)
-      .get();
-
-    if (!userSnap.exists) {
-      return res.status(401).json({
-        message: "Хэрэглэгч олдсонгүй."
-      });
+    if (!snap.exists) {
+      return res.status(401).json({ message: "Хэрэглэгч олдсонгүй." });
     }
 
     req.user = {
-      uid: decoded.uid,
-      ...userSnap.data()
+      ...snap.data(),
+      uid: decoded.uid
     };
 
+    req.userRef = userRef;
     next();
-
-  } catch (e) {
-    console.error("Auth error:", e.message);
-
+  } catch (error) {
     return res.status(401).json({
-      message: "Нэвтрэх эрх хүчингүй байна."
+      message: "Нэвтрэх эрх хүчингүй эсвэл хугацаа дууссан байна."
     });
   }
 }
 
 function authAdmin(req, res, next) {
-  if (!ADMIN_UIDS.has(req.user.uid)) {
-    return res.status(403).json({
-      message: "Админы эрх шаардлагатай."
-    });
+  if (!ADMIN_UIDS.includes(req.user.uid) &&
+      req.user.role !== "admin" &&
+      req.user.isAdmin !== true) {
+    return res.status(403).json({ message: "Админ эрх шаардлагатай." });
   }
 
   next();
 }
 
-function cleanUser(u) {
+function publicRequest(data) {
   return {
-    id: u.uid,
-    username: u.username,
-    displayName: u.displayName,
-    chips: Number(u.chips || 0),
-    bankName: u.bankName || "",
-    bankAccount: u.bankAccount || "",
-    bankHolder: u.bankHolder || "",
-    phone: u.phone || "",
-    isAdmin: ADMIN_UIDS.has(u.uid)
+    id: data.id,
+    type: data.type,
+    amount: data.amount,
+    username: data.username || "",
+    displayName: data.displayName || "",
+    bankName: data.bankName || "",
+    bankAccount: data.bankAccount || "",
+    bankHolder: data.bankHolder || "",
+    reference: data.reference || "",
+    status: data.status || "pending",
+    adminNote: data.adminNote || "",
+    createdAt: data.createdAt || null
   };
 }
 
-// ===============================
+// ==========================================
 // REGISTER
-// ===============================
+// ==========================================
 
 app.post("/api/register", async (req, res) => {
-  let createdUid = null;
-
   try {
-    const username = String(req.body.username || "")
-      .trim()
-      .toLowerCase();
-
+    const username = String(req.body.username || "").trim();
     const displayName = String(
       req.body.displayName || username
     ).trim();
-
     const password = String(req.body.password || "");
+    const confirmPassword = req.body.confirmPassword;
 
-    const confirmPassword = String(
-      req.body.confirmPassword || ""
-    );
-
-    const bankName = String(req.body.bankName || "").trim();
-    const bankAccount = String(req.body.bankAccount || "")
-      .trim()
-      .replace(/\s+/g, "");
-    const bankHolder = String(req.body.bankHolder || "").trim();
-    const phone = String(req.body.phone || "").trim();
-
-    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+    if (!validUsername(username)) {
       return res.status(400).json({
-        message: "Хэрэглэгчийн нэр 3-24 тэмдэгт байна."
+        message: "Хэрэглэгчийн нэр 3-20 тэмдэгт байх ёстой. Англи үсэг, тоо, _ ашиглана."
       });
     }
 
-    if (displayName.length < 2 || displayName.length > 18) {
+    if (password.length < 6) {
       return res.status(400).json({
-        message: "Тоглоомын нэр 2-18 тэмдэгт байна."
-      });
-    }
-
-    if (password.length < 8 || password.length > 72) {
-      return res.status(400).json({
-        message: "Нууц үг 8-72 тэмдэгт байх ёстой."
+        message: "Нууц үг дор хаяж 6 тэмдэгт байх ёстой."
       });
     }
 
@@ -242,712 +218,511 @@ app.post("/api/register", async (req, res) => {
       });
     }
 
-    const usernameRef = db.collection("usernames").doc(username);
-    const existing = await usernameRef.get();
+    const normalized = normalizeUsername(username);
+    const usernameRef = db.collection("usernames").doc(normalized);
+    const existingUsername = await usernameRef.get();
 
-    if (existing.exists) {
+    if (existingUsername.exists) {
       return res.status(409).json({
         message: "Энэ хэрэглэгчийн нэр бүртгэлтэй байна."
       });
     }
 
-    const account = await firebaseRequest("signUp", {
-      email: makeEmail(username),
+    const email = makeEmail(normalized);
+
+    const account = await firebaseRequest("accounts:signUp", {
+      email,
       password,
       returnSecureToken: true
     });
 
-    createdUid = account.localId;
+    const uid = account.localId;
 
-    const userRef = db.collection("users").doc(createdUid);
-
-    const newUser = {
-      uid: createdUid,
-      username,
-      displayName,
+    const userData = {
+      username: normalized,
+      displayName: displayName || normalized,
       chips: 0,
-      bankName,
-      bankAccount,
-      bankHolder,
-      phone,
+      role: "user",
+      isAdmin: false,
+      bankName: "",
+      bankAccount: "",
+      bankHolder: "",
       createdAt: FieldValue.serverTimestamp()
     };
 
-    await db.runTransaction(async tx => {
-      const check = await tx.get(usernameRef);
+    const batch = db.batch();
 
-      if (check.exists) {
-        throw new Error("Энэ хэрэглэгчийн нэр бүртгэлтэй байна.");
-      }
+    batch.set(usernameRef, { uid });
+    batch.set(db.collection("users").doc(uid), userData);
 
-      tx.set(usernameRef, {
-        uid: createdUid,
-        username
-      });
+    await batch.commit();
 
-      tx.set(userRef, newUser);
-    });
-
-    res.json({
+    return res.json({
       success: true,
       token: account.idToken,
-      user: cleanUser({
-        ...newUser,
-        uid: createdUid
-      })
+      refreshToken: account.refreshToken,
+      user: cleanUser(userData, uid)
     });
 
-  } catch (e) {
-    if (createdUid) {
-      try {
-        await auth.deleteUser(createdUid);
-      } catch (cleanupError) {
-        console.error("Register cleanup:", cleanupError);
-      }
-    }
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
 
-    console.error("Register error:", e);
-
-    res.status(
-      e.message.includes("бүртгэлтэй") ? 409 : 400
-    ).json({
-      message: e.message || "Бүртгэл үүсгэхэд алдаа гарлаа."
+    return res.status(400).json({
+      message: error.message || "Бүртгэл үүсгэхэд алдаа гарлаа."
     });
   }
 });
 
-// ===============================
+// ==========================================
 // LOGIN
-// ===============================
+// ==========================================
 
 app.post("/api/login", async (req, res) => {
   try {
-    const username = String(req.body.username || "")
-      .trim()
-      .toLowerCase();
-
+    const username = normalizeUsername(req.body.username);
     const password = String(req.body.password || "");
 
     if (!username || !password) {
       return res.status(400).json({
-        message: "Нэр болон нууц үгээ оруулна уу."
+        message: "Хэрэглэгчийн нэр, нууц үгээ оруулна уу."
       });
     }
 
-    const result = await firebaseRequest("signInWithPassword", {
-      email: makeEmail(username),
-      password,
-      returnSecureToken: true
-    });
+    const email = makeEmail(username);
 
-    const userSnap = await db
-      .collection("users")
-      .doc(result.localId)
-      .get();
+    const account = await firebaseRequest(
+      "accounts:signInWithPassword",
+      {
+        email,
+        password,
+        returnSecureToken: true
+      }
+    );
 
-    if (!userSnap.exists) {
-      return res.status(404).json({
+    const userRef = db.collection("users").doc(account.localId);
+    const snap = await userRef.get();
+
+    if (!snap.exists) {
+      return res.status(401).json({
         message: "Хэрэглэгчийн мэдээлэл олдсонгүй."
       });
     }
 
-    res.json({
+    const user = cleanUser(snap.data(), account.localId);
+
+    return res.json({
       success: true,
-      token: result.idToken,
-      user: cleanUser({
-        uid: result.localId,
-        ...userSnap.data()
-      })
+      token: account.idToken,
+      refreshToken: account.refreshToken,
+      user
     });
 
-  } catch (e) {
-    console.error("Login error:", e.message);
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
 
-    res.status(401).json({
-      message: "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна."
+    return res.status(401).json({
+      message: error.message || "Хэрэглэгчийн нэр эсвэл нууц үг буруу байна."
     });
   }
 });
 
-// ===============================
+// ==========================================
 // CURRENT USER
-// ===============================
+// ==========================================
 
-app.get("/api/me", authUser, async (req, res) => {
-  try {
-    const snap = await db
-      .collection("users")
-      .doc(req.user.uid)
-      .get();
-
-    res.json({
-      success: true,
-      user: cleanUser({
-        uid: req.user.uid,
-        ...snap.data()
-      })
-    });
-
-  } catch (e) {
-    console.error("Current user:", e);
-
-    res.status(500).json({
-      message: "Хэрэглэгчийн мэдээлэл авахад алдаа гарлаа."
-    });
-  }
+app.get("/api/me", authUser, (req, res) => {
+  res.json({
+    user: cleanUser(req.user, req.user.uid)
+  });
 });
 
-// ===============================
-// UPDATE PROFILE
-// ===============================
+// ==========================================
+// PROFILE UPDATE
+// ==========================================
 
 app.post("/api/profile/update", authUser, async (req, res) => {
   try {
     const displayName = String(req.body.displayName || "").trim();
     const bankName = String(req.body.bankName || "").trim();
-    const bankAccount = String(req.body.bankAccount || "")
-      .trim()
-      .replace(/\s+/g, "");
+    const bankAccount = String(req.body.bankAccount || "").trim();
     const bankHolder = String(req.body.bankHolder || "").trim();
-    const phone = String(req.body.phone || "").trim();
 
-    if (displayName.length < 2 || displayName.length > 18) {
+    if (displayName.length > 40) {
       return res.status(400).json({
-        message: "Тоглоомын нэр 2-18 тэмдэгт байна."
+        message: "Нэр 40 тэмдэгтээс хэтэрч болохгүй."
       });
     }
 
-    const userRef = db.collection("users").doc(req.user.uid);
-
-    await userRef.set({
-      displayName,
+    await req.userRef.update({
+      displayName: displayName || req.user.username,
       bankName,
       bankAccount,
-      bankHolder,
-      phone,
-      updatedAt: FieldValue.serverTimestamp()
-    }, { merge: true });
+      bankHolder
+    });
 
-    const snap = await userRef.get();
+    const snap = await req.userRef.get();
 
     res.json({
       success: true,
-      user: cleanUser({
-        uid: req.user.uid,
-        ...snap.data()
-      })
+      user: cleanUser(snap.data(), req.user.uid)
     });
 
-  } catch (e) {
-    console.error("Profile update:", e);
-
-    res.status(500).json({
-      message: "Профайл хадгалахад алдаа гарлаа."
-    });
+  } catch (error) {
+    res.status(500).json({ message: "Мэдээлэл хадгалахад алдаа гарлаа." });
   }
 });
 
-// ===============================
-// CASHIER HELPERS
-// ===============================
-
-function publicRequest(d) {
-  return {
-    id: d.id,
-    uid: d.uid,
-    username: d.username || "",
-    displayName: d.displayName || "",
-    type: d.type,
-    amount: Number(d.amount || 0),
-    status: d.status,
-    reference: d.reference || "",
-    bankName: d.bankName || "",
-    bankAccount: d.bankAccount || "",
-    bankHolder: d.bankHolder || "",
-    phone: d.phone || "",
-    createdAt: d.createdAt?.toDate?.()?.toISOString?.() || null,
-    decidedAt: d.decidedAt?.toDate?.()?.toISOString?.() || null,
-    adminNote: d.adminNote || ""
-  };
-}
-
-// ===============================
+// ==========================================
 // CASHIER INFO
-// ===============================
+// ==========================================
 
 app.get("/api/cashier/info", authUser, async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      bankName: process.env.CASHIER_BANK_NAME || "",
-      bankAccount: process.env.CASHIER_BANK_ACCOUNT || "",
-      bankHolder: process.env.CASHIER_BANK_HOLDER || "",
-      user: cleanUser(req.user)
-    });
-  } catch (e) {
-    console.error("Cashier info:", e);
-
-    res.status(500).json({
-      message: "Кассын мэдээлэл авахад алдаа гарлаа."
-    });
-  }
+  res.json({
+    bank: BANK_INFO,
+    chips: Number(req.user.chips || 0)
+  });
 });
 
-// ===============================
+// ==========================================
 // DEPOSIT REQUEST
-// ===============================
+// ==========================================
 
 app.post("/api/cashier/deposit", authUser, async (req, res) => {
   try {
     const amount = validAmount(req.body.amount);
-
-    const reference = String(req.body.reference || "")
-      .trim()
-      .slice(0, 120);
+    const reference = String(req.body.reference || "").trim();
 
     if (!amount) {
-      return res.status(400).json({
-        message: "Дүн 1,000-100,000,000 CHIP байна."
-      });
+      return res.status(400).json({ message: "Дүн буруу байна." });
     }
 
-    if (!reference) {
-      return res.status(400).json({
-        message: "Гүйлгээний утга эсвэл баримтын дугаар оруулна уу."
-      });
+    if (amount > 100000000) {
+      return res.status(400).json({ message: "Дүн хэт их байна." });
     }
 
-    const userSnap = await db
-      .collection("users")
-      .doc(req.user.uid)
-      .get();
+    const requestRef = db.collection("cashierRequests").doc();
 
-    if (!userSnap.exists) {
-      return res.status(404).json({
-        message: "Хэрэглэгч олдсонгүй."
-      });
-    }
-
-    const u = userSnap.data();
-    const ref = db.collection("cashierRequests").doc();
-
-    await ref.set({
+    await requestRef.set({
       uid: req.user.uid,
-      username: u.username,
-      displayName: u.displayName,
+      username: req.user.username,
+      displayName: req.user.displayName || req.user.username,
+      bankName: req.user.bankName || "",
+      bankAccount: req.user.bankAccount || "",
+      bankHolder: req.user.bankHolder || "",
       type: "deposit",
       amount,
       reference,
       status: "pending",
-      bankName: u.bankName || "",
-      bankAccount: u.bankAccount || "",
-      bankHolder: u.bankHolder || "",
-      phone: u.phone || "",
+      adminNote: "",
       createdAt: FieldValue.serverTimestamp()
     });
 
     res.json({
       success: true,
-      message: "Цэнэглэх хүсэлт админд илгээгдлээ.",
-      requestId: ref.id
+      message: "Цэнэглэлтийн хүсэлт амжилттай илгээгдлээ."
     });
 
-  } catch (e) {
-    console.error("Deposit error:", e);
-
-    res.status(500).json({
-      message: "Цэнэглэх хүсэлт илгээхэд алдаа гарлаа."
-    });
+  } catch (error) {
+    console.error("DEPOSIT ERROR:", error);
+    res.status(500).json({ message: "Хүсэлт илгээхэд алдаа гарлаа." });
   }
 });
 
-// ===============================
+// ==========================================
 // WITHDRAW REQUEST
-// ===============================
+// ==========================================
 
 app.post("/api/cashier/withdraw", authUser, async (req, res) => {
   try {
     const amount = validAmount(req.body.amount);
 
     if (!amount) {
+      return res.status(400).json({ message: "Дүн буруу байна." });
+    }
+
+    if (!req.user.bankName ||
+        !req.user.bankAccount ||
+        !req.user.bankHolder) {
       return res.status(400).json({
-        message: "Дүн 1,000-100,000,000 CHIP байна."
+        message: "Эхлээд банкны мэдээллээ профайл хэсэгт бүртгүүлнэ үү."
       });
     }
 
-    const userRef = db.collection("users").doc(req.user.uid);
+    const userRef = req.userRef;
     const requestRef = db.collection("cashierRequests").doc();
 
-    await db.runTransaction(async tx => {
-      const snap = await tx.get(userRef);
+    await db.runTransaction(async transaction => {
+      const snap = await transaction.get(userRef);
 
-      if (!snap.exists) {
-        throw new Error("Хэрэглэгч олдсонгүй.");
+      if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+
+      const balance = Number(snap.data().chips || 0);
+
+      if (balance < amount) {
+        throw new Error("Таны CHIP хүрэлцэхгүй байна.");
       }
 
-      const u = snap.data();
-      const chips = Number(u.chips || 0);
-
-      if (chips < amount) {
-        throw new Error("CHIP хүрэлцэхгүй байна.");
-      }
-
-      if (!u.bankName || !u.bankAccount || !u.bankHolder || !u.phone) {
-        throw new Error("Банкны мэдээллээ профайлд бүрэн оруулна уу.");
-      }
-
-      tx.update(userRef, {
-        chips: chips - amount,
-        updatedAt: FieldValue.serverTimestamp()
+      transaction.update(userRef, {
+        chips: balance - amount
       });
 
-      tx.set(requestRef, {
+      transaction.set(requestRef, {
         uid: req.user.uid,
-        username: u.username,
-        displayName: u.displayName,
+        username: req.user.username,
+        displayName: req.user.displayName || req.user.username,
+        bankName: req.user.bankName,
+        bankAccount: req.user.bankAccount,
+        bankHolder: req.user.bankHolder,
         type: "withdraw",
         amount,
+        reference: "",
         status: "pending",
-        bankName: u.bankName,
-        bankAccount: u.bankAccount,
-        bankHolder: u.bankHolder,
-        phone: u.phone,
+        adminNote: "",
         createdAt: FieldValue.serverTimestamp()
       });
     });
 
     res.json({
       success: true,
-      message: "Татах хүсэлт илгээгдлээ.",
-      requestId: requestRef.id
+      message: "Татан авалтын хүсэлт илгээгдлээ."
     });
 
-  } catch (e) {
-    console.error("Withdraw error:", e);
-
+  } catch (error) {
     res.status(400).json({
-      message: e.message || "Татах хүсэлтэд алдаа гарлаа."
+      message: error.message || "Хүсэлт илгээхэд алдаа гарлаа."
     });
   }
 });
 
-// ===============================
-// USER CASHIER HISTORY
-// ===============================
+// ==========================================
+// CASHIER HISTORY
+// ==========================================
 
 app.get("/api/cashier/history", authUser, async (req, res) => {
   try {
-    const snap = await db
-      .collection("cashierRequests")
+    const snap = await db.collection("cashierRequests")
       .where("uid", "==", req.user.uid)
+      .limit(100)
       .get();
 
     const requests = snap.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+      .map(doc => publicRequest({ id: doc.id, ...doc.data() }))
       .sort((a, b) => {
-        const at = a.createdAt?.toMillis?.() || 0;
-        const bt = b.createdAt?.toMillis?.() || 0;
-        return bt - at;
+        const ta = a.createdAt?.toMillis?.() || 0;
+        const tb = b.createdAt?.toMillis?.() || 0;
+        return tb - ta;
       });
+
+    res.json({ requests });
+
+  } catch (error) {
+    res.status(500).json({ message: "Түүх ачааллахад алдаа гарлаа." });
+  }
+});
+
+// ==========================================
+// ADMIN: CASHIER REQUEST LIST
+// ==========================================
+
+app.get("/api/admin/cashier/list", authUser, authAdmin, async (req, res) => {
+  try {
+    const snap = await db.collection("cashierRequests")
+      .where("status", "==", "pending")
+      .limit(200)
+      .get();
+
+    const requests = snap.docs.map(doc =>
+      publicRequest({ id: doc.id, ...doc.data() })
+    );
+
+    res.json({ requests });
+
+  } catch (error) {
+    res.status(500).json({ message: "Хүсэлтүүдийг ачааллахад алдаа гарлаа." });
+  }
+});
+
+// ==========================================
+// ADMIN: CASHIER DECISION
+// ==========================================
+
+app.post("/api/admin/cashier/decision", authUser, authAdmin, async (req, res) => {
+  try {
+    const requestId = String(req.body.requestId || "");
+    const decision = String(req.body.decision || "").toLowerCase();
+    const note = String(req.body.note || "").trim();
+
+    if (!requestId || !["approve", "reject"].includes(decision)) {
+      return res.status(400).json({ message: "Мэдээлэл буруу байна." });
+    }
+
+    const requestRef = db.collection("cashierRequests").doc(requestId);
+
+    await db.runTransaction(async transaction => {
+      const requestSnap = await transaction.get(requestRef);
+
+      if (!requestSnap.exists) {
+        throw new Error("Хүсэлт олдсонгүй.");
+      }
+
+      const request = requestSnap.data();
+
+      if (request.status !== "pending") {
+        throw new Error("Энэ хүсэлт өмнө нь шийдвэрлэгдсэн байна.");
+      }
+
+      const userRef = db.collection("users").doc(request.uid);
+      const userSnap = await transaction.get(userRef);
+
+      if (!userSnap.exists) {
+        throw new Error("Хэрэглэгч олдсонгүй.");
+      }
+
+      if (decision === "approve") {
+        if (request.type === "deposit") {
+          transaction.update(userRef, {
+            chips: FieldValue.increment(Number(request.amount))
+          });
+        }
+      } else {
+        if (request.type === "withdraw") {
+          transaction.update(userRef, {
+            chips: FieldValue.increment(Number(request.amount))
+          });
+        }
+      }
+
+      transaction.update(requestRef, {
+        status: decision === "approve" ? "approved" : "rejected",
+        adminNote: note,
+        decidedAt: FieldValue.serverTimestamp(),
+        decidedBy: req.user.uid
+      });
+    });
 
     res.json({
       success: true,
-      requests: requests.map(publicRequest)
+      message: decision === "approve"
+        ? "Хүсэлт баталгаажлаа."
+        : "Хүсэлт буцаагдлаа."
     });
 
-  } catch (e) {
-    console.error("Cashier history:", e);
-
-    res.status(500).json({
-      message: "Гүйлгээний түүх авахад алдаа гарлаа."
+  } catch (error) {
+    res.status(400).json({
+      message: error.message || "Хүсэлт шийдвэрлэхэд алдаа гарлаа."
     });
   }
 });
 
-// ===============================
-// ADMIN CASHIER LIST
-// ===============================
+// ==========================================
+// ADMIN: USERS
+// ==========================================
 
-app.get(
-  "/api/admin/cashier/list",
-  authUser,
-  authAdmin,
-  async (req, res) => {
-    try {
-      const snap = await db
-        .collection("cashierRequests")
-        .get();
+app.get("/api/admin/users", authUser, authAdmin, async (req, res) => {
+  try {
+    const snap = await db.collection("users").limit(300).get();
 
-      const requests = snap.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        .sort((a, b) => {
-          const at = a.createdAt?.toMillis?.() || 0;
-          const bt = b.createdAt?.toMillis?.() || 0;
-          return bt - at;
-        });
+    const users = snap.docs.map(doc => {
+      const user = cleanUser(doc.data(), doc.id);
+      return user;
+    });
 
-      res.json({
-        success: true,
-        requests: requests.map(publicRequest)
-      });
+    res.json({ users });
 
-    } catch (e) {
-      console.error("Admin cashier list:", e);
-
-      res.status(500).json({
-        message: "Хүсэлтүүдийг авахад алдаа гарлаа."
-      });
-    }
+  } catch (error) {
+    res.status(500).json({ message: "Хэрэглэгчдийн мэдээлэл ачааллахад алдаа гарлаа." });
   }
-);
+});
 
-// ===============================
-// ADMIN CASHIER DECISION
-// ===============================
+// ==========================================
+// ADMIN: ADD / REMOVE CHIPS
+// ==========================================
 
-app.post(
-  "/api/admin/cashier/decision",
-  authUser,
-  authAdmin,
-  async (req, res) => {
-    try {
-      const requestId = String(req.body.requestId || "").trim();
-      const decision = String(req.body.decision || "").trim();
-      const note = String(req.body.note || "").trim().slice(0, 300);
+app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
+  try {
+    const uid = String(req.body.uid || "");
+    const amount = validAmount(req.body.amount);
+    const action = String(req.body.action || "").toLowerCase();
 
-      if (!requestId || !["approve", "reject"].includes(decision)) {
-        return res.status(400).json({
-          message: "Хүсэлтийн мэдээлэл буруу байна."
-        });
+    if (!uid || !amount || !["add", "remove"].includes(action)) {
+      return res.status(400).json({ message: "Мэдээлэл буруу байна." });
+    }
+
+    const userRef = db.collection("users").doc(uid);
+
+    await db.runTransaction(async transaction => {
+      const snap = await transaction.get(userRef);
+
+      if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+
+      const current = Number(snap.data().chips || 0);
+      const next = action === "add" ? current + amount : current - amount;
+
+      if (!Number.isSafeInteger(next) || next < 0) {
+        throw new Error("CHIP үлдэгдэл хүрэлцэхгүй эсвэл дүн хэтэрсэн байна.");
       }
 
-      const requestRef = db
-        .collection("cashierRequests")
-        .doc(requestId);
+      transaction.update(userRef, { chips: next });
+    });
 
-      await db.runTransaction(async tx => {
-        const requestSnap = await tx.get(requestRef);
+    res.json({ success: true, message: "CHIP амжилттай шинэчлэгдлээ." });
 
-        if (!requestSnap.exists) {
-          throw new Error("Хүсэлт олдсонгүй.");
-        }
-
-        const request = requestSnap.data();
-
-        if (request.status !== "pending") {
-          throw new Error("Энэ хүсэлтийг өмнө нь шийдвэрлэсэн байна.");
-        }
-
-        const userRef = db
-          .collection("users")
-          .doc(request.uid);
-
-        const userSnap = await tx.get(userRef);
-
-        if (!userSnap.exists) {
-          throw new Error("Хэрэглэгч олдсонгүй.");
-        }
-
-        const user = userSnap.data();
-        const amount = Number(request.amount || 0);
-
-        if (request.type === "deposit" && decision === "approve") {
-          tx.update(userRef, {
-            chips: Number(user.chips || 0) + amount,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-        }
-
-        if (request.type === "withdraw" && decision === "reject") {
-          tx.update(userRef, {
-            chips: Number(user.chips || 0) + amount,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-        }
-
-        tx.update(requestRef, {
-          status: decision === "approve" ? "approved" : "rejected",
-          adminNote: note,
-          decidedBy: req.user.uid,
-          decidedAt: FieldValue.serverTimestamp()
-        });
-      });
-
-      res.json({
-        success: true,
-        message: decision === "approve"
-          ? "Хүсэлт баталгаажлаа."
-          : "Хүсэлтээс татгалзлаа."
-      });
-
-    } catch (e) {
-      console.error("Admin decision:", e);
-
-      res.status(400).json({
-        message: e.message || "Хүсэлт шийдвэрлэхэд алдаа гарлаа."
-      });
-    }
+  } catch (error) {
+    res.status(400).json({
+      message: error.message || "CHIP шинэчлэхэд алдаа гарлаа."
+    });
   }
-);
+});
 
-// ===============================
-// ADMIN USER LIST
-// ===============================
-
-app.get(
-  "/api/admin/users",
-  authUser,
-  authAdmin,
-  async (req, res) => {
-    try {
-      const snap = await db.collection("users").get();
-
-      const users = snap.docs.map(doc => {
-        const data = doc.data();
-
-        return {
-          id: doc.id,
-          username: data.username || "",
-          displayName: data.displayName || "",
-          chips: Number(data.chips || 0),
-          bankName: data.bankName || "",
-          bankAccount: data.bankAccount || "",
-          bankHolder: data.bankHolder || "",
-          phone: data.phone || "",
-          isAdmin: ADMIN_UIDS.has(doc.id)
-        };
-      });
-
-      res.json({
-        success: true,
-        users
-      });
-
-    } catch (e) {
-      console.error("Admin users:", e);
-
-      res.status(500).json({
-        message: "Хэрэглэгчдийн жагсаалт авахад алдаа гарлаа."
-      });
-    }
-  }
-);
-
-// ===============================
-// ADMIN CHIP ADJUSTMENT
-// ===============================
-
-app.post(
-  "/api/admin/chips",
-  authUser,
-  authAdmin,
-  async (req, res) => {
-    try {
-      const uid = String(req.body.uid || "").trim();
-      const amount = Math.floor(Number(req.body.amount));
-      const action = String(req.body.action || "");
-
-      if (!uid || !Number.isSafeInteger(amount) || amount <= 0) {
-        return res.status(400).json({
-          message: "Хэрэглэгч болон CHIP дүн буруу байна."
-        });
-      }
-
-      if (!["add", "remove"].includes(action)) {
-        return res.status(400).json({
-          message: "Үйлдэл буруу байна."
-        });
-      }
-
-      const userRef = db.collection("users").doc(uid);
-
-      await db.runTransaction(async tx => {
-        const snap = await tx.get(userRef);
-
-        if (!snap.exists) {
-          throw new Error("Хэрэглэгч олдсонгүй.");
-        }
-
-        const user = snap.data();
-        const oldChips = Number(user.chips || 0);
-
-        if (action === "remove" && oldChips < amount) {
-          throw new Error("Хэрэглэгчийн CHIP хүрэлцэхгүй байна.");
-        }
-
-        tx.update(userRef, {
-          chips: action === "add"
-            ? oldChips + amount
-            : oldChips - amount,
-          updatedAt: FieldValue.serverTimestamp()
-        });
-      });
-
-      res.json({
-        success: true,
-        message: "CHIP шинэчлэгдлээ."
-      });
-
-    } catch (e) {
-      console.error("Admin CHIP:", e);
-
-      res.status(400).json({
-        message: e.message || "CHIP өөрчлөхөд алдаа гарлаа."
-      });
-    }
-  }
-);
-
-// =====================================
-// POKER TABLE SYSTEM
-// =====================================
+// ==========================================
+// POKER TABLES
+// ==========================================
 
 const TABLE_CONFIG = [
   {
-    id: "table1",
+    id: "BEGINNER",
     name: "BEGINNER",
-    smallBlind: 50,
-    bigBlind: 100,
-    minBuyIn: 1000,
-    maxBuyIn: 10000,
-    maxPlayers: 6
-  },
-  {
-    id: "table2",
-    name: "SILVER",
+    type: "texas",
     smallBlind: 100,
     bigBlind: 200,
-    minBuyIn: 2000,
-    maxBuyIn: 20000,
+    minBuyIn: 5000,
+    maxBuyIn: 50000,
     maxPlayers: 6
   },
   {
-    id: "table3",
-    name: "GOLD",
+    id: "SILVER",
+    name: "SILVER",
+    type: "texas",
     smallBlind: 500,
     bigBlind: 1000,
-    minBuyIn: 10000,
-    maxBuyIn: 100000,
+    minBuyIn: 25000,
+    maxBuyIn: 250000,
     maxPlayers: 6
   },
   {
-    id: "table4",
-    name: "BLACK",
+    id: "GOLD",
+    name: "GOLD",
+    type: "texas",
     smallBlind: 1000,
     bigBlind: 2000,
-    minBuyIn: 20000,
-    maxBuyIn: 200000,
+    minBuyIn: 50000,
+    maxBuyIn: 500000,
+    maxPlayers: 6
+  },
+  {
+    id: "BLACK",
+    name: "BLACK",
+    type: "omaha",
+    smallBlind: 5000,
+    bigBlind: 10000,
+    minBuyIn: 250000,
+    maxBuyIn: 2500000,
     maxPlayers: 6
   }
 ];
 
 const tables = new Map();
+const socketUsers = new Map();
 
 for (const config of TABLE_CONFIG) {
   tables.set(config.id, {
@@ -955,343 +730,99 @@ for (const config of TABLE_CONFIG) {
     players: [],
     communityCards: [],
     pot: 0,
-    currentTurn: null,
-    dealerIndex: 0,
+    currentBet: 0,
+    currentTurn: 0,
+    dealerIndex: -1,
     handStarted: false,
-    status: "waiting"
+    street: "waiting",
+    deck: [],
+    handNumber: 0
   });
 }
 
-const socketUsers = new Map();
-
 function getTable(tableId) {
-  return tables.get(String(tableId));
+  return tables.get(String(tableId || "").toUpperCase());
 }
 
 function getPublicTable(table) {
   return {
     id: table.id,
     name: table.name,
+    type: table.type,
     smallBlind: table.smallBlind,
     bigBlind: table.bigBlind,
     minBuyIn: table.minBuyIn,
     maxBuyIn: table.maxBuyIn,
     maxPlayers: table.maxPlayers,
-
-    players: table.players.map(player => ({
+    players: table.players.map((player, index) => ({
       id: player.uid,
+      uid: player.uid,
       username: player.username,
       displayName: player.displayName,
       chips: player.chips,
-      avatar: player.avatar || "",
-      seat: player.seat,
+      bet: player.bet || 0,
+      seat: index,
       online: player.online !== false,
       folded: !!player.folded,
-      isDealer: !!player.isDealer,
-      isTurn: table.currentTurn === player.uid
+      cards: player.uid === table.players[table.currentTurn]?.uid
+        ? player.cards || []
+        : []
     })),
-
-    communityCards: table.communityCards,
-    pot: table.pot,
-    currentTurn: table.currentTurn,
-    status: table.status
+    communityCards: table.communityCards || [],
+    pot: table.pot || 0,
+    currentBet: table.currentBet || 0,
+    currentTurn: table.currentTurn || 0,
+    handStarted: !!table.handStarted,
+    street: table.street,
+    handNumber: table.handNumber
   };
 }
 
+function sendTableUpdate(table) {
+  io.to("table:" + table.id).emit("table:update", getPublicTable(table));
+}
+
 function sendLobby() {
-  const result = Array.from(tables.values()).map(getPublicTable);
+  const onlineUsers = new Set();
+
+  for (const entry of socketUsers.values()) {
+    if (entry.uid) onlineUsers.add(entry.uid);
+  }
+
+  const publicTables = [...tables.values()].map(table => ({
+    id: table.id,
+    name: table.name,
+    type: table.type,
+    smallBlind: table.smallBlind,
+    bigBlind: table.bigBlind,
+    minBuyIn: table.minBuyIn,
+    maxBuyIn: table.maxBuyIn,
+    maxPlayers: table.maxPlayers,
+    players: table.players.map(player => ({
+      uid: player.uid,
+      username: player.username,
+      chips: player.chips,
+      online: player.online !== false
+    }))
+  }));
 
   io.emit("lobby:update", {
-    tables: result
+    tables: publicTables,
+    onlineCount: onlineUsers.size
   });
 }
 
-function sendTableUpdate(table) {
-  io.to(table.id).emit("table:update", {
-    table: getPublicTable(table)
-  });
+function makeDeck() {
+  const suits = ["♠", "♥", "♦", "♣"];
+  const ranks = [
+    "2", "3", "4", "5", "6", "7", "8",
+    "9", "10", "J", "Q", "K", "A"
+  ];
 
-  sendLobby();
-}
-
-function removePlayerFromTable(socket, notify = true) {
-  const info = socketUsers.get(socket.id);
-
-  if (!info) return;
-
-  const table = getTable(info.tableId);
-
-  if (table) {
-    table.players = table.players.filter(
-      player => player.uid !== info.uid
-    );
-
-    if (table.currentTurn === info.uid) {
-      table.currentTurn = null;
-    }
-
-    if (table.players.length === 0) {
-      table.communityCards = [];
-      table.pot = 0;
-      table.handStarted = false;
-      table.status = "waiting";
-    }
-
-    if (notify) {
-      sendTableUpdate(table);
-    }
-  }
-
-  if (info.tableId) {
-    socket.leave(info.tableId);
-  }
-
-  socketUsers.delete(socket.id);
-}
-
-// =====================================
-// SOCKET CONNECTION
-// =====================================
-
-io.on("connection", socket => {
-
-  socket.on("lobby:get", async () => {
-    try {
-      const token = socket.handshake.auth?.token;
-
-      if (token) {
-        const decoded = await auth.verifyIdToken(token);
-
-        socketUsers.set(socket.id, {
-          uid: decoded.uid,
-          tableId: null
-        });
-      }
-
-      sendLobby();
-
-    } catch (e) {
-      console.error("Lobby authentication:", e.message);
-
-      socket.emit("notice", {
-        message: "Нэвтрэх мэдээлэл хүчингүй байна."
-      });
-    }
-  });
-
-  // ===================================
-  // JOIN TABLE
-  // ===================================
-
-  socket.on("table:join", async data => {
-    try {
-      const token = socket.handshake.auth?.token;
-
-      if (!token) {
-        return socket.emit("notice", {
-          message: "Эхлээд нэвтэрнэ үү."
-        });
-      }
-
-      const decoded = await auth.verifyIdToken(token);
-      const uid = decoded.uid;
-
-      const table = getTable(data?.tableId);
-
-      if (!table) {
-        return socket.emit("notice", {
-          message: "Ширээ олдсонгүй."
-        });
-      }
-
-      const userSnap = await db
-        .collection("users")
-        .doc(uid)
-        .get();
-
-      if (!userSnap.exists) {
-        return socket.emit("notice", {
-          message: "Хэрэглэгч олдсонгүй."
-        });
-      }
-
-      const user = userSnap.data();
-
-      const alreadyPlaying = Array.from(tables.values())
-        .some(t => t.players.some(p => p.uid === uid));
-
-      if (alreadyPlaying) {
-        return socket.emit("notice", {
-          message: "Та аль хэдийн ширээнд суусан байна."
-        });
-      }
-
-      if (table.players.length >= table.maxPlayers) {
-        return socket.emit("notice", {
-          message: "Ширээ дүүрсэн байна."
-        });
-      }
-
-      const buyIn = Math.floor(Number(data?.buyIn));
-
-      if (
-        !Number.isSafeInteger(buyIn) ||
-        buyIn < table.minBuyIn ||
-        buyIn > table.maxBuyIn
-      ) {
-        return socket.emit("notice", {
-          message: "Оруулах CHIP дүн тохирохгүй байна."
-        });
-      }
-
-      const userRef = db.collection("users").doc(uid);
-
-      await db.runTransaction(async tx => {
-        const snap = await tx.get(userRef);
-
-        if (!snap.exists) {
-          throw new Error("Хэрэглэгч олдсонгүй.");
-        }
-
-        const current = Number(snap.data().chips || 0);
-
-        if (current < buyIn) {
-          throw new Error("CHIP хүрэлцэхгүй байна.");
-        }
-
-        tx.update(userRef, {
-          chips: current - buyIn,
-          updatedAt: FieldValue.serverTimestamp()
-        });
-      });
-
-      const seat = Array.from(
-        { length: table.maxPlayers },
-        (_, i) => i
-      ).find(index =>
-        !table.players.some(player => player.seat === index)
-      );
-
-      const player = {
-        uid,
-        username: user.username,
-        displayName: user.displayName,
-        chips: buyIn,
-        avatar: "",
-        seat,
-        online: true,
-        folded: false,
-        isDealer: false
-      };
-
-      table.players.push(player);
-
-      socketUsers.set(socket.id, {
-        uid,
-        tableId: table.id
-      });
-
-      socket.join(table.id);
-
-      socket.emit("table:update", {
-        table: getPublicTable(table)
-      });
-
-      sendTableUpdate(table);
-
-    } catch (e) {
-      console.error("Table join:", e);
-
-      socket.emit("notice", {
-        message: e.message || "Ширээнд ороход алдаа гарлаа."
-      });
-    }
-  });
-
-  // ===================================
-  // LEAVE TABLE
-  // ===================================
-
-  socket.on("table:leave", async () => {
-    try {
-      const info = socketUsers.get(socket.id);
-
-      if (!info || !info.tableId) return;
-
-      const table = getTable(info.tableId);
-
-      if (!table) {
-        socketUsers.delete(socket.id);
-        return;
-      }
-
-      const player = table.players.find(
-        p => p.uid === info.uid
-      );
-
-      if (player) {
-        const userRef = db.collection("users").doc(info.uid);
-
-        await userRef.update({
-          chips: FieldValue.increment(player.chips),
-          updatedAt: FieldValue.serverTimestamp()
-        });
-      }
-
-      removePlayerFromTable(socket);
-
-    } catch (e) {
-      console.error("Table leave:", e);
-
-      socket.emit("notice", {
-        message: "Ширээнээс гарахад алдаа гарлаа."
-      });
-    }
-  });
-
-  // ===================================
-  // DISCONNECT
-  // ===================================
-
-  socket.on("disconnect", () => {
-    const info = socketUsers.get(socket.id);
-
-    if (!info) return;
-
-    const table = getTable(info.tableId);
-
-    if (table) {
-      const player = table.players.find(
-        p => p.uid === info.uid
-      );
-
-      if (player) {
-        player.online = false;
-        sendTableUpdate(table);
-      }
-    }
-
-    socketUsers.delete(socket.id);
-  });
-
-});
-
- // =====================================
- // POKER GAME HELPERS
- // =====================================
-
-const SUITS = ["♠", "♥", "♦", "♣"];
-
-const RANKS = [
-  "2", "3", "4", "5", "6", "7", "8",
-  "9", "10", "J", "Q", "K", "A"
-];
-
-function createDeck() {
   const deck = [];
 
-  for (const suit of SUITS) {
-    for (const rank of RANKS) {
+  for (const suit of suits) {
+    for (const rank of ranks) {
       deck.push({ rank, suit });
     }
   }
@@ -1304,236 +835,486 @@ function createDeck() {
   return deck;
 }
 
-function resetPlayer(player) {
-  player.folded = false;
-  player.bet = 0;
-  player.cards = [];
-  player.online = true;
-}
-
-function startHand(table) {
-  const active = table.players.filter(p => p.chips > 0);
-
-  if (active.length < 2) {
-    table.status = "waiting";
-    table.handStarted = false;
-    return false;
-  }
-
-  const deck = createDeck();
-
-  table.deck = deck;
-  table.communityCards = [];
-  table.pot = 0;
-  table.currentBet = 0;
-  table.handStarted = true;
-  table.status = "preflop";
-
-  table.players.forEach(resetPlayer);
-
-  for (let i = 0; i < 2; i++) {
-    active.forEach(player => {
-      player.cards.push(table.deck.pop());
-    });
-  }
-
-  table.dealerIndex =
-    (table.dealerIndex + 1) % active.length;
-
-  const dealer = active[table.dealerIndex];
-
-  table.players.forEach(p => {
-    p.isDealer = p.uid === dealer.uid;
-  });
-
-  table.currentTurn = active[0].uid;
-
-  sendTableUpdate(table);
-
-  return true;
-}
-
-function nextTurn(table) {
-  const active = table.players.filter(
-    p => !p.folded && p.chips > 0
+function getActivePlayers(table) {
+  return table.players.filter(player =>
+    !player.folded && player.chips >= 0
   );
-
-  if (active.length <= 1) {
-    finishHand(table);
-    return;
-  }
-
-  const currentIndex = active.findIndex(
-    p => p.uid === table.currentTurn
-  );
-
-  const nextIndex = (currentIndex + 1) % active.length;
-
-  table.currentTurn = active[nextIndex].uid;
-
-  sendTableUpdate(table);
 }
 
-function finishHand(table) {
-  const active = table.players.filter(p => !p.folded);
+function nextPlayerIndex(table, fromIndex) {
+  if (!table.players.length) return 0;
 
-  if (active.length === 1) {
-    active[0].chips += table.pot;
-  } else if (active.length > 1) {
-    const winner = active[
-      Math.floor(Math.random() * active.length)
-    ];
+  for (let step = 1; step <= table.players.length; step++) {
+    const index = (fromIndex + step) % table.players.length;
+    const player = table.players[index];
 
+    if (player && !player.folded && player.chips > 0) {
+      return index;
+    }
+  }
+
+  return fromIndex;
+}
+
+function finishHand(table, winner) {
+  if (winner) {
     winner.chips += table.pot;
   }
 
   table.pot = 0;
-  table.currentTurn = null;
+  table.currentBet = 0;
   table.handStarted = false;
-  table.status = "waiting";
+  table.street = "waiting";
+  table.communityCards = [];
 
-  table.players.forEach(player => {
-    player.cards = [];
-    player.folded = false;
+  for (const player of table.players) {
     player.bet = 0;
-  });
+    player.folded = false;
+    player.cards = [];
+  }
 
+  sendTableUpdate(table);
+  sendLobby();
+}
+
+function startHand(table) {
+  const players = table.players.filter(player =>
+    player.online !== false && player.chips > 0
+  );
+
+  if (players.length < 2) {
+    return false;
+  }
+
+  table.deck = makeDeck();
+  table.communityCards = [];
+  table.pot = 0;
+  table.currentBet = table.bigBlind;
+  table.handStarted = true;
+  table.street = "preflop";
+  table.handNumber += 1;
+
+  table.dealerIndex = (table.dealerIndex + 1) % table.players.length;
+
+  for (const player of table.players) {
+    player.folded = player.chips <= 0 || player.online === false;
+    player.bet = 0;
+    player.cards = [];
+
+    if (!player.folded) {
+      player.cards.push(table.deck.pop(), table.deck.pop());
+    }
+  }
+
+  const active = table.players.filter(p => !p.folded);
+
+  if (active.length < 2) {
+    table.handStarted = false;
+    return false;
+  }
+
+  const smallBlindPlayer = active[0];
+  const bigBlindPlayer = active[1];
+
+  const small = Math.min(table.smallBlind, smallBlindPlayer.chips);
+  const big = Math.min(table.bigBlind, bigBlindPlayer.chips);
+
+  smallBlindPlayer.chips -= small;
+  smallBlindPlayer.bet = small;
+  table.pot += small;
+
+  bigBlindPlayer.chips -= big;
+  bigBlindPlayer.bet = big;
+  table.pot += big;
+
+  table.currentBet = big;
+  table.currentTurn = table.players.indexOf(active[0]);
+  table.currentTurn = nextPlayerIndex(table, table.currentTurn - 1);
+
+  sendTableUpdate(table);
+  sendLobby();
+
+  return true;
+}
+
+function advanceStreet(table) {
+  if (table.street === "preflop") {
+    table.communityCards.push(
+      table.deck.pop(),
+      table.deck.pop(),
+      table.deck.pop()
+    );
+    table.street = "flop";
+  } else if (table.street === "flop") {
+    table.communityCards.push(table.deck.pop());
+    table.street = "turn";
+  } else if (table.street === "turn") {
+    table.communityCards.push(table.deck.pop());
+    table.street = "river";
+  } else if (table.street === "river") {
+    const active = getActivePlayers(table);
+    const winner = active[Math.floor(Math.random() * active.length)];
+    finishHand(table, winner);
+    return;
+  }
+
+  for (const player of table.players) {
+    player.bet = 0;
+  }
+
+  table.currentBet = 0;
+  table.currentTurn = nextPlayerIndex(table, table.dealerIndex);
   sendTableUpdate(table);
 }
 
-// =====================================
-// GAME ACTION
-// =====================================
+async function getSocketUser(socket) {
+  const token = socket.handshake.auth?.token;
+
+  if (!token) throw new Error("Нэвтрэх шаардлагатай.");
+
+  const decoded = await admin.auth().verifyIdToken(token);
+  const snap = await db.collection("users").doc(decoded.uid).get();
+
+  if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+
+  return {
+    ...snap.data(),
+    uid: decoded.uid
+  };
+}
+
+async function refundPlayerChips(uid, amount) {
+  if (!Number.isSafeInteger(amount) || amount <= 0) return;
+
+  const userRef = db.collection("users").doc(uid);
+
+  await userRef.update({
+    chips: FieldValue.increment(amount)
+  });
+}
+
+function removePlayerFromTable(table, uid) {
+  const index = table.players.findIndex(player => player.uid === uid);
+
+  if (index < 0) return false;
+
+  table.players.splice(index, 1);
+
+  if (table.currentTurn >= table.players.length) {
+    table.currentTurn = 0;
+  }
+
+  if (table.dealerIndex >= table.players.length) {
+    table.dealerIndex = 0;
+  }
+
+  return true;
+}
+
+// ==========================================
+// SOCKET CONNECTIONS
+// ==========================================
 
 io.on("connection", socket => {
 
-  socket.on("game:action", async data => {
+  socket.on("lobby:get", async () => {
     try {
-      const info = socketUsers.get(socket.id);
+      const user = await getSocketUser(socket);
 
-      if (!info || !info.tableId) {
-        return socket.emit("notice", {
-          message: "Та ширээнд суугаагүй байна."
-        });
-      }
-
-      const table = getTable(info.tableId);
-
-      if (!table || !table.handStarted) {
-        return socket.emit("notice", {
-          message: "Тоглолт эхлээгүй байна."
-        });
-      }
-
-      if (table.currentTurn !== info.uid) {
-        return socket.emit("notice", {
-          message: "Таны ээлж биш байна."
-        });
-      }
-
-      const player = table.players.find(
-        p => p.uid === info.uid
-      );
-
-      if (!player) return;
-
-      const action = String(data?.action || "");
-
-      if (action === "fold") {
-        player.folded = true;
-        nextTurn(table);
-        return;
-      }
-
-      if (action === "check") {
-        nextTurn(table);
-        return;
-      }
-
-      if (action === "call") {
-        const difference = Math.max(
-          0,
-          Number(table.currentBet || 0) -
-          Number(player.bet || 0)
-        );
-
-        const amount = Math.min(
-          difference,
-          player.chips
-        );
-
-        player.chips -= amount;
-        player.bet = Number(player.bet || 0) + amount;
-        table.pot += amount;
-
-        nextTurn(table);
-        return;
-      }
-
-      if (action === "raise") {
-        const raiseAmount = Math.floor(
-          Number(data?.amount)
-        );
-
-        if (
-          !Number.isSafeInteger(raiseAmount) ||
-          raiseAmount <= 0 ||
-          raiseAmount > player.chips
-        ) {
-          return socket.emit("notice", {
-            message: "Бооцооны дүн буруу байна."
-          });
-        }
-
-        player.chips -= raiseAmount;
-        player.bet = Number(player.bet || 0) + raiseAmount;
-        table.pot += raiseAmount;
-        table.currentBet = player.bet;
-
-        nextTurn(table);
-        return;
-      }
-
-      socket.emit("notice", {
-        message: "Тоглоомын үйлдэл буруу байна."
+      socketUsers.set(socket.id, {
+        uid: user.uid,
+        tableId: null
       });
 
-    } catch (e) {
-      console.error("Game action:", e);
+      for (const table of tables.values()) {
+        const player = table.players.find(p => p.uid === user.uid);
 
+        if (player) {
+          player.online = true;
+
+          socketUsers.set(socket.id, {
+            uid: user.uid,
+            tableId: table.id
+          });
+
+          socket.join("table:" + table.id);
+          sendTableUpdate(table);
+          break;
+        }
+      }
+
+      sendLobby();
+
+    } catch (error) {
       socket.emit("notice", {
-        message: "Тоглоомын үйлдэлд алдаа гарлаа."
+        message: error.message || "Нэвтрэх эрх шалгахад алдаа гарлаа."
       });
     }
   });
 
-  // ===================================
-  // NEXT HAND
-  // ===================================
+  socket.on("table:join", async (data, callback) => {
+    const reply = result => {
+      if (typeof callback === "function") callback(result);
+    };
 
-  socket.on("game:next", () => {
-    const info = socketUsers.get(socket.id);
+    try {
+      const user = await getSocketUser(socket);
+      const table = getTable(data?.tableId);
 
-    if (!info || !info.tableId) return;
+      if (!table) {
+        return reply({ success: false, message: "Ширээ олдсонгүй." });
+      }
 
-    const table = getTable(info.tableId);
+      const existing = table.players.find(p => p.uid === user.uid);
 
-    if (!table || table.handStarted) return;
+      if (existing) {
+        existing.online = true;
 
-    if (table.players.length < 2) {
-      return socket.emit("notice", {
-        message: "Тоглолт эхлүүлэхэд 2 тоглогч хэрэгтэй."
+        socketUsers.set(socket.id, {
+          uid: user.uid,
+          tableId: table.id
+        });
+
+        socket.join("table:" + table.id);
+        sendTableUpdate(table);
+        sendLobby();
+
+        return reply({
+          success: true,
+          table: getPublicTable(table)
+        });
+      }
+
+      for (const otherTable of tables.values()) {
+        if (otherTable.players.some(p => p.uid === user.uid)) {
+          return reply({
+            success: false,
+            message: "Та өөр ширээнд суусан байна."
+          });
+        }
+      }
+
+      if (table.players.length >= table.maxPlayers) {
+        return reply({ success: false, message: "Ширээ дүүрсэн байна." });
+      }
+
+      const buyIn = table.minBuyIn;
+      const userRef = db.collection("users").doc(user.uid);
+
+      await db.runTransaction(async transaction => {
+        const snap = await transaction.get(userRef);
+
+        if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+
+        const balance = Number(snap.data().chips || 0);
+
+        if (!Number.isSafeInteger(balance) || balance < buyIn) {
+          throw new Error("CHIP хүрэлцэхгүй байна.");
+        }
+
+        transaction.update(userRef, { chips: balance - buyIn });
+      });
+
+      table.players.push({
+        uid: user.uid,
+        username: user.username || "Player",
+        displayName: user.displayName || user.username || "Player",
+        chips: buyIn,
+        bet: 0,
+        folded: false,
+        online: true,
+        cards: []
+      });
+
+      socketUsers.set(socket.id, {
+        uid: user.uid,
+        tableId: table.id
+      });
+
+      socket.join("table:" + table.id);
+
+      sendTableUpdate(table);
+      sendLobby();
+
+      reply({
+        success: true,
+        table: getPublicTable(table)
+      });
+
+    } catch (error) {
+      reply({
+        success: false,
+        message: error.message || "Ширээнд суухад алдаа гарлаа."
       });
     }
+  });
 
-    startHand(table);
+  socket.on("table:leave", async () => {
+    try {
+      const session = socketUsers.get(socket.id);
+
+      if (!session?.tableId) return;
+
+      const table = getTable(session.tableId);
+      if (!table) return;
+
+      const player = table.players.find(p => p.uid === session.uid);
+      if (!player) return;
+
+      if (table.handStarted) {
+        socket.emit("notice", {
+          message: "Тоглолт дууссаны дараа ширээнээс гараарай."
+        });
+        return;
+      }
+
+      await refundPlayerChips(session.uid, player.chips);
+
+      removePlayerFromTable(table, session.uid);
+      socket.leave("table:" + table.id);
+      socketUsers.delete(socket.id);
+
+      sendTableUpdate(table);
+      sendLobby();
+
+    } catch (error) {
+      socket.emit("notice", {
+        message: error.message || "Ширээнээс гарахад алдаа гарлаа."
+      });
+    }
+  });
+
+  // ----------------------------------------
+  // PLAYER ACTION
+  // ----------------------------------------
+
+  socket.on("game:action", async data => {
+    try {
+      const session = socketUsers.get(socket.id);
+      if (!session?.tableId) return;
+
+      const table = getTable(session.tableId);
+      if (!table || !table.handStarted) return;
+
+      const player = table.players.find(p => p.uid === session.uid);
+      if (!player || player.folded) return;
+
+      const turnPlayer = table.players[table.currentTurn];
+
+      if (!turnPlayer || turnPlayer.uid !== session.uid) {
+        socket.emit("notice", { message: "Одоо таны ээлж биш байна." });
+        return;
+      }
+
+      const action = String(data?.action || "").toLowerCase();
+      const amount = validAmount(data?.amount);
+
+      if (action === "fold") {
+        player.folded = true;
+      } else if (action === "check") {
+        if (player.bet < table.currentBet) {
+          socket.emit("notice", { message: "Check хийх боломжгүй. Call эсвэл Fold хийнэ үү." });
+          return;
+        }
+      } else if (action === "call") {
+        const difference = Math.max(0, table.currentBet - player.bet);
+        const paid = Math.min(difference, player.chips);
+
+        player.chips -= paid;
+        player.bet += paid;
+        table.pot += paid;
+      } else if (action === "raise") {
+        if (!amount || amount <= table.currentBet) {
+          socket.emit("notice", { message: "Raise дүн буруу байна." });
+          return;
+        }
+
+        const needed = amount - player.bet;
+
+        if (needed > player.chips) {
+          socket.emit("notice", { message: "CHIP хүрэлцэхгүй байна." });
+          return;
+        }
+
+        player.chips -= needed;
+        player.bet = amount;
+        table.pot += needed;
+        table.currentBet = amount;
+      } else {
+        socket.emit("notice", { message: "Үйлдэл буруу байна." });
+        return;
+      }
+
+      const active = getActivePlayers(table);
+
+      if (active.length === 1) {
+        finishHand(table, active[0]);
+        return;
+      }
+
+      table.currentTurn = nextPlayerIndex(table, table.currentTurn);
+
+      sendTableUpdate(table);
+      sendLobby();
+
+    } catch (error) {
+      socket.emit("notice", {
+        message: error.message || "Үйлдэл хийхэд алдаа гарлаа."
+      });
+    }
+  });
+
+  // ----------------------------------------
+  // NEXT HAND / NEXT STREET
+  // ----------------------------------------
+
+  socket.on("game:next", () => {
+    const session = socketUsers.get(socket.id);
+    if (!session?.tableId) return;
+
+    const table = getTable(session.tableId);
+    if (!table) return;
+
+    if (!table.handStarted) {
+      startHand(table);
+      return;
+    }
+
+    const active = getActivePlayers(table);
+
+    if (active.length === 1) {
+      finishHand(table, active[0]);
+      return;
+    }
+
+    advanceStreet(table);
+  });
+
+  socket.on("disconnect", () => {
+    const session = socketUsers.get(socket.id);
+
+    if (session?.tableId) {
+      const table = getTable(session.tableId);
+
+      if (table) {
+        const player = table.players.find(p => p.uid === session.uid);
+
+        if (player) {
+          player.online = false;
+          sendTableUpdate(table);
+        }
+      }
+    }
+
+    socketUsers.delete(socket.id);
+    sendLobby();
   });
 
 });
 
-// =====================================
-// HEALTH CHECK
-// =====================================
+// ==========================================
+// ROOT + HEALTH
+// ==========================================
 
 app.get("/", (req, res) => {
   res.send("BLACKCLUB Poker Server is running.");
@@ -1541,16 +1322,16 @@ app.get("/", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({
-    success: true,
-    status: "online",
+    ok: true,
+    service: "BLACKCLUB Poker",
     time: new Date().toISOString()
   });
 });
 
-// =====================================
-// START SERVER
-// =====================================
+// ==========================================
+// SERVER START
+// ==========================================
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`BLACKCLUB server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`BLACKCLUB Poker server running on port ${PORT}`);
 });
