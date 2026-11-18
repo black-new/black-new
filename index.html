@@ -1137,6 +1137,28 @@ body:has(#authScreen:not([style*="display: none"])) {
 .admin-chip-add{background:#1c8055;color:#fff}.admin-chip-remove{background:#873c45;color:#fff}
 .admin-users-search{width:100%;box-sizing:border-box;background:#101f30;color:#fff;border:1px solid #354a60;border-radius:8px;padding:11px;margin:8px 0 12px}
 
+
+/* Хөзөр тараах үеийн зөөлөн animation */
+.playing-card.deal-animate { animation: cardDealIn .48s cubic-bezier(.2,.8,.2,1) both; transform-origin: center bottom; }
+@keyframes cardDealIn {
+  0% { opacity:0; transform:translateY(-34px) rotate(-9deg) scale(.78); filter:brightness(1.35); }
+  65% { opacity:1; transform:translateY(4px) rotate(2deg) scale(1.04); }
+  100% { opacity:1; transform:translateY(0) rotate(0) scale(1); filter:brightness(1); }
+}
+
+
+/* Хөзрийг тоглогчийн аватарын яг дээр байрлуулах */
+.my-hand-wrap{display:none!important}
+.seat .seat-cards{position:absolute;z-index:12;left:-18px;top:-29px;display:flex;align-items:flex-end;justify-content:center;gap:2px;width:48px;height:29px;pointer-events:none}
+.seat .seat-cards .playing-card{width:20px;height:28px;min-width:20px;padding:2px 1px;font-size:10px;line-height:1;border:1px solid #f2d58e;border-radius:3px;box-shadow:0 2px 5px #000b;background:linear-gradient(145deg,#fff,#eee5d4)}
+.seat .seat-cards .playing-card + .playing-card{margin-left:-5px}
+.seat .seat-cards .card-back{background:repeating-linear-gradient(45deg,#102d50 0 3px,#d1a34c 3px 4px,#102d50 4px 7px);border:1px solid #f0cf7b;box-shadow:0 2px 5px #000b,inset 0 0 0 2px #10213a}
+.seat .seat-cards .playing-card.deal-animate{animation:cardDealIn .48s cubic-bezier(.2,.8,.2,1) both}
+@media(max-width:600px){
+ .seat .seat-cards{left:50%;top:-27px;transform:translateX(-50%);width:42px;height:25px}
+ .seat .seat-cards .playing-card{width:17px;height:25px;min-width:17px;font-size:9px}
+}
+
 </style>
 </head>
 
@@ -1377,6 +1399,7 @@ let allTables = [];
 let filter = "all";
 let currentTable = null;
 let lastState = null;
+let autoNextScheduledHand = -1;
 
 const $ = id => document.getElementById(id);
 
@@ -1521,7 +1544,9 @@ function openAccountSection(section) {
         <button class="card-choice" onclick="setCardTheme('gold',this)">GOLD</button>
         <button class="card-choice" onclick="setCardTheme('classic',this)">CLASSIC</button>
       </div>
-      <p style="color:#9babbc;font-size:12px;margin-top:14px">Таны сонголт энэ төхөөрөмж дээр хадгалагдана.</p>
+      <div style="color:#e8bd62;font-weight:bold;margin-top:16px">Тоглолтын тохиргоо</div>
+      <label style="display:flex;align-items:center;gap:10px;margin-top:10px;color:#e7edf5"><input id="autoNextHandToggle" type="checkbox" onchange="setAutoNextHand(this.checked)"> Гар дуусмагц дараагийн гарыг автоматаар эхлүүлэх</label>
+      <p style="color:#9babbc;font-size:12px;margin-top:14px">Таны сонголт энэ төхөөрөмж дээр хадгалагдана. Ээлжийн хугацаа 5 минут; хугацаа дуусвал автоматаар FOLD хийгээд ширээнд үлдэнэ.</p>
     `;
     setTimeout(markSelectedThemes,0);
   }
@@ -2041,9 +2066,19 @@ function cardHtml(card) {
 
   const symbol = symbols[String(suit).toLowerCase()] || suit;
 
-  return `<div class="playing-card ${red ? "red" : ""}">
+  return `<div class="playing-card deal-animate ${red ? "red" : ""}">
     ${escapeHtml(String(rank))}${escapeHtml(String(symbol))}
   </div>`;
+}
+
+function playerPocketHtml(player, table, isMe) {
+  if (!table?.handStarted) return "";
+  const cards = Array.isArray(player?.cards) ? player.cards : [];
+  const count = String(table.type || "").toLowerCase().includes("omaha") ? 4 : 2;
+  // Хувийн хөзрийг зөвхөн эзэнд нь, эсвэл showdown үед л нүүрээр харуулна.
+  const mayReveal = cards.length > 0 && (isMe || table.street === "showdown");
+  if (mayReveal) return `<div class="seat-cards">${cards.map(cardHtml).join("")}</div>`;
+  return `<div class="seat-cards">${Array.from({length:count},()=>'<div class="playing-card card-back deal-animate" aria-label="Нууц хөзөр"></div>').join("")}</div>`;
 }
 
 function getPlayerName(player) {
@@ -2077,6 +2112,7 @@ function renderSeat(player, index, table = {}) {
   const isTurn = Number(table.currentTurn) === index && table.handStarted;
   seat.className = "seat seat-" + (index + 1) + (isTurn ? " is-turn" : "");
   seat.innerHTML = `
+    ${playerPocketHtml(player, table, isMe)}
     <div class="avatar">${escapeHtml(initial)}</div>
     <div class="seat-info">
       <strong>${escapeHtml(name)}</strong>
@@ -2090,6 +2126,10 @@ function renderTable(state) {
   if (!state) return;
   const table = state.table || state;
   const players = table.players || state.players || [];
+  if (!table.handStarted && table.street === "showdown" && localStorage.getItem('blackclub_auto_next_hand') === 'true' && currentTable && autoNextScheduledHand !== Number(table.handNumber || 0)) {
+    autoNextScheduledHand = Number(table.handNumber || 0);
+    setTimeout(() => { if (currentTable && !table.handStarted && localStorage.getItem('blackclub_auto_next_hand') === 'true' && socket?.connected) nextHand(); }, 5000);
+  }
   const seats = table.seats || state.seats || [];
   $("tableTitle").textContent = table.name || table.title || "BLACKCLUB POKER";
   const streetNames = {waiting:"Хүлээж байна",preflop:"Pre-Flop",flop:"Flop",turn:"Turn",river:"River",showdown:"Тоглолт дууссан"};

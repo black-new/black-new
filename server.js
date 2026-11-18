@@ -897,7 +897,29 @@ function getPublicTable(table, viewerUid = null) {
   };
 }
 
+function scheduleTurnTimeout(table) {
+  if (table.turnTimer) clearTimeout(table.turnTimer);
+  table.turnTimer = null;
+  if (!table.handStarted || table.currentTurn < 0) return;
+  const expectedUid = table.players[table.currentTurn]?.uid;
+  if (!expectedUid) return;
+  const expectedHand = table.handNumber;
+  table.turnTimer = setTimeout(() => {
+    if (!table.handStarted || table.handNumber !== expectedHand) return;
+    const current = table.players[table.currentTurn];
+    if (!current || current.uid !== expectedUid || current.folded || current.allIn) return;
+    // 5 минутэд үйлдэл хийгээгүй бол автоматаар FOLD хийнэ. Тоглогч ширээндээ үлдэнэ.
+    current.folded = true;
+    current.acted = true;
+    current.lastAction = "timeout-fold";
+    advanceTurnOrStreet(table);
+    io.to("table:" + table.id).emit("notice", { message: `${current.displayName || current.username} — 5 минутын хугацаа дууссан тул автоматаар FOLD боллоо. Та ширээндээ үлдлээ.` });
+  }, 5 * 60 * 1000);
+  if (typeof table.turnTimer.unref === "function") table.turnTimer.unref();
+}
+
 function sendTableUpdate(table) {
+  scheduleTurnTimeout(table);
   // Хувийн хөзрийг зөвхөн тухайн тоглогчийн socket руу илгээнэ.
   for (const [socketId, session] of socketUsers.entries()) {
     if (session.tableId !== table.id) continue;
@@ -1034,6 +1056,8 @@ function persistStacks(table) {
   return batch.commit();
 }
 function finishHand(table, forcedWinner = null) {
+  if (table.turnTimer) clearTimeout(table.turnTimer);
+  table.turnTimer = null;
   const active = getActivePlayers(table);
   if (!active.length) return;
   let winners = forcedWinner ? [forcedWinner] : [];
