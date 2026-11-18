@@ -887,17 +887,18 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
 
 const BASE_TABLE_CONFIG = [
   { id: "BEGINNER", name: "BEGINNER", type: "texas", smallBlind: 100, bigBlind: 200, minBuyIn: 5000, maxBuyIn: 50000, maxPlayers: 6 },
-  { id: "SILVER", name: "SILVER", type: "texas", smallBlind: 500, bigBlind: 1000, minBuyIn: 25000, maxBuyIn: 250000, maxPlayers: 6 },
-  { id: "GOLD", name: "GOLD", type: "texas", smallBlind: 1000, bigBlind: 2000, minBuyIn: 50000, maxBuyIn: 500000, maxPlayers: 6 },
-  { id: "BLACK", name: "BLACK", type: "omaha", smallBlind: 5000, bigBlind: 10000, minBuyIn: 250000, maxBuyIn: 2500000, maxPlayers: 6 }
+  { id: "SILVER", name: "SILVER", type: "texas", smallBlind: 500, bigBlind: 1000, minBuyIn: 10000, maxBuyIn: 250000, maxPlayers: 6 },
+  { id: "GOLD", name: "GOLD", type: "texas", smallBlind: 1000, bigBlind: 2000, minBuyIn: 20000, maxBuyIn: 500000, maxPlayers: 6 },
+  { id: "BLACK", name: "BLACK", type: "omaha", smallBlind: 5000, bigBlind: 10000, minBuyIn: 100000, maxBuyIn: 2500000, maxPlayers: 6 }
 ];
 
 // New 9-seat tables: three tables per blind level for both Texas Hold'em and Omaha.
-// Buy-in limits scale with the table's big blind (25 BB minimum, 250 BB maximum).
+// Minimum buy-in is the exact amount requested for each blind level; maximum remains 250 BB.
 const STAKES = [
   [100, 200], [250, 500], [500, 1000], [1000, 2000],
   [2500, 5000], [5000, 10000], [10000, 20000]
 ];
+const MIN_BUY_IN_BY_BIG_BLIND = { 200: 5000, 500: 7500, 1000: 10000, 2000: 20000, 5000: 50000, 10000: 100000, 20000: 250000 };
 const TABLE_CONFIG = [...BASE_TABLE_CONFIG];
 for (const [smallBlind, bigBlind] of STAKES) {
   for (const type of ["texas", "omaha"]) {
@@ -910,7 +911,7 @@ for (const [smallBlind, bigBlind] of STAKES) {
         type,
         smallBlind,
         bigBlind,
-        minBuyIn: bigBlind * 25,
+        minBuyIn: MIN_BUY_IN_BY_BIG_BLIND[bigBlind] || bigBlind * 25,
         maxBuyIn: bigBlind * 250,
         maxPlayers: 9
       });
@@ -1343,6 +1344,28 @@ io.on("connection", socket => {
       socket.emit("chat:history",rows.slice(-80).reverse());
     } catch(e){ socket.emit("notice",{message:e.message||"Чат ачаалж чадсангүй."}); }
   });
+  socket.on("chat:clear", async (_data={}, callback) => {
+    const reply=v=>{if(typeof callback==="function")callback(v);};
+    try {
+      const user=await getSocketUser(socket);
+      const isAdmin=ADMIN_UIDS.includes(user.uid)||user.role==="admin"||user.isAdmin===true;
+      if(!isAdmin) return reply({ok:false,message:"Зөвхөн админ чат устгах эрхтэй."});
+      const collection=db.collection("chatMessages");
+      let deleted=0;
+      while(true){
+        const snap=await collection.limit(450).get();
+        if(snap.empty) break;
+        const batch=db.batch();
+        snap.docs.forEach(doc=>batch.delete(doc.ref));
+        await batch.commit();
+        deleted+=snap.size;
+        if(snap.size<450) break;
+      }
+      io.emit("chat:cleared");
+      reply({ok:true,deleted});
+    } catch(e){reply({ok:false,message:e.message||"Чат устгаж чадсангүй."});}
+  });
+
   socket.on("chat:send", async (data={}, callback) => {
     const reply=v=>{if(typeof callback==="function")callback(v);};
     try {
