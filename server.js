@@ -214,9 +214,7 @@ async function authUser(req, res, next) {
 // ==========================================
 
 function authAdmin(req, res, next) {
-  const allowed =
-    ADMIN_UIDS.includes(req.user.uid) ||
-    req.auth?.admin === true;
+  const allowed = ADMIN_UIDS.includes(req.user.uid);
 
   if (!allowed) {
     return res.status(403).json({
@@ -247,6 +245,7 @@ function publicRequest(data) {
     createdAt: data.createdAt || null
   };
 }
+
 // ==========================================
 // REGISTER
 // ==========================================
@@ -798,7 +797,11 @@ app.post(
       const amount = Number(req.body.amount);
       const action = String(req.body.action || "").trim();
 
-      if (!targetUid || !Number.isSafeInteger(amount) || amount <= 0) {
+      if (
+        !targetUid ||
+        !Number.isSafeInteger(amount) ||
+        amount <= 0
+      ) {
         return res.status(400).json({
           message: "Хэрэглэгч эсвэл чипийн хэмжээ буруу байна."
         });
@@ -811,6 +814,8 @@ app.post(
       }
 
       const targetRef = db.collection("users").doc(targetUid);
+
+      let newChips = 0;
 
       await db.runTransaction(async transaction => {
         const snap = await transaction.get(targetRef);
@@ -826,9 +831,13 @@ app.post(
           throw new Error("Хэрэглэгчийн чип хүрэлцэхгүй байна.");
         }
 
-        const newChips = action === "add"
+        newChips = action === "add"
           ? currentChips + amount
           : currentChips - amount;
+
+        if (!Number.isSafeInteger(newChips) || newChips < 0) {
+          throw new Error("Чипийн хэмжээ хэтэрсэн байна.");
+        }
 
         transaction.update(targetRef, {
           chips: newChips
@@ -847,6 +856,7 @@ app.post(
 
       res.json({
         success: true,
+        chips: newChips,
         message: "Чипийн үйлдэл амжилттай."
       });
 
@@ -859,6 +869,7 @@ app.post(
     }
   }
 );
+
 // ==========================================
 // POKER TABLE CONFIGURATION
 // ==========================================
@@ -912,6 +923,52 @@ const TABLE_CONFIG = [
 
 const tables = new Map();
 const socketUsers = new Map();
+
+// Нэвтэрсэн бүх lobby хэрэглэгчийн Socket-ууд.
+// Нэг хэрэглэгч олон табаар орсон ч нэг хүнээр тоолно.
+const onlineUsers = new Map();
+
+function getOnlineCount() {
+  return onlineUsers.size;
+}
+
+function registerOnlineUser(socket, user) {
+  const uid = user.uid;
+
+  if (!uid) return;
+
+  socket.data.uid = uid;
+  socket.data.username = user.username || "";
+
+  let sockets = onlineUsers.get(uid);
+
+  if (!sockets) {
+    sockets = new Set();
+    onlineUsers.set(uid, sockets);
+  }
+
+  sockets.add(socket.id);
+  sendLobby();
+}
+
+function unregisterOnlineUser(socket) {
+  const uid = socket.data.uid;
+
+  if (!uid) return;
+
+  const sockets = onlineUsers.get(uid);
+
+  if (sockets) {
+    sockets.delete(socket.id);
+
+    if (sockets.size === 0) {
+      onlineUsers.delete(uid);
+    }
+  }
+
+  socket.data.uid = null;
+  sendLobby();
+}
 
 function getTable(tableId) {
   if (!tables.has(tableId)) {
@@ -1016,9 +1073,11 @@ function sendLobby() {
     };
   });
 
-  io.emit("lobby:update", lobby);
+  io.emit("lobby:update", {
+    tables: lobby,
+    onlineCount: getOnlineCount()
+  });
 }
-
 // ==========================================
 // MAKE DECK
 // ==========================================
@@ -1044,7 +1103,6 @@ function makeDeck() {
 
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
@@ -1254,8 +1312,6 @@ function advanceStreet(table) {
     table.street = "river";
 
   } else if (table.street === "river") {
-    // Түр хувилбар: гарын оноолт бүрэн хэрэгжээгүй.
-    // Жинхэнэ ялагчийг тодорхойлох үнэлгээний систем шаардлагатай.
     table.lastAction = "Гарын үнэлгээ хүлээгдэж байна.";
     sendTableUpdate(table);
     return;
@@ -1332,12 +1388,61 @@ function removePlayerFromTable(table, uid) {
   sendTableUpdate(table);
   sendLobby();
 }
+
+// ==========================================
+// SOCKET AUTHENTICATION
+// ==========================================
+
+io.use(async (socket, next) => {
+  try {
+    const token = String(
+      socket.handshake.auth?.token || ""
+    );
+
+    if (!token) {
+      return next(new Error("Нэвтрэх шаардлагатай."));
+    }
+
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    const userRef = db.collection("users").doc(decoded.uid);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      return next(new Error("Хэрэглэгч олдсонгүй."));
+    }
+
+    const user = userSnap.data();
+
+    socket.data.uid = decoded.uid;
+    socket.data.username = user.username || "";
+    socket.data.displayName =
+      user.displayName || user.username || "";
+
+    next();
+
+  } catch (error) {
+    console.error("SOCKET AUTH ERROR:", error);
+    next(new Error("Нэвтрэх эрх хүчингүй байна."));
+  }
+});
+
 // ==========================================
 // SOCKET CONNECTIONS
 // ==========================================
 
 io.on("connection", socket => {
-  console.log("Socket connected:", socket.id);
+  console.log(
+    "Socket connected:",
+    socket.id,
+    socket.data.username
+  );
+
+  // Lobby-д нэвтэрсэн хэрэглэгчийг бүртгэнэ.
+  registerOnlineUser(socket, {
+    uid: socket.data.uid,
+    username: socket.data.username
+  });
 
   // ========================================
   // LOBBY GET
@@ -1361,7 +1466,10 @@ io.on("connection", socket => {
       };
     });
 
-    socket.emit("lobby:update", lobby);
+    socket.emit("lobby:update", {
+      tables: lobby,
+      onlineCount: getOnlineCount()
+    });
   });
 
   // ========================================
@@ -1370,18 +1478,15 @@ io.on("connection", socket => {
 
   socket.on("table:join", async data => {
     try {
-      const token = String(data?.token || "");
+      const uid = socket.data.uid;
       const tableId = String(data?.tableId || "");
 
-      if (!token) {
+      if (!uid) {
         socket.emit("error:message", {
           message: "Нэвтрэх шаардлагатай."
         });
         return;
       }
-
-      const decoded = await admin.auth().verifyIdToken(token);
-      const uid = decoded.uid;
 
       const userRef = db.collection("users").doc(uid);
       const userSnap = await userRef.get();
@@ -1479,7 +1584,9 @@ io.on("connection", socket => {
 
       if (
         table.status !== "playing" &&
-        table.players.filter(p => !p.disconnected && p.chips > 0).length >= 2
+        table.players.filter(
+          p => !p.disconnected && p.chips > 0
+        ).length >= 2
       ) {
         startHand(table);
       }
@@ -1525,7 +1632,10 @@ io.on("connection", socket => {
           }
 
           if (getActivePlayers(table).length <= 1) {
-            finishHand(table, getActivePlayers(table)[0] || null);
+            finishHand(
+              table,
+              getActivePlayers(table)[0] || null
+            );
           } else {
             sendTableUpdate(table);
           }
@@ -1538,7 +1648,7 @@ io.on("connection", socket => {
           const userRef = db.collection("users").doc(socketUser.uid);
 
           await userRef.update({
-            chips: admin.firestore.FieldValue.increment(player.chips)
+            chips: FieldValue.increment(player.chips)
           });
 
           sendTableUpdate(table);
@@ -1778,9 +1888,12 @@ io.on("connection", socket => {
       socketUsers.delete(socket.id);
     }
 
+    unregisterOnlineUser(socket);
+
     console.log("Socket disconnected:", socket.id);
   });
 });
+
 // ==========================================
 // ROOT ROUTE
 // ==========================================
@@ -1797,6 +1910,7 @@ app.get("/health", (req, res) => {
   res.json({
     ok: true,
     service: "BLACKCLUB Poker",
+    onlineCount: getOnlineCount(),
     time: new Date().toISOString()
   });
 });
