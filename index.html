@@ -1224,6 +1224,23 @@ body:has(#authScreen:not([style*="display: none"])) {
  .actions button{min-height:43px!important;height:43px!important;font-size:11px!important}
 }
 
+
+/* Floating chat: isolated from poker table layout */
+.chat-launcher{position:fixed;right:22px;bottom:22px;z-index:1200;display:flex;align-items:center;gap:9px;padding:9px 16px 9px 9px;border:1px solid #c49a4c;border-radius:28px;background:linear-gradient(135deg,#172b26,#081711);color:#f3d28b;font-weight:800;letter-spacing:1px;box-shadow:0 8px 28px #000b}
+.chat-launcher-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,#f0d28a,#94652a);color:#142018;font-size:21px}
+.chat-launcher i{width:8px;height:8px;border-radius:50%;background:#55dc8b;display:none}
+.table-chat-float{position:fixed!important;right:22px;bottom:22px;z-index:1201;width:min(360px,calc(100vw - 24px));height:390px;max-height:min(72vh,520px);margin:0!important;padding:0!important;display:none;overflow:hidden;border:1px solid #b38a43!important;border-radius:15px!important;background:#091521!important;box-shadow:0 14px 48px #000d!important}
+.table-chat-float.chat-open{display:flex;flex-direction:column}
+.chat-float-head{height:48px;min-height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 10px 0 14px;background:linear-gradient(100deg,#142b25,#0b1722);border-bottom:1px solid #5b482b}
+.chat-float-head strong{font-size:12px;letter-spacing:1px;color:#f1d18b}.chat-head-mark{color:#d9b45b;margin-right:5px}
+.chat-head-actions{display:flex;gap:6px}.chat-head-actions button{width:29px;height:29px;border:1px solid #425365;border-radius:7px;background:#142334;color:#f3d28b;font-size:20px;line-height:20px}
+.chat-float-tools{display:flex;gap:7px;padding:8px 9px 4px}.chat-float-tools select{flex:1;min-width:0;padding:7px;border:1px solid #34485e;border-radius:7px;background:#101f2e;color:#eee;font-size:12px}.chat-float-tools .bc-action{width:38px;margin:0;padding:5px}
+#chatMessages{flex:1;min-height:90px;overflow:auto;margin:5px 9px;padding:9px;background:#050d16;border:1px solid #263d57;border-radius:8px;font-size:12px;overflow-wrap:anywhere}
+.chat-compose{display:flex;gap:7px;padding:8px 9px 10px}.chat-compose input{flex:1;min-width:0;padding:10px;border:1px solid #34485e;border-radius:8px;background:#101f2e;color:#fff}.chat-compose .gold-btn{width:42px;min-width:42px;padding:8px}
+.table-chat-float .bc-note{padding:0 10px 7px;margin:0;font-size:10px}
+.table-chat-float.chat-minimized{height:48px;max-height:48px}.table-chat-float.chat-minimized .chat-float-tools,.table-chat-float.chat-minimized #chatMessages,.table-chat-float.chat-minimized .chat-compose,.table-chat-float.chat-minimized #bankDisplay{display:none}
+@media(max-width:600px){.chat-launcher{right:12px;bottom:12px}.table-chat-float{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(62vh,430px);max-height:calc(100dvh - 90px)}}
+
 </style>
 </head>
 
@@ -1451,11 +1468,13 @@ body:has(#authScreen:not([style*="display: none"])) {
         <button class="gold-btn" onclick="sendAction('raise')">RAISE</button>
         <button class="gold-btn next-hand" onclick="nextHand()">NEXT HAND</button>
       </div>
-      <section class="cashier-card" id="tableChatPanel" style="margin-top:10px;padding:10px">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><strong>BLACKCLUB CHAT</strong><select id="chatMode" style="max-width:145px"><option value="table">Ширээний чат</option><option value="global">Нийтийн чат</option><option value="support">Админд бичих</option></select><button class="bc-action" style="width:auto;padding:6px 10px" onclick="loadChatHistory()">ШИНЭЧЛЭХ</button></div>
-        <div id="chatMessages" style="height:105px;overflow:auto;background:#07111d;border:1px solid #263d57;border-radius:8px;padding:7px;margin:7px 0;font-size:12px"></div>
-        <div style="display:flex;gap:6px"><input id="chatInput" maxlength="300" placeholder="Мессеж бичих..." style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')sendChatMessage()"><button class="gold-btn" onclick="sendChatMessage()">ИЛГЭЭХ</button></div>
-        <div id="bankDisplay" class="bc-note" style="margin-top:7px"></div>
+      <button id="chatLauncher" class="chat-launcher" type="button" onclick="toggleTableChat(true)" aria-label="Чат нээх"><span class="chat-launcher-avatar">♟</span><span>CHAT</span><i id="chatUnreadDot"></i></button>
+      <section class="cashier-card table-chat-float" id="tableChatPanel" aria-label="BLACKCLUB чат">
+        <div class="chat-float-head"><strong><span class="chat-head-mark">♠</span> BLACKCLUB CHAT</strong><div class="chat-head-actions"><button type="button" onclick="minimizeTableChat()" title="Жижигрүүлэх" aria-label="Жижигрүүлэх">−</button><button type="button" onclick="toggleTableChat(false)" title="Хаах" aria-label="Хаах">×</button></div></div>
+        <div class="chat-float-tools"><select id="chatMode"><option value="table">Ширээний чат</option><option value="global">Нийтийн чат</option><option value="support">Админд бичих</option></select><button class="bc-action" type="button" onclick="loadChatHistory()">↻</button></div>
+        <div id="chatMessages"></div>
+        <div class="chat-compose"><input id="chatInput" maxlength="300" placeholder="Мессеж бичих..." onkeydown="if(event.key==='Enter')sendChatMessage()"><button class="gold-btn" onclick="sendChatMessage()">➤</button></div>
+        <div id="bankDisplay" class="bc-note" style="margin-top:5px"></div>
       </section>
     </section>
   </section>
@@ -2023,6 +2042,17 @@ function connectSocket() {
   });
 }
 
+function toggleTableChat(open){
+  const panel=$("tableChatPanel"), launcher=$("chatLauncher");
+  if(!panel||!launcher)return;
+  if(open){panel.classList.add("chat-open");panel.classList.remove("chat-minimized");launcher.style.display="none";loadChatHistory();}
+  else{panel.classList.remove("chat-open","chat-minimized");launcher.style.display="flex";}
+}
+function minimizeTableChat(){
+  const panel=$("tableChatPanel"), launcher=$("chatLauncher");
+  if(!panel||!launcher)return;
+  panel.classList.remove("chat-open","chat-minimized");launcher.style.display="flex";
+}
 function addChatLine(m) { const box=$("chatMessages"); if(!box)return; const line=document.createElement("div"); line.style.margin="3px 0"; const who=document.createElement("b"); who.textContent=(m.username||"Тоглогч")+": "; const msg=document.createElement("span"); msg.textContent=m.text||""; line.append(who,msg); box.appendChild(line); box.scrollTop=box.scrollHeight; }
 function loadChatHistory(){ if(!socket?.connected)return; socket.emit("chat:history",{mode:$("chatMode")?.value||"table"}); }
 function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const mode=$("chatMode")?.value||"table"; socket.emit("chat:send",{mode,tableId:currentTable,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
