@@ -1311,8 +1311,10 @@ body:has(#authScreen:not([style*="display: none"])) {
 @media(max-width:700px){
  .poker-table[data-max-players="9"] .seat{width:clamp(52px,14vw,64px)!important;min-height:0!important;padding:2px!important}.poker-table[data-max-players="9"] .seat .avatar{width:clamp(25px,7vw,31px)!important;height:clamp(25px,7vw,31px)!important;font-size:12px!important}.poker-table[data-max-players="9"] .seat .seat-info{padding:2px 1px!important}.poker-table[data-max-players="9"] .seat strong{font-size:clamp(6px,1.7vw,8px)!important}.poker-table[data-max-players="9"] .seat .chip-display{font-size:clamp(5px,1.5vw,7px)!important;white-space:normal!important}
  .poker-table[data-max-players="9"] .seat-1{top:4%!important;left:16%!important}.poker-table[data-max-players="9"] .seat-2{top:4%!important;right:16%!important}.poker-table[data-max-players="9"] .seat-3{top:28%!important;right:0!important}.poker-table[data-max-players="9"] .seat-4{bottom:28%!important;right:0!important}.poker-table[data-max-players="9"] .seat-5{bottom:4%!important;right:16%!important}.poker-table[data-max-players="9"] .seat-6{bottom:4%!important;left:16%!important}.poker-table[data-max-players="9"] .seat-7{bottom:28%!important;left:0!important}.poker-table[data-max-players="9"] .seat-8{top:28%!important;left:0!important}.poker-table[data-max-players="9"] .seat-9{bottom:1%!important;left:50%!important;transform:translateX(-50%)!important}
- .poker-table[data-max-players="6"] .seat-6{left:1%!important}.table-rewards{top:5%!important;gap:3px!important}.reward-pill{min-width:0;padding:3px 5px;border-radius:6px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.buyin-dialog{padding:16px}.buyin-head h3{font-size:15px}
+ .poker-table[data-max-players="6"] .seat-6{top:40%!important;left:7%!important;right:auto!important;bottom:auto!important;transform:none!important}.table-rewards{top:5%!important;gap:3px!important}.reward-pill{min-width:0;padding:3px 5px;border-radius:6px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.buyin-dialog{padding:16px}.buyin-head h3{font-size:15px}
 }
+/* Six-player table: keep the left-side sixth seat inside the felt, not clipped. */
+.poker-table[data-max-players="6"] .seat-6{top:40%!important;left:1%!important;right:auto!important;bottom:auto!important;transform:none!important;width:clamp(76px,13vw,116px)!important;}
 
 </style>
 </head>
@@ -1407,12 +1409,6 @@ body:has(#authScreen:not([style*="display: none"])) {
     </button>
     <button class="menu-item" id="adminHomeMenu" style="display:none" onclick="openAccountSection('adminHome')">
       <span class="menu-item-icon">⚙</span> Админ тохиргоо
-    </button>
-    <button class="menu-item" id="adminCashierMenu" style="display:none" onclick="openAccountSection('adminCashier')">
-      <span class="menu-item-icon">♛</span> Админ касс
-    </button>
-    <button class="menu-item" id="adminUsersMenu" style="display:none" onclick="openAccountSection('adminUsers')">
-      <span class="menu-item-icon">♟</span> Хэрэглэгчид / CHIP удирдах
     </button>
     <button class="menu-item" onclick="openAccountSection('history')">
       <span class="menu-item-icon">◷</span> Тоглоомын түүх
@@ -1631,8 +1627,6 @@ function updateHeader() {
   if ($("lobbyWelcomeName")) $("lobbyWelcomeName").textContent = name;
   if ($("lobbyBalance")) $("lobbyBalance").textContent = balance;
   if ($("adminHomeMenu")) $("adminHomeMenu").style.display = user?.isAdmin ? "flex" : "none";
-  if ($("adminCashierMenu")) $("adminCashierMenu").style.display = user?.isAdmin ? "flex" : "none";
-  if ($("adminUsersMenu")) $("adminUsersMenu").style.display = user?.isAdmin ? "flex" : "none";
 }
 
 function toggleAccountMenu() {
@@ -1743,10 +1737,13 @@ function openAccountSection(section) {
     title.textContent = "АДМИН ТОХИРГОО";
     content.innerHTML = `
       <div class="cashier-card">
-        <div class="bc-note">Админы үндсэн удирдлага. Одоо байгаа касс болон CHIP удирдлагын тохиргоо хэвээр хадгалагдсан.</div>
-        <button class="bc-action" onclick="openAccountSection('adminCashier')">АДМИН КАСС · ХҮСЭЛТҮҮД</button>
-        <button class="bc-action" onclick="openAccountSection('adminUsers')">ХЭРЭГЛЭГЧИД · CHIP / BLOCK УДИРДАХ</button>
-        <button class="bc-action" onclick="openAccountSection('adminTables')">LIVE ШИРЭЭ · БҮХ ХӨЗӨР ХАРАХ</button>
+        <div class="bc-note">Админы хяналтын самбар. Нэвтрэлт, Firebase эрх, CHIP-ийн үндсэн бүртгэл, кассын хэрэглэгчийн үйлдэл болон серверийн нууц тохиргоонд хүрэхгүй.</div>
+        <button class="bc-action" onclick="openAccountSection('adminUsers')">♟ ТОГЛОГЧИЙН УДИРДЛАГА · ПРОФАЙЛ / BLOCK</button>
+        <button class="bc-action" onclick="openAccountSection('adminTables')">♧ LIVE ШИРЭЭ · ТОГЛОЛТЫН ТӨЛӨВ</button>
+        <button class="bc-action" onclick="openAccountSection('adminHands')">🂠 ДУУССАН ГАР · ХӨЗРИЙН АУДИТ</button>
+        <button class="bc-action" onclick="openAccountSection('adminBots')">🤖 БОТЫН ТОХИРГОО</button>
+        <button class="bc-action" onclick="openAccountSection('adminProfile')">♛ АДМИНЫ МЭДЭЭЛЭЛ</button>
+        <button class="bc-action" onclick="openAccountSection('adminSystem')">⚙ СИСТЕМИЙН ТӨЛӨВ / ТАЙЛАН</button>
         <div class="cashier-card"><h3>ЧАТНЫ УДИРДЛАГА</h3><div id="adminChatSettings">Ачаалж байна...</div></div>
         <div class="cashier-card"><h3>RAKE / JACKPOT УДИРДЛАГА</h3><div id="adminCasinoSettings">Ачаалж байна...</div><div id="adminCasinoReport" class="bc-note"></div></div>
         <button class="bc-action bc-secondary" onclick="closeAccountSection()">ӨӨРӨӨ ШИРЭЭНД СУУХ · LOBBY</button>
@@ -1754,23 +1751,49 @@ function openAccountSection(section) {
     setTimeout(()=>{renderChatAdmin();renderCasinoAdmin();}, 0);
   }
 
+  if (section === "adminHands") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "ДУУССАН ГАР · ХӨЗРИЙН АУДИТ";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Зөвхөн дууссан гарын хөзөр, нийтийн мод, ялагч болон потын бүртгэл харагдана. Идэвхтэй тоглолтын нууц хөзрийг урьдчилан харуулахгүй.</div><button class="bc-action" onclick="loadAdminHands()">↻ ШИНЭЧЛЭХ</button><div id="adminHandsList">Аудит ачаалж байна...</div></div>';
+    loadAdminHands();
+  }
+
+  if (section === "adminBots") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "БОТЫН ТОХИРГОО";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Ботын үндсэн модуль одоогийн серверт хараахан холбогдоогүй. Энд тохиргоог хадгалж болно; бот ширээнд автоматаар суух үйлдэл идэвхжээгүй.</div><label class="bc-field">Ботын дээд тоо<input id="botCount" type="number" min="0" max="8" value="2"></label><label class="bc-field">Тоглох хэв маяг<select id="botStyle"><option value="balanced">Тэнцвэртэй</option><option value="tight">Болгоомжтой</option><option value="loose">Идэвхтэй</option></select></label><label class="bc-field">Шийдвэрийн хугацаа (секунд)<input id="botThinkSeconds" type="number" min="2" max="30" value="5"></label><label style="display:flex;gap:8px;align-items:center;color:#e7edf5"><input id="botEnabled" type="checkbox"> Ботын модулийг зөвшөөрөх (модуль холбогдсоны дараа)</label><button class="bc-action" onclick="saveAdminBotSettings()">ТОХИРГОО ХАДГАЛАХ</button><div id="botSettingsMessage" class="bc-note"></div></div>';
+    loadAdminBotSettings();
+  }
+
+  if (section === "adminSystem") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "СИСТЕМИЙН ТӨЛӨВ / ТАЙЛАН";
+    content.innerHTML = '<div class="cashier-card"><button class="bc-action" onclick="loadAdminSystem()">↻ ШИНЭЧЛЭХ</button><div id="adminSystemInfo">Системийн мэдээлэл ачаалж байна...</div><h3>RAKE / JACKPOT ТАЙЛАН</h3><div id="adminSystemReport">Тайлан ачаалж байна...</div></div>';
+    loadAdminSystem();
+  }
+
+  if (section === "adminProfile") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "АДМИНЫ МЭДЭЭЛЭЛ";
+    content.innerHTML = `<div class="cashier-card"><div class="admin-user-name">BLACKCLUB ADMIN</div><div class="admin-user-meta">Нэвтэрсэн нэр: ${escapeHtml(getUsername())}<br>Эрхийн түвшин: ADMIN<br>UID: ${escapeHtml(user?.uid || "Firebase session")}</div><div class="bc-note">Админ эрх сервер дээр Firebase ID token болон authAdmin шалгалтаар баталгаажна. Админ нууц үг, Firebase түлхүүр, серверийн нууц утгуудыг энэ дэлгэцэд харуулахгүй.</div></div>`;
+  }
+
   if (section === "adminCashier") {
     title.textContent = "АДМИН КАСС";
-    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Хүлээгдэж буй цэнэглэх болон татах хүсэлтүүд.</div><div id="adminCashierList">Ачаалж байна...</div></div>';
-    loadAdminCashier();
+    content.innerHTML = '<div class="bc-note">Энэ хуучин админ кассын хэсгийг үндсэн цэснээс хассан.</div>';
   }
 
   if (section === "adminTables") {
     if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
     title.textContent = "LIVE ШИРЭЭ / ТОГЛОЛТЫН ХЯНАЛТ";
-    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Админ бүх ширээний тоглогч, CHIP, бооцоо, ээлж болон хөзрийг бодит цагт хянана. Өөрөө тоглох бол энэ цонхыг хаагаад Lobby-оос ширээ сонгоно.</div><button class="bc-action" onclick="loadAdminTables()">↻ ШИНЭЧЛЭХ</button><div id="adminTablesList">Ширээ ачаалж байна...</div></div>';
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Live хяналт: ширээний төлөв, суудал, бооцоо, нийтийн хөзөр. Идэвхтэй гарын хувийн хөзрийг энд харуулахгүй; гар дууссаны дараах аудитад хөзрүүд нээгдэнэ.</div><button class="bc-action" onclick="loadAdminTables()">↻ ШИНЭЧЛЭХ</button><div id="adminTablesList">Ширээ ачаалж байна...</div></div>';
     loadAdminTables();
   }
 
   if (section === "adminUsers") {
     if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
-    title.textContent = "ХЭРЭГЛЭГЧИД / CHIP УДИРДАХ";
-    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Хэрэглэгчийн CHIP үлдэгдлийг харах, CHIP нэмэх эсвэл хасах боломжтой. Өөрчлөлт сервер дээр хадгалагдана.</div><input class="admin-users-search" id="adminUsersSearch" placeholder="Нэрээр хайх..." oninput="filterAdminUsers()"><div id="adminUsersList">Хэрэглэгчид ачаалж байна...</div></div>';
+    title.textContent = "ТОГЛОГЧИЙН УДИРДЛАГА";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Тоглогчийн профайл болон хамгаалалтын төлөв. CHIP үлдэгдэл, цэнэглэлт, таталтын тохиргоог энэ админ хэсгээс хассан.</div><input class="admin-users-search" id="adminUsersSearch" placeholder="Нэрээр хайх..." oninput="filterAdminUsers()"><div id="adminUsersList">Хэрэглэгчид ачаалж байна...</div></div>';
     loadAdminUsers();
   }
 
@@ -1840,11 +1863,9 @@ function renderAdminUsers(users) {
     const uid = String(u.uid || u.id || "");
     const name = String(u.displayName || u.username || "Нэргүй хэрэглэгч");
     const username = String(u.username || "-");
-    const chips = Number(u.chips ?? u.balance ?? 0);
     return `<div class="admin-user-card" data-uid="${escapeHtml(uid)}">
-      <div class="admin-user-top"><div><div class="admin-user-name">${escapeHtml(name)} ${u.isAdmin ? "· ADMIN" : ""}</div><div class="admin-user-meta">@${escapeHtml(username)}<br>ID: ${escapeHtml(uid)}</div></div><div class="admin-user-balance">${(Number.isFinite(chips) ? chips : 0).toLocaleString("en-US")} CHIP</div></div>
-      <div class="admin-chip-controls"><input class="admin-chip-amount" type="number" min="1" step="1" placeholder="CHIP дүн"><button class="admin-chip-add" onclick="changeAdminChips(this,'add')">+ НЭМЭХ</button><button class="admin-chip-remove" onclick="changeAdminChips(this,'remove')">− ХАСАХ</button></div>
-      ${u.isAdmin ? '<div class="bc-note">Админ бүртгэл</div>' : `<div class="admin-chip-controls"><button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button><button class="admin-chip-remove" onclick="setChatMuted('${escapeHtml(uid)}',${u.chatMuted ? 'false' : 'true'})">${u.chatMuted ? 'ЧАТ НЭЭХ' : 'ЧАТ MUTE'}</button></div>`}
+      <div class="admin-user-top"><div><div class="admin-user-name">${escapeHtml(name)} ${u.isAdmin ? "· ADMIN" : ""}</div><div class="admin-user-meta">@${escapeHtml(username)}<br>ID: ${escapeHtml(uid)}</div></div><div class="bc-status">${u.isAdmin ? 'АДМИН' : (u.blocked ? 'BLOCKED' : 'ИДЭВХТЭЙ')}</div></div>
+      ${u.isAdmin ? '<div class="bc-note">Админ бүртгэл · хамгаалалттай</div>' : `<div class="admin-chip-controls"><button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button><button class="admin-chip-remove" onclick="setChatMuted('${escapeHtml(uid)}',${u.chatMuted ? 'false' : 'true'})">${u.chatMuted ? 'ЧАТ НЭЭХ' : 'ЧАТ MUTE'}</button></div>`}
       ${u.blocked ? '<div class="bc-status">BLOCKED · НЭВТРЭХ ЭРХ ХААЛТТАЙ</div>' : ''}
     </div>`;
   }).join("");
@@ -1868,8 +1889,27 @@ async function loadAdminTables() {
   try {
     const data = await apiGet("/api/admin/tables");
     const tables = data.tables || [];
-    target.innerHTML = tables.map(t => `<div class="cashier-card"><h3>${escapeHtml(t.name || t.id)} · ${escapeHtml(t.type || '')}</h3><div class="bc-note">Төлөв: ${t.handStarted ? 'ХӨЗӨР ТАРААСАН · ' + escapeHtml(t.street || '') : 'ХҮЛЭЭЖ БАЙНА'} | Гар #${Number(t.handNumber || 0)}<br>Pot: ${Number(t.pot || 0).toLocaleString()} CHIP · Одоогийн бооцоо: ${Number(t.currentBet || 0).toLocaleString()} CHIP</div><div class="bc-request"><strong>Нийтийн хөзөр:</strong> ${(t.communityCards || []).map(c => escapeHtml(String(c))).join('  ') || 'Одоогоор тараагаагүй'}</div>${(t.players || []).map((p,i) => `<div class="bc-request"><strong>${i+1}. ${escapeHtml(p.displayName || p.username || 'Тоглогч')}</strong> · ${p.online ? 'ONLINE' : 'OFFLINE'}${p.folded ? ' · FOLD' : ''}${p.allIn ? ' · ALL-IN' : ''}<br>CHIP: ${Number(p.chips || 0).toLocaleString()} · Бооцоо: ${Number(p.bet || 0).toLocaleString()}<br><strong>Хувийн хөзөр:</strong> ${(p.cards || []).map(c => escapeHtml(String(c))).join('  ') || (t.handStarted ? 'Нуугдсан / хараахан тараагаагүй' : 'Гар эхлээгүй')} ${t.handStarted && !p.folded && p.cards?.length ? '' : ''}</div>`).join('') || '<div class="bc-note">Суудалд тоглогч алга.</div>'}</div>`).join('') || '<div class="bc-note">Ширээ олдсонгүй.</div>';
+    target.innerHTML = tables.map(t => `<div class="cashier-card"><h3>${escapeHtml(t.name || t.id)} · ${escapeHtml(t.type || '')}</h3><div class="bc-note">Төлөв: ${t.handStarted ? 'ТОГЛОЛТ ЯВАГДАЖ БАЙНА · ' + escapeHtml(t.street || '') : 'ХҮЛЭЭЖ БАЙНА'} | Гар #${Number(t.handNumber || 0)}<br>Pot: ${Number(t.pot || 0).toLocaleString()} CHIP · Одоогийн бооцоо: ${Number(t.currentBet || 0).toLocaleString()} CHIP<br>Үлдсэн мод: ${Number(t.deckRemaining || 0)} · Нийтийн хөзөр: ${(t.communityCards || []).map(c => escapeHtml((c.rank || '') + (c.suit || ''))).join('  ') || 'Тараагаагүй'}</div>${(t.players || []).map((p,i) => `<div class="bc-request"><strong>${i+1}. ${escapeHtml(p.displayName || p.username || 'Тоглогч')}</strong> · ${p.online ? 'ONLINE' : 'OFFLINE'}${p.folded ? ' · FOLD' : ''}${p.allIn ? ' · ALL-IN' : ''}<br>CHIP: ${Number(p.chips || 0).toLocaleString()} · Бооцоо: ${Number(p.bet || 0).toLocaleString()}</div>`).join('') || '<div class="bc-note">Суудалд тоглогч алга.</div>'}</div>`).join('') || '<div class="bc-note">Ширээ олдсонгүй.</div>';
   } catch (error) { target.textContent = error.message; }
+}
+
+async function loadAdminSystem() {
+  if (!user?.isAdmin) return;
+  try { const d = await apiGet("/api/admin/system"); const el = $("adminSystemInfo"); if (el) el.innerHTML = `<div class="bc-request">Серверийн төлөв: <strong>ONLINE</strong><br>Холбогдсон session: ${Number(d.connectedSessions || 0)}<br>Нийт ширээ: ${Number(d.totalTables || 0)}<br>Явагдаж буй гар: ${Number(d.activeHands || 0)}<br>Суудалд байгаа тоглогч: ${Number(d.seatedPlayers || 0)}</div>`; const r = $("adminSystemReport"); if (r) r.innerHTML = (d.rakeEntries || []).map(x => `<div class="bc-request">${escapeHtml(x.tableId || "Ширээ")} · Гар #${Number(x.handNumber || 0)}<br>Rake: ${Number(x.rake || 0).toLocaleString()} CHIP · Jackpot: ${Number(x.jackpotContribution || 0).toLocaleString()} CHIP</div>`).join("") || '<div class="bc-note">Rake бүртгэл одоогоор алга.</div>'; } catch(e) { showMessage("adminSystemInfo", e.message); }
+}
+
+async function loadAdminHands() {
+  const target = $("adminHandsList"); if (!target || !user?.isAdmin) return;
+  try { const data = await apiGet("/api/admin/hands"); const hands = data.hands || [];
+    target.innerHTML = hands.length ? hands.map(h => `<div class="bc-request"><strong>${escapeHtml(h.tableName || h.tableId || "Ширээ")} · Гар #${Number(h.handNumber || 0)}</strong><br>${h.createdAt?new Date(h.createdAt._seconds? h.createdAt._seconds*1000 : h.createdAt).toLocaleString("mn-MN"):"Огноо тодорхойгүй"} · ${escapeHtml(h.gameType || "texas")}<br>Нийтийн мод: ${(h.communityCards || []).map(c => escapeHtml(c.rank + c.suit)).join(" ") || "-"}<br>Пот: ${Number(h.grossPot || 0).toLocaleString()} · Rake: ${Number(h.rake || 0).toLocaleString()} · Ялагч: ${(h.winners || []).map(w => escapeHtml(w.username || w.uid)).join(", ") || "-"}<div class="bc-note">${(h.players || []).map(p => `${escapeHtml(p.username || p.uid)}: ${(p.cards || []).map(c => escapeHtml(c.rank + c.suit)).join(" ") || "хөзөр бүртгэгдээгүй"}${p.folded ? " · FOLD" : ""}`).join("<br>")}</div></div>`).join("") : '<div class="bc-note">Дууссан гарын бүртгэл алга.</div>';
+  } catch(e) { target.textContent = e.message; }
+}
+async function loadAdminBotSettings() {
+  try { const d = await apiGet("/api/admin/bots/settings"); const b = d.settings || {}; if ($("botCount")) $("botCount").value = b.count ?? 2; if ($("botStyle")) $("botStyle").value = b.style || "balanced"; if ($("botThinkSeconds")) $("botThinkSeconds").value = b.thinkSeconds ?? 5; if ($("botEnabled")) $("botEnabled").checked = b.enabled === true; } catch(e) { showMessage("botSettingsMessage", e.message); }
+}
+async function saveAdminBotSettings() {
+  if (!user?.isAdmin) return; const payload = { count:Number($("botCount").value), style:$("botStyle").value, thinkSeconds:Number($("botThinkSeconds").value), enabled:$("botEnabled").checked };
+  try { const r = await api("/api/admin/bots/settings", payload); showMessage("botSettingsMessage", r.message || "Тохиргоо хадгалагдлаа."); } catch(e) { showMessage("botSettingsMessage", e.message); }
 }
 
 function filterAdminUsers() {

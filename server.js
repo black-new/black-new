@@ -784,6 +784,53 @@ app.get("/api/admin/users", authUser, authAdmin, async (req, res) => {
 });
 
 // ==========================================
+// ADMIN: READ-ONLY SYSTEM STATUS + RAKE REPORT
+// ==========================================
+app.get("/api/admin/system", authUser, authAdmin, async (req, res) => {
+  try {
+    const activeTables = [...tables.values()];
+    const rakeSnap = await db.collection("rakeLedger").orderBy("createdAt", "desc").limit(50).get();
+    res.json({
+      connectedSessions: socketUsers.size,
+      totalTables: activeTables.length,
+      activeHands: activeTables.filter(t => t.handStarted).length,
+      seatedPlayers: activeTables.reduce((n, t) => n + t.players.length, 0),
+      rakeEntries: rakeSnap.docs.map(d => ({ id:d.id, ...d.data() }))
+    });
+  } catch (error) { res.status(500).json({ message:"Системийн тайлан ачаалж чадсангүй." }); }
+});
+
+// ==========================================
+// ADMIN: COMPLETED HAND AUDIT (ADMIN ONLY)
+// Private cards are returned only from immutable completed-hand records.
+// ==========================================
+app.get("/api/admin/hands", authUser, authAdmin, async (req, res) => {
+  try {
+    const snap = await db.collection("handHistory").orderBy("createdAt", "desc").limit(100).get();
+    res.json({ hands: snap.docs.map(d => ({ id: d.id, ...d.data() })) });
+  } catch (error) {
+    res.status(500).json({ message: "Дууссан гарын аудит ачааллахад алдаа гарлаа." });
+  }
+});
+
+// ==========================================
+// ADMIN: BOT SETTINGS (CONFIG ONLY; BOT ENGINE NOT CONNECTED)
+// ==========================================
+app.get("/api/admin/bots/settings", authUser, authAdmin, async (req, res) => {
+  try { const snap = await db.collection("adminSettings").doc("bots").get(); res.json({ settings: snap.exists ? (snap.data() || {}) : { enabled:false, count:2, style:"balanced", thinkSeconds:5 } }); }
+  catch (error) { res.status(500).json({ message: "Ботын тохиргоо уншиж чадсангүй." }); }
+});
+app.post("/api/admin/bots/settings", authUser, authAdmin, async (req, res) => {
+  try {
+    const count = Number(req.body.count), thinkSeconds = Number(req.body.thinkSeconds), style = String(req.body.style || "balanced");
+    const enabled = req.body.enabled === true;
+    if (!Number.isInteger(count) || count < 0 || count > 8 || !Number.isInteger(thinkSeconds) || thinkSeconds < 2 || thinkSeconds > 30 || !["balanced","tight","loose"].includes(style)) return res.status(400).json({ message:"Ботын тохиргооны утга буруу байна." });
+    await db.collection("adminSettings").doc("bots").set({ enabled, count, style, thinkSeconds, updatedAt:FieldValue.serverTimestamp(), updatedBy:req.user.uid }, { merge:true });
+    res.json({ success:true, message:"Ботын тохиргоо хадгалагдлаа. Ботын тоглогчийн модуль холбогдоогүй тул ширээнд одоогоор автоматаар суухгүй." });
+  } catch (error) { res.status(500).json({ message:"Ботын тохиргоо хадгалж чадсангүй." }); }
+});
+
+// ==========================================
 // ADMIN: LIVE TABLE MONITOR (ADMIN ONLY)
 // ==========================================
 app.get("/api/admin/tables", authUser, authAdmin, async (req, res) => {
@@ -795,10 +842,10 @@ app.get("/api/admin/tables", authUser, authAdmin, async (req, res) => {
       currentTurn: table.currentTurn || 0,
       players: table.players.map((p, index) => ({
         uid: p.uid, username: p.username, displayName: p.displayName,
-        chips: p.chips, bet: p.bet || 0, folded: !!p.folded,
-        online: p.online !== false, allIn: !!p.allIn, cards: p.cards || [], seat: index
+        bet: p.bet || 0, folded: !!p.folded,
+        online: p.online !== false, allIn: !!p.allIn, seat: index
       })),
-      communityCards: table.communityCards || []
+      communityCards: table.communityCards || [], deckRemaining: Array.isArray(table.deck) ? table.deck.length : 0
     }));
     res.json({ tables: liveTables });
   } catch (error) {
