@@ -992,6 +992,24 @@ body.game-active #tablePage .poker-table {
 .auth-foot{margin-top:17px;padding-top:14px;border-top:1px solid #ffffff10;color:#62666b;font-size:8px;letter-spacing:2px}
 .auth-foot b{color:#bd9855;padding:0 5px}
 @media(max-width:480px){.auth-screen{padding:16px}.auth-box{padding:28px 23px 20px}.auth-brand{font-size:28px}}
+
+
+/* NEW REGISTRATION FORM */
+.register-form{margin-top:8px;text-align:left;max-height:min(68vh,560px);overflow:auto;padding:0 3px 4px}
+.register-form .auth-divider{margin:15px 0 12px}
+.register-form .auth-label{margin:9px 0 5px}
+.register-form .auth-input-wrap{height:43px}
+.register-form .auth-input-wrap select{width:100%;height:100%;border:0;outline:0;background:transparent;color:#f1d28a;font-size:13px}
+.register-form .auth-input-wrap select option{background:#0c1725;color:#fff}
+.register-form .auth-input-wrap input{font-size:13px}
+.age-confirm{display:flex;align-items:flex-start;gap:9px;margin:15px 0 8px;color:#e5d6b5;font-size:11px;line-height:1.5;text-align:left}
+.age-confirm input{width:16px;height:16px;flex:0 0 16px;margin:0;accent-color:#d9b45b}
+.register-form #completeRegisterBtn,.register-form .register-back{height:42px;margin-top:8px;border-radius:7px}
+.register-form #completeRegisterBtn{background:linear-gradient(110deg,#f0d58f,#c3984d 55%,#e4c477);color:#171108;font-size:12px;font-weight:900;letter-spacing:1px}
+.register-form .register-back{width:100%;background:#11161c;color:#e0c17d;border:1px solid #806334}
+.register-form .message{min-height:16px}
+@media(max-height:760px){.register-form{max-height:calc(100svh - 170px)}.register-form .auth-divider{margin:9px 0}.register-form .auth-label{margin:6px 0 4px}.register-form .auth-input-wrap{height:38px}}
+
 /* LOGIN FIX: keep the screen within the viewport and prevent autofill white boxes. */
 html, body { min-height:100%; }
 body:has(#authScreen:not([style*="display: none"])) {
@@ -1121,8 +1139,35 @@ body:has(#authScreen:not([style*="display: none"])) {
     <div class="auth-input-wrap"><span>◆</span><input id="authPassword" type="password" placeholder="Нууц үгээ оруулна уу" autocomplete="current-password"></div>
     <button class="gold-btn" id="loginBtn" onclick="login()">НЭВТРЭХ <span>→</span></button>
     <div class="auth-register-note">BLACKCLUB-д шинээр нэгдэх үү?</div>
-    <button class="secondary-btn" id="registerBtn" onclick="register()">БҮРТГҮҮЛЭХ</button>
+    <button class="secondary-btn" id="registerBtn" onclick="showRegisterForm()">БҮРТГҮҮЛЭХ</button>
     <div class="message" id="authMessage"></div>
+
+    <div id="registerForm" class="register-form" style="display:none">
+      <div class="auth-divider"><i></i><span>ШИНЭ БҮРТГЭЛ</span><i></i></div>
+      <label class="auth-label" for="regUsername">ХЭРЭГЛЭГЧИЙН НЭР</label>
+      <div class="auth-input-wrap"><span>♙</span><input id="regUsername" placeholder="3-20 тэмдэгт" autocomplete="username"></div>
+      <label class="auth-label" for="regPassword">НУУЦ ҮГ</label>
+      <div class="auth-input-wrap"><span>◆</span><input id="regPassword" type="password" placeholder="Дор хаяж 6 тэмдэгт" autocomplete="new-password"></div>
+      <label class="auth-label" for="regBankName">БАНК СОНГОХ</label>
+      <div class="auth-input-wrap"><span>▣</span><select id="regBankName" aria-label="Банк сонгох">
+        <option value="">Банк сонгоно уу</option>
+        <option value="Хаан банк">Хаан банк</option>
+        <option value="Худалдаа хөгжлийн банк">Худалдаа хөгжлийн банк</option>
+        <option value="ХасБанк">ХасБанк</option>
+        <option value="Төрийн банк">Төрийн банк</option>
+        <option value="Голомт банк">Голомт банк</option>
+        <option value="Капитрон банк">Капитрон банк</option>
+      </select></div>
+      <label class="auth-label" for="regBankAccount">ДАНСНЫ ДУГААР</label>
+      <div class="auth-input-wrap"><span>№</span><input id="regBankAccount" inputmode="numeric" placeholder="Дансны дугаар"></div>
+      <label class="auth-label" for="regBankHolder">ДАНС ЭЗЭМШИГЧИЙН НЭР</label>
+      <div class="auth-input-wrap"><span>♙</span><input id="regBankHolder" placeholder="Овог нэр"></div>
+      <label class="age-confirm"><input id="regAgeConfirmed" type="checkbox"><span>Би 18 нас хүрсэн гэдгээ баталгаажуулж байна.</span></label>
+      <button class="gold-btn" id="completeRegisterBtn" onclick="register()">БҮРТГЭЛ ҮҮСГЭХ →</button>
+      <button class="secondary-btn register-back" onclick="hideRegisterForm()">БУЦАХ</button>
+      <div class="message" id="registerMessage"></div>
+      <div class="auth-foot">18+ <b>•</b> PRIVATE POKER CLUB</div>
+    </div>
   </div>
 </div>
 
@@ -1582,21 +1627,57 @@ async function login() {
   }
 }
 
-async function register() {
-  const username = $("authUsername").value.trim();
-  const password = $("authPassword").value;
+function showRegisterForm() {
+  $("registerForm").style.display = "block";
+  $("registerBtn").style.display = "none";
+  $("loginBtn").style.display = "none";
+  $("authMessage").textContent = "";
+  $("regUsername").value = $("authUsername").value.trim();
+  $("regPassword").value = $("authPassword").value;
+  $("regUsername").focus();
+}
 
-  if (!username || !password) {
-    $("authMessage").textContent = "Нэр болон нууц үгээ оруулна уу";
+function hideRegisterForm() {
+  $("registerForm").style.display = "none";
+  $("registerBtn").style.display = "block";
+  $("loginBtn").style.display = "block";
+  $("registerMessage").textContent = "";
+}
+
+async function register() {
+  const username = $("regUsername").value.trim();
+  const password = $("regPassword").value;
+  const bankName = $("regBankName").value;
+  const bankAccount = $("regBankAccount").value.trim();
+  const bankHolder = $("regBankHolder").value.trim();
+  const ageConfirmed = $("regAgeConfirmed").checked;
+
+  if (!username || !password || !bankName || !bankAccount || !bankHolder) {
+    $("registerMessage").textContent = "Бүх талбарыг бөглөнө үү.";
+    return;
+  }
+  if (!ageConfirmed) {
+    $("registerMessage").textContent = "18+ баталгаажуулалтыг зөвшөөрнө үү.";
     return;
   }
 
   try {
-    $("authMessage").textContent = "Бүртгүүлж байна...";
-    const result = await api("/api/register", { username, displayName: username, password });
+    $("registerMessage").textContent = "Бүртгүүлж байна...";
+    $("completeRegisterBtn").disabled = true;
+    const result = await api("/api/register", {
+      username,
+      displayName: username,
+      password,
+      bankName,
+      bankAccount,
+      bankHolder,
+      ageConfirmed: true
+    });
     acceptLogin(result);
   } catch (error) {
-    $("authMessage").textContent = error.message;
+    $("registerMessage").textContent = error.message;
+  } finally {
+    $("completeRegisterBtn").disabled = false;
   }
 }
 
