@@ -1471,6 +1471,11 @@ body:has(#authScreen:not([style*="display: none"])) {
         <div class="seat seat-5" id="seat4"></div>
         <div class="seat seat-6" id="seat5"></div>
         <div class="dealer-button" aria-hidden="true">D</div>
+        <aside class="table-rewards" aria-label="Шагналын сан">
+          <div class="reward-pill jackpot"><b>♛ JACKPOT</b><span id="jackpotPoolValue">POOL</span></div>
+          <div class="reward-pill badbeat"><b>♥ BAD BEAT</b><span>REWARD</span></div>
+          <div class="reward-pill smart"><b>✦ SMART</b><span>REWARD</span></div>
+        </aside>
       </div>
       <div class="actions">
         <button class="secondary-btn fold-btn" onclick="sendAction('fold')">FOLD</button>
@@ -2068,6 +2073,7 @@ function minimizeTableChat(){
 function addChatLine(m) { const box=$("chatMessages"); if(!box)return; const line=document.createElement("div"); line.style.margin="3px 0"; const who=document.createElement("b"); who.textContent=(m.username||"Тоглогч")+": "; const msg=document.createElement("span"); msg.textContent=m.text||""; line.append(who,msg); box.appendChild(line); box.scrollTop=box.scrollHeight; }
 function loadChatHistory(){ if(!socket?.connected)return; socket.emit("chat:history",{mode:$("chatMode")?.value||"table"}); }
 function sendChatMessage(){ const input=$("chatInput"); const text=input?.value?.trim(); if(!text||!socket?.connected)return; const mode=$("chatMode")?.value||"table"; socket.emit("chat:send",{mode,tableId:currentTable,text},r=>{if(!r?.ok)alert(r?.message||"Чат илгээж чадсангүй.");else input.value="";}); }
+async function loadCasinoPools(){try{const d=await apiGet("/api/casino/pools");const el=$("jackpotPoolValue");if(el)el.textContent=`${Number(d.jackpotPool||0).toLocaleString("en-US")} CHIP`;}catch(e){}}
 async function loadChatSettings(){ try{const r=await apiGet("/api/chat/settings"); const b=r.bank||{}; if($("bankDisplay"))$("bankDisplay").textContent=b.account?`Төлбөрийн данс: ${b.name||""} · ${b.account} · ${b.holder||""}`:"Төлбөрийн дансны мэдээлэл тохируулаагүй.";}catch(e){} }
 function renderChatAdmin(){ const el=$("adminChatSettings"); if(!el)return; apiGet("/api/chat/settings").then(r=>{el.innerHTML=`<label class="bc-field"><input type="checkbox" id="adminChatEnabled" ${r.enabled?"checked":""}> Чат нээлттэй</label><div class="bc-note">Банкны өмнөх тохиргоо өөрчлөгдөхгүй.</div><button class="bc-action" onclick="saveChatAdmin()">ЧАТНЫ ТӨЛӨВ ХАДГАЛАХ</button>`;}).catch(e=>el.textContent=e.message); }
 async function saveChatAdmin(){ try{await api("/api/admin/chat/settings",{enabled:$("adminChatEnabled").checked}); alert("Чатны төлөв хадгалагдлаа.");}catch(e){alert(e.message);} }
@@ -2161,7 +2167,7 @@ function joinTable(tableId) {
       lastState = result.table;
       renderTable(result.table);
     }
-    setTimeout(()=>{loadChatHistory();loadChatSettings();},150);
+    setTimeout(()=>{loadChatHistory();loadChatSettings();loadCasinoPools();},150);
     if (!result.seated) {
       const min = Number(result.minBuyIn || result.table?.minBuyIn || 0);
       const max = Number(result.maxBuyIn || result.table?.maxBuyIn || 0);
@@ -2184,8 +2190,9 @@ function sitAtSeat(seatIndex) {
   const min = Number(table.minBuyIn || 0);
   const max = Number(table.maxBuyIn || min);
   let buyIn = min;
+  const step = Math.max(1, Number(table.bigBlind || 1));
   const entered = prompt(`Суудал ${seatIndex + 1}
-Buy-in оруулна уу (${min.toLocaleString()}–${max.toLocaleString()} CHIP):`, String(min));
+Доод хэмжээ ${min.toLocaleString()} CHIP (${Number(table.smallBlind||0).toLocaleString()}/${Number(table.bigBlind||0).toLocaleString()} blind). Хүссэн хэмжээгээ оруулна уу (${min.toLocaleString()}–${max.toLocaleString()} CHIP):`, String(min));
   if (entered === null) return;
   buyIn = Math.floor(Number(String(entered).replace(/,/g, "")));
   if (!Number.isSafeInteger(buyIn) || buyIn < min || buyIn > max) {
@@ -2270,7 +2277,7 @@ function renderSeat(player, seatIndex, table = {}, playerIndex = -1) {
     <div class="avatar">${escapeHtml(initial)}</div>
     <div class="seat-info">
       <strong>${escapeHtml(name)}</strong>
-      <div class="chip-display"><span class="chip-icon"></span><span>${chips} CHIP</span></div>
+      <div class="chip-display"><span class="chip-stack" aria-hidden="true"><i></i><i></i><i></i></span><span>${chips} CHIP</span></div>
       ${timer}
       ${player.folded ? '<small class="folded-label">FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : "")}
       ${isMe ? '<small class="seat-me">ТАНЫ СУУДАЛ</small>' : ""}
@@ -2310,10 +2317,23 @@ function renderTable(state) {
   const board = table.communityCards || state.communityCards || [];
   $("boardCards").innerHTML = board.map(cardHtml).join("");
   $("myHandCards").innerHTML = (me?.cards || []).map(cardHtml).join("");
-  const seatPlayers = Array(6).fill(null);
+  const maxSeats = Math.max(6, Math.min(9, Number(table.maxPlayers || 6)));
+  const pokerTable = document.querySelector(".poker-table");
+  if (pokerTable) pokerTable.dataset.maxPlayers = String(maxSeats);
+  for (let i = 0; i < 9; i++) {
+    let seatNode = $("seat" + i);
+    if (!seatNode && pokerTable) {
+      seatNode = document.createElement("div");
+      seatNode.className = "seat seat-" + (i + 1);
+      seatNode.id = "seat" + i;
+      pokerTable.appendChild(seatNode);
+    }
+    if (seatNode) seatNode.style.display = i < maxSeats ? "" : "none";
+  }
+  const seatPlayers = Array(maxSeats).fill(null);
   if (Array.isArray(players)) players.forEach((player,index)=>{
     const pos = Number.isInteger(player.seat) ? player.seat : index;
-    if(pos>=0 && pos<6) seatPlayers[pos]=player;
+    if(pos>=0 && pos<maxSeats) seatPlayers[pos]=player;
   });
   seatPlayers.forEach((player,index)=>renderSeat(player,index,table,player ? players.indexOf(player) : -1));
   const isMyTurn = !!table.handStarted && !!turnPlayer && ((turnPlayer.uid || turnPlayer.id || turnPlayer.userId) === myUidForActions || turnPlayer.username === user?.username);
@@ -2374,3 +2394,33 @@ boot();
 
 </body>
 </html>
+
+/* BLACKCLUB 9-SEAT TABLES + BLIND-SCALED CHIP DISPLAY */
+.chip-stack{display:inline-flex;align-items:center;position:relative;width:10px;height:9px;flex:0 0 10px}
+.chip-stack i{position:absolute;left:0;width:8px;height:3px;border:1px solid #fff0c5;border-radius:50%;background:linear-gradient(90deg,#c38d35,#f1d17b);box-shadow:0 1px 2px #0009}
+.chip-stack i:nth-child(1){top:0;background:linear-gradient(90deg,#2f8d68,#70d0a4)}
+.chip-stack i:nth-child(2){top:3px;background:linear-gradient(90deg,#b23b45,#ef7c83)}
+.chip-stack i:nth-child(3){top:6px;background:linear-gradient(90deg,#315f9b,#7fb5ef)}
+.table-rewards{position:absolute;right:3.5%;top:29%;z-index:4;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.reward-pill{display:flex;flex-direction:column;gap:1px;min-width:88px;padding:5px 7px;border-radius:7px;background:#061321eF;border:1px solid #b88a3d;box-shadow:0 3px 10px #0008;font-size:9px;line-height:1.15;text-align:center;white-space:nowrap}
+.reward-pill b{font-size:9px;letter-spacing:.4px}.reward-pill span{color:#d9e5f5;font-size:8px}
+.reward-pill.jackpot b{color:#f4d477}.reward-pill.badbeat b{color:#ff929a}.reward-pill.smart b{color:#83dfbd}
+.poker-table[data-max-players="9"] .seat-1{top:2%;left:43%;transform:translateX(-50%)}
+.poker-table[data-max-players="9"] .seat-2{top:9%;right:17%}
+.poker-table[data-max-players="9"] .seat-3{top:34%;right:1%}
+.poker-table[data-max-players="9"] .seat-4{bottom:15%;right:7%}
+.poker-table[data-max-players="9"] .seat-5{bottom:2%;right:29%}
+.poker-table[data-max-players="9"] .seat-6{bottom:2%;left:29%}
+.poker-table[data-max-players="9"] .seat-7{bottom:15%;left:7%}
+.poker-table[data-max-players="9"] .seat-8{top:34%;left:1%}
+.poker-table[data-max-players="9"] .seat-9{top:9%;left:17%}
+.poker-table[data-max-players="9"] .table-rewards{right:3%;top:26%}
+@media(max-width:700px){
+ .table-rewards{right:2%;top:27%;gap:3px}.reward-pill{min-width:57px;padding:3px 4px;border-radius:5px}.reward-pill b{font-size:7px}.reward-pill span{font-size:6px}.chip-stack{width:7px;height:7px;flex-basis:7px}.chip-stack i{width:6px;height:2px}
+ .poker-table[data-max-players="9"] .seat{width:clamp(53px,15vw,65px)!important}
+ .poker-table[data-max-players="9"] .seat-1{top:1%;left:50%;transform:translateX(-50%)}
+ .poker-table[data-max-players="9"] .seat-2{top:8%;right:10%}.poker-table[data-max-players="9"] .seat-3{top:30%;right:0%}
+ .poker-table[data-max-players="9"] .seat-4{bottom:24%;right:0%}.poker-table[data-max-players="9"] .seat-5{bottom:5%;right:12%}
+ .poker-table[data-max-players="9"] .seat-6{bottom:5%;left:12%}.poker-table[data-max-players="9"] .seat-7{bottom:24%;left:0%}
+ .poker-table[data-max-players="9"] .seat-8{top:30%;left:0%}.poker-table[data-max-players="9"] .seat-9{top:8%;left:10%}
+}

@@ -205,6 +205,16 @@ app.get("/api/history/hands", authUser, async (req, res) => {
 // ==========================================
 // CASINO RAKE / JACKPOT SETTINGS & REPORTS
 // ==========================================
+app.get("/api/casino/pools", authUser, async (req, res) => {
+  try {
+    const snap = await db.collection("casinoStats").doc("global").get();
+    const data = snap.exists ? (snap.data() || {}) : {};
+    res.json({ jackpotPool: Number(data.jackpotPool || 0), updatedAt: data.updatedAt || null });
+  } catch (error) {
+    res.status(500).json({ message: "Шагналын сангийн мэдээлэл уншиж чадсангүй." });
+  }
+});
+
 app.get("/api/admin/casino/settings", authUser, authAdmin, (req, res) => {
   res.json({ settings: { ...casinoSettings } });
 });
@@ -875,48 +885,38 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
 // POKER TABLES
 // ==========================================
 
-const TABLE_CONFIG = [
-  {
-    id: "BEGINNER",
-    name: "BEGINNER",
-    type: "texas",
-    smallBlind: 100,
-    bigBlind: 200,
-    minBuyIn: 5000,
-    maxBuyIn: 50000,
-    maxPlayers: 6
-  },
-  {
-    id: "SILVER",
-    name: "SILVER",
-    type: "texas",
-    smallBlind: 500,
-    bigBlind: 1000,
-    minBuyIn: 25000,
-    maxBuyIn: 250000,
-    maxPlayers: 6
-  },
-  {
-    id: "GOLD",
-    name: "GOLD",
-    type: "texas",
-    smallBlind: 1000,
-    bigBlind: 2000,
-    minBuyIn: 50000,
-    maxBuyIn: 500000,
-    maxPlayers: 6
-  },
-  {
-    id: "BLACK",
-    name: "BLACK",
-    type: "omaha",
-    smallBlind: 5000,
-    bigBlind: 10000,
-    minBuyIn: 250000,
-    maxBuyIn: 2500000,
-    maxPlayers: 6
-  }
+const BASE_TABLE_CONFIG = [
+  { id: "BEGINNER", name: "BEGINNER", type: "texas", smallBlind: 100, bigBlind: 200, minBuyIn: 5000, maxBuyIn: 50000, maxPlayers: 6 },
+  { id: "SILVER", name: "SILVER", type: "texas", smallBlind: 500, bigBlind: 1000, minBuyIn: 25000, maxBuyIn: 250000, maxPlayers: 6 },
+  { id: "GOLD", name: "GOLD", type: "texas", smallBlind: 1000, bigBlind: 2000, minBuyIn: 50000, maxBuyIn: 500000, maxPlayers: 6 },
+  { id: "BLACK", name: "BLACK", type: "omaha", smallBlind: 5000, bigBlind: 10000, minBuyIn: 250000, maxBuyIn: 2500000, maxPlayers: 6 }
 ];
+
+// New 9-seat tables: three tables per blind level for both Texas Hold'em and Omaha.
+// Buy-in limits scale with the table's big blind (25 BB minimum, 250 BB maximum).
+const STAKES = [
+  [100, 200], [250, 500], [500, 1000], [1000, 2000],
+  [2500, 5000], [5000, 10000], [10000, 20000]
+];
+const TABLE_CONFIG = [...BASE_TABLE_CONFIG];
+for (const [smallBlind, bigBlind] of STAKES) {
+  for (const type of ["texas", "omaha"]) {
+    for (let copy = 1; copy <= 3; copy++) {
+      const typeName = type === "texas" ? "HOLD'EM" : "OMAHA";
+      const id = `${type.toUpperCase()}_${smallBlind}_${bigBlind}_${copy}`;
+      TABLE_CONFIG.push({
+        id,
+        name: `${typeName} ${smallBlind.toLocaleString("en-US")}/${bigBlind.toLocaleString("en-US")} · ${copy}`,
+        type,
+        smallBlind,
+        bigBlind,
+        minBuyIn: bigBlind * 25,
+        maxBuyIn: bigBlind * 250,
+        maxPlayers: 9
+      });
+    }
+  }
+}
 
 const tables = new Map();
 const socketUsers = new Map();
@@ -1452,9 +1452,10 @@ io.on("connection", socket => {
       if (table.players.length >= table.maxPlayers) return reply({ success: false, message: "Ширээ дүүрсэн байна." });
 
       const requestedBuyIn = Number(data?.buyIn);
-      const buyIn = Number.isSafeInteger(requestedBuyIn) && requestedBuyIn > 0
-        ? Math.min(table.maxBuyIn, Math.max(table.minBuyIn, requestedBuyIn))
-        : table.minBuyIn;
+      const buyIn = Number.isSafeInteger(requestedBuyIn) ? requestedBuyIn : table.minBuyIn;
+      if (buyIn < table.minBuyIn || buyIn > table.maxBuyIn) {
+        return reply({ success: false, message: `Энэ ширээний суух хэмжээ ${table.minBuyIn.toLocaleString()}–${table.maxBuyIn.toLocaleString()} CHIP байна.` });
+      }
       const userRef = db.collection("users").doc(user.uid);
       let walletAfter = 0;
       await db.runTransaction(async transaction => {
