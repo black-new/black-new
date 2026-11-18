@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
+const crypto = require("crypto");
 const admin = require("firebase-admin");
 const { Server } = require("socket.io");
 
@@ -8,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "1mb", verify: (req, res, buf) => { req.rawBody = Buffer.from(buf); } }));
 
 const io = new Server(server, {
   cors: {
@@ -44,7 +45,9 @@ const ALLOWED_BANKS = [
   "ХасБанк",
   "Төрийн банк",
   "Голомт банк",
-  "Капитрон банк"
+  "Капитрон банк",
+  "M Bank",
+  "Богд банк"
 ];
 
 // ==========================================
@@ -520,14 +523,144 @@ app.post("/api/profile/update", authUser, async (req, res) => {
 });
 
 // ==========================================
+// BANK WEBHOOK: verified incoming transfer -> player CHIP credit
+// Configure BANK_WEBHOOK_SECRETS on Render as JSON: {"provider-key":"long-random-secret"}
+// Provider must POST signed raw JSON with X-BLACKCLUB-SIGNATURE: hex(HMAC-SHA256(rawBody, secret)).
+// Body: {transactionId, accountNumber, amount, description, status:"success", currency:"MNT"}
+// ==========================================
+function safeEqualHex(a, b) {
+  try { const aa=Buffer.from(String(a||""),"hex"), bb=Buffer.from(String(b||""),"hex"); return aa.length===bb.length && aa.length>0 && crypto.timingSafeEqual(aa,bb); }
+  catch (_) { return false; }
+}
+function getBankWebhookSecrets() {
+  try { const x=JSON.parse(process.env.BANK_WEBHOOK_SECRETS||"{}"); return x && typeof x==="object" ? x : {}; }
+  catch (_) { return {}; }
+}
+function extractPlayerUsername(description) {
+  const text=String(description||"").trim();
+  // Accept a username as a standalone token; avoid matching a substring of another word.
+  const matches=text.match(/[A-Za-z0-9_]{3,20}/g)||[];
+  return matches.length===1 ? matches[0] : "";
+}
+app.post("/api/bank-webhooks/:bankKey", async (req,res) => {
+  try {
+    const bankKey=String(req.params.bankKey||"").trim().toLowerCase();
+    const secret=getBankWebhookSecrets()[bankKey];
+    if(!secret || !req.rawBody) return res.status(404).json({message:"Webhook холболт тохируулаагүй байна."});
+    const supplied=String(req.get("x-blackclub-signature")||"").replace(/^sha256=/i,"");
+    const expected=crypto.createHmac("sha256",String(secret)).update(req.rawBody).digest("hex");
+    if(!safeEqualHex(supplied,expected)) return res.status(401).json({message:"Гарын үсгийн баталгаажуулалт амжилтгүй."});
+    const body=req.body||{};
+    const transactionId=String(body.transactionId||"").trim();
+    const accountNumber=String(body.accountNumber||"").replace(/\s/g,"");
+    const amount=validAmount(body.amount);
+    const description=String(body.description||"").trim();
+    const status=String(body.status||"").toLowerCase();
+    const currency=String(body.currency||"MNT").toUpperCase();
+    if(!transactionId || transactionId.length>160 || !/^[0-9]{6,20}$/.test(accountNumber) || !amount || amount>100000000 || !description || status!=="success" || currency!=="MNT")
+      return res.status(400).json({message:"Гүйлгээний мэдээлэл буруу эсвэл амжилтгүй байна."});
+    const accountSnap=await db.collection("paymentAccounts").where("bankAccount","==",accountNumber).limit(10).get();
+    const accountDoc=accountSnap.docs.find(d => d.data().active===true || d.data().bankKey===bankKey);
+    if(!accountDoc) return res.status(404).json({message:"Хүлээн авах данс BLACKCLUB-д бүртгэлгүй байна."});
+    const playerName=extractPlayerUsername(description);
+    const txKey=crypto.createHash("sha256").update(bankKey+"|"+transactionId).digest("hex");
+    const txRef=db.collection("bankTransactions").doc(txKey);
+    const usernameLower=normalizeUsername(playerName);
+    let userSnap=null;
+    if(playerName) {
+      const q=await db.collection("users").where("username","==",playerName).limit(2).get();
+      if(!q.empty) userSnap=q.size===1?q.docs[0]:null;
+      if(!userSnap) {
+        const all=await db.collection("users").limit(5000).get();
+        const found=all.docs.filter(d=>normalizeUsername(d.data().username)===usernameLower);
+        if(found.length===1) userSnap=found[0];
+      }
+    }
+    let outcome="pending", reason="";
+    await db.runTransaction(async t=>{
+      const already=await t.get(txRef);
+      if(already.exists) { outcome="duplicate"; return; }
+      if(!userSnap) {
+        reason=playerName?"Тоглогчийн нэр олдсонгүй эсвэл давхардсан.":"Гүйлгээний утгад ганц тоглогчийн нэр олдсонгүй.";
+        t.create(txRef,{bankKey,transactionId,accountNumber,amount,description,username:playerName,status:"pending",reason,receivedAt:FieldValue.serverTimestamp()});
+        outcome="pending"; return;
+      }
+      const userRef=userSnap.ref;
+      const fresh=await t.get(userRef);
+      if(!fresh.exists) { reason="Тоглогчийн бүртгэл олдсонгүй."; t.create(txRef,{bankKey,transactionId,accountNumber,amount,description,username:playerName,status:"pending",reason,receivedAt:FieldValue.serverTimestamp()}); outcome="pending"; return; }
+      t.update(userRef,{chips:FieldValue.increment(amount)});
+      t.create(txRef,{bankKey,transactionId,accountNumber,amount,description,uid:userRef.id,username:fresh.data().username||playerName,status:"credited",creditedAt:FieldValue.serverTimestamp(),receivedAt:FieldValue.serverTimestamp()});
+      const ledgerRef=db.collection("chipLedger").doc(txKey);
+      t.create(ledgerRef,{uid:userRef.id,username:fresh.data().username||playerName,type:"deposit",amount,source:"bank_webhook",bankKey,transactionId,createdAt:FieldValue.serverTimestamp()});
+      outcome="credited";
+    });
+    return res.json({success:true,status:outcome,reason:reason||undefined});
+  } catch(error) { console.error("BANK WEBHOOK ERROR",error); return res.status(500).json({message:"Гүйлгээг боловсруулахад алдаа гарлаа."}); }
+});
+
+// ==========================================
 // CASHIER INFO
 // ==========================================
 
 app.get("/api/cashier/info", authUser, async (req, res) => {
   try {
+    const activeSnap = await db.collection("paymentAccounts").where("active", "==", true).limit(1).get();
+    if (!activeSnap.empty) {
+      const a = activeSnap.docs[0].data() || {};
+      return res.json({ bank:{name:a.bankName||"",account:a.bankAccount||"",holder:a.bankHolder||"",accountId:activeSnap.docs[0].id}, chips:Number(req.user.chips||0), paymentMode:"manual-pending-provider" });
+    }
     const snap=await db.collection("casinoSettings").doc("main").get(); const v=snap.data()||{};
-    res.json({ bank:{name:v.bankName||BANK_INFO.name,account:v.bankAccount||BANK_INFO.account,holder:v.bankHolder||BANK_INFO.holder}, chips:Number(req.user.chips||0) });
+    res.json({ bank:{name:v.bankName||BANK_INFO.name,account:v.bankAccount||BANK_INFO.account,holder:v.bankHolder||BANK_INFO.holder}, chips:Number(req.user.chips||0), paymentMode:"manual-pending-provider" });
   } catch(e) { res.status(500).json({message:"Банкны мэдээлэл авахад алдаа гарлаа."}); }
+});
+
+// ADMIN: MULTIPLE RECEIVING ACCOUNTS. This manages display/selection only;
+// it does not verify bank transfers until an official bank/payment API is connected.
+app.get("/api/admin/payment-accounts", authUser, authAdmin, async (req,res) => {
+  try {
+    const snap = await db.collection("paymentAccounts").orderBy("createdAt", "desc").limit(100).get();
+    res.json({ accounts:snap.docs.map(d=>({id:d.id,...d.data()})) });
+  } catch(e) { res.status(500).json({message:"Дансны жагсаалт ачаалж чадсангүй."}); }
+});
+app.post("/api/admin/payment-accounts", authUser, authAdmin, async (req,res) => {
+  try {
+    const bankName=String(req.body.bankName||"").trim();
+    const bankAccount=String(req.body.bankAccount||"").trim();
+    const bankHolder=String(req.body.bankHolder||"").trim();
+    if(!ALLOWED_BANKS.includes(bankName)) return res.status(400).json({message:"Банкны нэр буруу байна."});
+    if(!/^[0-9]{6,20}$/.test(bankAccount)) return res.status(400).json({message:"Дансны дугаар 6-20 оронтой байх ёстой."});
+    if(bankHolder.length<2||bankHolder.length>60) return res.status(400).json({message:"Данс эзэмшигчийн нэр буруу байна."});
+    const ref=db.collection("paymentAccounts").doc();
+    const existing=await db.collection("paymentAccounts").limit(1).get();
+    await ref.set({bankName,bankAccount,bankHolder,active:existing.empty,createdAt:FieldValue.serverTimestamp(),createdBy:req.user.uid,ownerConsentConfirmed:req.body.ownerConsentConfirmed===true});
+    res.json({success:true,id:ref.id,message:"Данс хадгалагдлаа. Автомат гүйлгээ танихын тулд банкны API холболт шаардлагатай."});
+  } catch(e) { res.status(500).json({message:"Данс хадгалах үед алдаа гарлаа."}); }
+});
+app.post("/api/admin/payment-accounts/active", authUser, authAdmin, async (req,res) => {
+  try {
+    const id=String(req.body.id||"").trim();
+    if(!id) return res.status(400).json({message:"Дансны ID дутуу байна."});
+    const selected=db.collection("paymentAccounts").doc(id);
+    const selectedSnap=await selected.get();
+    if(!selectedSnap.exists) return res.status(404).json({message:"Данс олдсонгүй."});
+    const all=await db.collection("paymentAccounts").get();
+    const batch=db.batch();
+    all.docs.forEach(d=>batch.set(d.ref,{active:d.id===id,updatedAt:FieldValue.serverTimestamp(),updatedBy:req.user.uid},{merge:true}));
+    await batch.commit();
+    res.json({success:true,message:"Идэвхтэй данс солигдлоо."});
+  } catch(e) { res.status(500).json({message:"Идэвхтэй данс солиход алдаа гарлаа."}); }
+});
+app.post("/api/admin/payment-accounts/delete", authUser, authAdmin, async (req,res) => {
+  try {
+    const id=String(req.body.id||"").trim();
+    if(!id) return res.status(400).json({message:"Дансны ID дутуу байна."});
+    const ref=db.collection("paymentAccounts").doc(id), snap=await ref.get();
+    if(!snap.exists) return res.status(404).json({message:"Данс олдсонгүй."});
+    await ref.delete();
+    const remaining=await db.collection("paymentAccounts").get();
+    if(!remaining.empty && !remaining.docs.some(d=>d.data().active===true)) await remaining.docs[0].ref.set({active:true},{merge:true});
+    res.json({success:true,message:"Данс устгагдлаа."});
+  } catch(e) { res.status(500).json({message:"Данс устгахад алдаа гарлаа."}); }
 });
 
 // ==========================================
@@ -552,14 +685,18 @@ app.post("/api/cashier/deposit", authUser, async (req, res) => {
     }
 
     const requestRef = db.collection("cashierRequests").doc();
+    const activeAccountSnap = await db.collection("paymentAccounts").where("active", "==", true).limit(1).get();
+    const activeAccountDoc = activeAccountSnap.empty ? null : activeAccountSnap.docs[0];
+    const activeAccount = activeAccountDoc ? (activeAccountDoc.data() || {}) : {};
 
     await requestRef.set({
       uid: req.user.uid,
       username: req.user.username,
       displayName: req.user.displayName || req.user.username,
-      bankName: req.user.bankName || "",
-      bankAccount: req.user.bankAccount || "",
-      bankHolder: req.user.bankHolder || "",
+      bankName: activeAccount.bankName || req.user.bankName || "",
+      bankAccount: activeAccount.bankAccount || req.user.bankAccount || "",
+      bankHolder: activeAccount.bankHolder || req.user.bankHolder || "",
+      bankTargetAccountId: activeAccountDoc?.id || "",
       type: "deposit",
       amount,
       reference,
@@ -781,6 +918,33 @@ app.get("/api/admin/users", authUser, authAdmin, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Хэрэглэгчдийн мэдээлэл ачааллахад алдаа гарлаа." });
   }
+});
+
+// ROOT ADMIN: only the first ADMIN_UIDS entry may grant/revoke secondary admin role.
+app.get("/api/admin/admins", authUser, authAdmin, async (req,res) => {
+  try {
+    const rootUid=ADMIN_UIDS[0]||"";
+    if(!rootUid || req.user.uid!==rootUid) return res.status(403).json({message:"Зөвхөн үндсэн админ энэ хэсгийг удирдана."});
+    const snap=await db.collection("users").where("role","==","admin").limit(100).get();
+    const admins=snap.docs.map(d=>({uid:d.id,username:d.data().username||"",displayName:d.data().displayName||"",root:d.id===rootUid}));
+    const root=await db.collection("users").doc(rootUid).get();
+    if(root.exists&&!admins.some(a=>a.uid===rootUid)) admins.unshift({uid:rootUid,username:root.data().username||"",displayName:root.data().displayName||"",root:true});
+    res.json({admins,rootUid});
+  } catch(e) { res.status(500).json({message:"Админы жагсаалт ачаалж чадсангүй."}); }
+});
+app.post("/api/admin/admins/set", authUser, authAdmin, async (req,res) => {
+  try {
+    const rootUid=ADMIN_UIDS[0]||"";
+    if(!rootUid || req.user.uid!==rootUid) return res.status(403).json({message:"Зөвхөн үндсэн админ дэд админ нэмэх эрхтэй."});
+    const uid=String(req.body.uid||"").trim(), enabled=req.body.enabled===true;
+    if(!uid) return res.status(400).json({message:"Хэрэглэгчийн UID оруулна уу."});
+    if(uid===rootUid) return res.status(400).json({message:"Үндсэн админы эрхийг энэ хэсгээс өөрчлөхгүй."});
+    const ref=db.collection("users").doc(uid), snap=await ref.get();
+    if(!snap.exists) return res.status(404).json({message:"Хэрэглэгч олдсонгүй. Эхлээд тухайн хэрэглэгч бүртгүүлсэн байх ёстой."});
+    await ref.set({role:enabled?"admin":"user",isAdmin:enabled,adminRoleUpdatedAt:FieldValue.serverTimestamp(),adminRoleUpdatedBy:req.user.uid},{merge:true});
+    await db.collection("adminAudit").add({actorUid:req.user.uid,targetUid:uid,action:enabled?"grant_admin":"revoke_admin",createdAt:FieldValue.serverTimestamp()});
+    res.json({success:true,message:enabled?"Дэд админ нэмэгдлээ.":"Дэд админы эрх цуцлагдлаа."});
+  } catch(e) { res.status(500).json({message:"Админы эрх өөрчлөхөд алдаа гарлаа."}); }
 });
 
 // ==========================================
