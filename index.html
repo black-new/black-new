@@ -1753,7 +1753,9 @@ function renderTables() {
     const rawGame = table.type || table.gameType || table.game || "Покер";
     const game = String(rawGame).toLowerCase().includes("omaha") ? "Омаха" :
       (String(rawGame).toLowerCase().includes("texas") ? "Техас" : String(rawGame));
-    const players = table.players?.length ?? table.playerCount ?? table.seats?.filter(Boolean).length ?? 0;
+    const players = Array.isArray(table.players)
+      ? table.players.length
+      : Number(table.playerCount ?? table.players ?? table.seats?.filter(Boolean).length ?? 0);
     const maxPlayers = table.maxPlayers || 6;
     const smallBlind = table.smallBlind ?? table.blinds?.small ?? table.smallBlindAmount;
     const bigBlind = table.bigBlind ?? table.blinds?.big ?? table.bigBlindAmount;
@@ -1781,8 +1783,8 @@ function joinTable(tableId) {
   }
 
   socket.emit("table:join", { tableId }, result => {
-    if (result && result.error) {
-      alert(result.error);
+    if (!result || result.success === false || result.error) {
+      alert(result?.message || result?.error || "Ширээнд суухад алдаа гарлаа.");
       return;
     }
 
