@@ -1116,11 +1116,11 @@ body:has(#authScreen:not([style*="display: none"])) {
     <div class="auth-subtitle">PRIVATE POKER CLUB</div>
     <div class="auth-divider"><i></i><span>WELCOME BACK</span><i></i></div>
     <label class="auth-label" for="authUsername">ХЭРЭГЛЭГЧИЙН НЭР</label>
-    <div class="auth-input-wrap"><span>♙</span><input id="authUsername" placeholder="Жишээ: boldoo123" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="24"></div>
+    <div class="auth-input-wrap"><span>♙</span><input id="authUsername" placeholder="Нэрээ оруулна уу" autocomplete="username"></div>
     <label class="auth-label" for="authPassword">НУУЦ ҮГ</label>
-    <div class="auth-input-wrap"><span>◆</span><input id="authPassword" type="password" placeholder="Нууц үг (дор хаяж 8 тэмдэгт)" autocomplete="current-password" minlength="8" maxlength="72"></div>
+    <div class="auth-input-wrap"><span>◆</span><input id="authPassword" type="password" placeholder="Нууц үгээ оруулна уу" autocomplete="current-password"></div>
     <button class="gold-btn" id="loginBtn" onclick="login()">НЭВТРЭХ <span>→</span></button>
-    <div class="auth-register-note">BLACKCLUB-д шинээр нэгдэх үү?</div><div class="auth-register-note" style="font-size:10px;line-height:1.6;color:#9eafc1;margin:5px 0 8px">Бүртгүүлэхдээ хэрэглэгчийн нэр 3–24 англи жижиг үсэг, тоо эсвэл _ тэмдэгт байна. Нууц үг 8-аас доошгүй тэмдэгт.</div>
+    <div class="auth-register-note">BLACKCLUB-д шинээр нэгдэх үү?</div>
     <button class="secondary-btn" id="registerBtn" onclick="register()">БҮРТГҮҮЛЭХ</button>
     <div class="message" id="authMessage"></div>
   </div>
@@ -1529,16 +1529,8 @@ async function decideCashier(requestId, decision) {
 }
 
 function closeAccountSection() {
-  const section = $("accountSection");
-  if (section) section.classList.remove("open");
+  $("accountSection").classList.remove("open");
 }
-
-document.addEventListener("keydown", event => {
-  if (event.key === "Escape") {
-    closeAccountMenu();
-    closeAccountSection();
-  }
-});
 
 function setTableTheme(color, button) {
   document.documentElement.style.setProperty('--table-blue', color);
@@ -1573,15 +1565,11 @@ function loadVisualPreferences() {
 }
 
 async function login() {
-  const username = $("authUsername").value.trim().toLowerCase();
+  const username = $("authUsername").value.trim();
   const password = $("authPassword").value;
 
   if (!username || !password) {
-    $("authMessage").textContent = "Хэрэглэгчийн нэр болон нууц үгээ оруулна уу.";
-    return;
-  }
-  if (!/^[a-z0-9_]{3,24}$/.test(username)) {
-    $("authMessage").textContent = "Нэр 3–24 тэмдэгт байх бөгөөд зөвхөн англи жижиг үсэг, тоо, _ ашиглана.";
+    $("authMessage").textContent = "Нэр болон нууц үгээ оруулна уу";
     return;
   }
 
@@ -1595,28 +1583,20 @@ async function login() {
 }
 
 async function register() {
-  const username = $("authUsername").value.trim().toLowerCase();
+  const username = $("authUsername").value.trim();
   const password = $("authPassword").value;
 
   if (!username || !password) {
-    $("authMessage").textContent = "Бүртгүүлэхийн тулд хэрэглэгчийн нэр, нууц үгээ хоёуланг нь оруулна уу.";
-    return;
-  }
-  if (!/^[a-z0-9_]{3,24}$/.test(username)) {
-    $("authMessage").textContent = "Хэрэглэгчийн нэр 3–24 тэмдэгт, зөвхөн англи жижиг үсэг, тоо, _ байна. Жишээ: boldoo123";
-    return;
-  }
-  if (password.length < 8 || password.length > 72) {
-    $("authMessage").textContent = "Нууц үг 8–72 тэмдэгт байх ёстой.";
+    $("authMessage").textContent = "Нэр болон нууц үгээ оруулна уу";
     return;
   }
 
   try {
-    $("authMessage").textContent = "Бүртгэл үүсгэж байна...";
+    $("authMessage").textContent = "Бүртгүүлж байна...";
     const result = await api("/api/register", { username, displayName: username, password });
     acceptLogin(result);
   } catch (error) {
-    $("authMessage").textContent = error.message || "Бүртгүүлэхэд алдаа гарлаа.";
+    $("authMessage").textContent = error.message;
   }
 }
 
@@ -1671,16 +1651,16 @@ function logout() {
   closeAccountSection();
 
   $("authScreen").style.display = "flex";
-  $("lobbyPage").style.display = "block";
+  $("lobbyPage").style.display = "none";
   $("tablePage").style.display = "none";
   $("authMessage").textContent = "";
 }
 
 function showLobby() {
-  closeAccountMenu();
-  closeAccountSection();
   document.body.classList.remove("game-active");
-  $("lobbyPage").style.display = "block";
+  // Lobby нь зүүн цэс + үндсэн хэсэг гэсэн CSS Grid бүтэцтэй.
+  // block гэж inline оноосноор хоёр хэсэг давхарлан/буруу байрлаж байсан.
+  $("lobbyPage").style.display = "grid";
   $("tablePage").style.display = "none";
   currentTable = null;
 
@@ -1984,8 +1964,6 @@ function escapeHtml(value) {
   })[char]);
 }
 
-closeAccountMenu();
-closeAccountSection();
 loadVisualPreferences();
 boot();
 </script>
