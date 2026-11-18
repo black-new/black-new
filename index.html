@@ -1090,6 +1090,20 @@ body:has(#authScreen:not([style*="display: none"])) {
 @media(max-width:850px){#lobbyPage{grid-template-columns:1fr;gap:13px}.lobby-sidebar{position:static;padding:12px}.lobby-brand{padding-bottom:10px;margin-bottom:10px}.lobby-nav{grid-template-columns:repeat(4,minmax(0,1fr))}.lobby-nav button{justify-content:center;padding:9px 5px;font-size:10px;gap:5px}.lobby-nav button span{width:auto}.lobby-side-note{display:none}}
 @media(max-width:560px){#lobbyPage{width:94%;margin:13px auto 25px}.lobby-welcome{padding:15px;align-items:flex-start;flex-direction:column}.lobby-welcome-balance{width:100%;text-align:left}.lobby-shortcuts{grid-template-columns:1fr}.lobby-shortcut{min-height:55px}#lobbyPage .table-card{grid-template-columns:1fr auto;gap:8px}#lobbyPage .table-card .lobby-table-meta{grid-column:1}#lobbyPage .table-card .gold-btn{grid-column:2;grid-row:1 / span 2}#lobbyPage .panel{padding:13px}.lobby-nav{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
+
+/* BLACKCLUB account and cashier panels */
+.cashier-card{background:#0b1725;border:1px solid #293d53;border-radius:12px;padding:16px;margin:12px 0}
+.cashier-card h3{margin:0 0 12px;color:#e8bd62;font-size:15px}
+.bc-field{display:block;margin:12px 0;color:#aebdce;font-size:12px}
+.bc-field input,.bc-field select{display:block;width:100%;margin-top:6px;padding:12px;border:1px solid #34485e;border-radius:7px;background:#07111d;color:#fff;outline:none}
+.bc-action{width:100%;border:0;border-radius:7px;padding:12px;background:linear-gradient(135deg,#e8bd62,#a8792e);color:#17120a;font-weight:800;margin-top:8px}
+.bc-secondary{background:#17283a;color:#f2d28a;border:1px solid #455a70}
+.bc-note{font-size:12px;line-height:1.6;color:#9eafc1;margin:10px 0}
+.bc-request{border:1px solid #2a3b4e;border-radius:8px;padding:12px;margin:9px 0;background:#091421;font-size:12px}
+.bc-request strong{color:#e8bd62}
+.bc-status{display:inline-block;padding:4px 8px;border-radius:20px;background:#26384b;color:#e8d29a;margin-top:6px}
+.bc-actions{display:flex;gap:8px;margin-top:9px}.bc-actions button{flex:1;border:0;border-radius:6px;padding:8px;font-weight:bold}.bc-approve{background:#1c8055;color:white}.bc-reject{background:#873c45;color:white}
+
 </style>
 </head>
 
@@ -1147,6 +1161,15 @@ body:has(#authScreen:not([style*="display: none"])) {
     </button>
     <button class="menu-item" onclick="openAccountSection('balance')">
       <span class="menu-item-icon">◉</span> CHIP-ийн үлдэгдэл
+    </button>
+    <button class="menu-item" onclick="openAccountSection('cashier')">
+      <span class="menu-item-icon">▣</span> Касс / CHIP цэнэглэх
+    </button>
+    <button class="menu-item" onclick="openAccountSection('withdraw')">
+      <span class="menu-item-icon">⇧</span> CHIP татах
+    </button>
+    <button class="menu-item" id="adminCashierMenu" style="display:none" onclick="openAccountSection('adminCashier')">
+      <span class="menu-item-icon">♛</span> Админ касс
     </button>
     <button class="menu-item" onclick="openAccountSection('history')">
       <span class="menu-item-icon">◷</span> Тоглоомын түүх
@@ -1341,6 +1364,7 @@ function updateHeader() {
   if ($("sideAvatar")) $("sideAvatar").textContent = initial;
   if ($("lobbyWelcomeName")) $("lobbyWelcomeName").textContent = name;
   if ($("lobbyBalance")) $("lobbyBalance").textContent = balance;
+  if ($("adminCashierMenu")) $("adminCashierMenu").style.display = user?.isAdmin ? "flex" : "none";
 }
 
 function toggleAccountMenu() {
@@ -1433,7 +1457,75 @@ function openAccountSection(section) {
     setTimeout(markSelectedThemes,0);
   }
 
+  if (section === "cashier") {
+    title.textContent = "КАСС / CHIP ЦЭНЭГЛЭХ";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Мөнгөө шилжүүлсний дараа дүн болон гүйлгээний утга/баримтын дугаараа оруулж хүсэлт илгээнэ. Админ баталсны дараа CHIP нэмэгдэнэ.</div><div id="cashierBankInfo" class="bc-note">Кассын мэдээлэл ачаалж байна...</div><label class="bc-field">Цэнэглэх CHIP дүн<input id="depositAmount" type="number" min="1000" placeholder="Жишээ: 10000"></label><label class="bc-field">Гүйлгээний утга / баримтын дугаар<input id="depositReference" maxlength="120" placeholder="Гүйлгээний утга"></label><button class="bc-action" onclick="submitDeposit()">ЦЭНЭГЛЭХ ХҮСЭЛТ ИЛГЭЭХ</button><div id="cashierMessage" class="bc-note"></div></div><div class="cashier-card"><h3>Миний кассын хүсэлтүүд</h3><div id="cashierHistory">Ачаалж байна...</div></div>';
+    loadCashierInfo(); loadCashierHistory();
+  }
+
+  if (section === "withdraw") {
+    title.textContent = "CHIP ТАТАХ";
+    content.innerHTML = `<div class="cashier-card"><div class="bc-note">Татахын тулд банкны мэдээллээ профайлд хадгалсан байх шаардлагатай. Хүсэлт илгээхэд CHIP түр хасагдаж, татгалзвал буцаан нэмэгдэнэ.</div><label class="bc-field">Татах CHIP дүн<input id="withdrawAmount" type="number" min="1000" placeholder="Дүн"></label><button class="bc-action" onclick="submitWithdraw()">ТАТАХ ХҮСЭЛТ ИЛГЭЭХ</button><div id="withdrawMessage" class="bc-note"></div></div>`;
+  }
+
+  if (section === "account") {
+    content.innerHTML += `<div class="cashier-card"><h3>Профайл / Банкны мэдээлэл</h3><label class="bc-field">Тоглоомын нэр<input id="profileDisplayName" maxlength="18" value="${escapeHtml(user?.displayName || getUsername())}"></label><label class="bc-field">Банкны нэр<input id="profileBankName" value="${escapeHtml(user?.bankName || "")}" placeholder="Хаан банк гэх мэт"></label><label class="bc-field">Дансны дугаар<input id="profileBankAccount" value="${escapeHtml(user?.bankAccount || "")}" placeholder="Дансны дугаар"></label><label class="bc-field">Данс эзэмшигчийн нэр<input id="profileBankHolder" value="${escapeHtml(user?.bankHolder || "")}" placeholder="Овог нэр"></label><button class="bc-action" onclick="saveProfile()">МЭДЭЭЛЭЛ ХАДГАЛАХ</button><div id="profileMessage" class="bc-note"></div></div>`;
+  }
+
+  if (section === "adminCashier") {
+    title.textContent = "АДМИН КАСС";
+    content.innerHTML = '<div class="cashier-card"><div class="bc-note">Хүлээгдэж буй цэнэглэх болон татах хүсэлтүүд.</div><div id="adminCashierList">Ачаалж байна...</div></div>';
+    loadAdminCashier();
+  }
+
   $("accountSection").classList.add("open");
+}
+
+async function apiGet(path) {
+  const response = await fetch(SERVER_URL + path, { headers: { "Authorization": "Bearer " + token } });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || "Алдаа гарлаа");
+  return result;
+}
+function showMessage(id, message) { const el = $(id); if (el) el.textContent = message; }
+async function refreshMe() {
+  const result = await apiGet("/api/me"); user = result.user || result; updateHeader();
+}
+async function loadCashierInfo() {
+  try {
+    const d = await apiGet("/api/cashier/info");
+    showMessage("cashierBankInfo", `Хүлээн авагч банк: ${d.bank?.name || "Админ тохируулаагүй"}\nДанс: ${d.bank?.account || "Тохируулаагүй"}\nЭзэмшигч: ${d.bank?.holder || "Тохируулаагүй"}\nТаны үлдэгдэл: ${Number(d.chips||0).toLocaleString()} CHIP`);
+  } catch(e) { showMessage("cashierBankInfo", e.message); }
+}
+async function loadCashierHistory() {
+  try {
+    const d = await apiGet("/api/cashier/history"); const list = d.requests || [];
+    $("cashierHistory").innerHTML = list.length ? list.map(r => `<div class="bc-request"><strong>${r.type === "deposit" ? "Цэнэглэх" : "Татах"}</strong> · ${Number(r.amount).toLocaleString()} CHIP<br>Огноо: ${r.createdAt ? new Date(r.createdAt).toLocaleString("mn-MN") : "-"}<br><span class="bc-status">${r.status === "pending" ? "Хүлээгдэж байна" : r.status === "approved" ? "Зөвшөөрсөн" : "Татгалзсан"}</span>${r.adminNote ? `<div>Тайлбар: ${escapeHtml(r.adminNote)}</div>` : ""}</div>`).join("") : '<div class="bc-note">Одоогоор хүсэлт алга.</div>';
+  } catch(e) { showMessage("cashierHistory", e.message); }
+}
+async function submitDeposit() {
+  try { const amount = Number($("depositAmount").value); const reference = $("depositReference").value.trim();
+    const r = await api("/api/cashier/deposit", { amount, reference }); showMessage("cashierMessage", r.message || "Хүсэлт илгээгдлээ."); $("depositAmount").value=""; $("depositReference").value=""; loadCashierHistory();
+  } catch(e) { showMessage("cashierMessage", e.message); }
+}
+async function submitWithdraw() {
+  try { const amount = Number($("withdrawAmount").value); const r = await api("/api/cashier/withdraw", { amount }); showMessage("withdrawMessage", r.message || "Хүсэлт илгээгдлээ."); await refreshMe(); $("withdrawAmount").value="";
+  } catch(e) { showMessage("withdrawMessage", e.message); }
+}
+async function saveProfile() {
+  try { const payload = { displayName: $("profileDisplayName").value.trim(), bankName: $("profileBankName").value.trim(), bankAccount: $("profileBankAccount").value.trim(), bankHolder: $("profileBankHolder").value.trim() };
+    const r = await api("/api/profile/update", payload); user = r.user || user; updateHeader(); showMessage("profileMessage", r.message || "Мэдээлэл хадгалагдлаа.");
+  } catch(e) { showMessage("profileMessage", e.message); }
+}
+async function loadAdminCashier() {
+  try { const d = await apiGet("/api/admin/cashier/list"); const list = d.requests || [];
+    $("adminCashierList").innerHTML = list.length ? list.map(r => `<div class="bc-request"><strong>${r.type === "deposit" ? "Цэнэглэх" : "Татах"} · ${Number(r.amount).toLocaleString()} CHIP</strong><br>Хэрэглэгч: ${escapeHtml(r.username || r.displayName || "-")}<br>Данс: ${escapeHtml(r.bankName || "-")} ${escapeHtml(r.bankAccount || "")} ${escapeHtml(r.bankHolder || "")}<br>Баримт: ${escapeHtml(r.reference || "-")}<div class="bc-actions"><button class="bc-approve" onclick="decideCashier('${r.id}','approve')">Зөвшөөрөх</button><button class="bc-reject" onclick="decideCashier('${r.id}','reject')">Татгалзах</button></div></div>`).join("") : '<div class="bc-note">Хүлээгдэж буй хүсэлт алга.</div>';
+  } catch(e) { showMessage("adminCashierList", e.message); }
+}
+async function decideCashier(requestId, decision) {
+  const note = decision === "reject" ? (prompt("Татгалзсан шалтгаан (заавал биш):") || "") : "";
+  try { const r = await api("/api/admin/cashier/decision", { requestId, decision, note }); alert(r.message || "Шийдвэр хадгалагдлаа."); loadAdminCashier(); }
+  catch(e) { alert(e.message); }
 }
 
 function closeAccountSection() {
@@ -1501,7 +1593,7 @@ async function register() {
 
   try {
     $("authMessage").textContent = "Бүртгүүлж байна...";
-    const result = await api("/api/register", { username, password });
+    const result = await api("/api/register", { username, displayName: username, password });
     acceptLogin(result);
   } catch (error) {
     $("authMessage").textContent = error.message;
