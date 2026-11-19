@@ -197,6 +197,90 @@ function authAdmin(req, res, next) {
   next();
 }
 
+// ==========================================
+// TOURNAMENTS: lobby, registration, admin controls and idempotent payouts
+// ==========================================
+app.get("/api/tournaments", authUser, async (req,res) => {
+  try {
+    const snap=await db.collection("tournaments").orderBy("createdAt","desc").limit(100).get();
+    const tournaments=[];
+    for (const d of snap.docs) {
+      const v=d.data();
+      const mine=await d.ref.collection("participants").doc(req.user.uid).get();
+      tournaments.push({id:d.id,name:v.name,description:v.description||"",mode:v.mode,entryFee:Number(v.entryFee||0),maxPlayers:Number(v.maxPlayers||0),startAt:v.startAt||null,registrationDeadline:v.registrationDeadline||null,status:v.status,prizes:v.prizes||[],participantCount:Number(v.participantCount||0),registered:mine.exists});
+    }
+    res.json({tournaments});
+  } catch(e) { res.status(500).json({message:"Тэмцээний жагсаалт ачаалж чадсангүй."}); }
+});
+app.post("/api/tournaments/:id/register", authUser, async (req,res) => {
+  try {
+    const ref=db.collection("tournaments").doc(String(req.params.id||""));
+    const result=await db.runTransaction(async tx=>{
+      const ts=await tx.get(ref); if(!ts.exists) throw new Error("Тэмцээн олдсонгүй.");
+      const t=ts.data(), participant=ref.collection("participants").doc(req.user.uid), ps=await tx.get(participant);
+      if(ps.exists) throw new Error("Та аль хэдийн бүртгүүлсэн байна.");
+      if(t.status!=="scheduled") throw new Error("Энэ тэмцээний бүртгэл хаалттай байна.");
+      if(t.registrationDeadline && Date.now()>new Date(t.registrationDeadline).getTime()) throw new Error("Бүртгэлийн хугацаа дууссан байна.");
+      if(Number(t.participantCount||0)>=Number(t.maxPlayers||0)) throw new Error("Оролцогчдын тоо дүүрсэн байна.");
+      const fee=Number(t.entryFee||0), userRef=db.collection("users").doc(req.user.uid), us=await tx.get(userRef);
+      if(!us.exists) throw new Error("Хэрэглэгч олдсонгүй.");
+      const balance=Number(us.data().chips||0); if(balance<fee) throw new Error("CHIP хүрэлцэхгүй байна.");
+      if(fee>0) tx.update(userRef,{chips:balance-fee});
+      tx.create(participant,{uid:req.user.uid,username:req.user.username||"",displayName:req.user.displayName||req.user.username||"",entryFee:fee,status:"registered",registeredAt:FieldValue.serverTimestamp()});
+      tx.update(ref,{participantCount:FieldValue.increment(1),updatedAt:FieldValue.serverTimestamp()});
+      if(fee>0) tx.create(db.collection("chipLedger").doc("tourney_entry_"+ref.id+"_"+req.user.uid),{uid:req.user.uid,username:req.user.username||"",type:"tournament_buyin",amount:-fee,tournamentId:ref.id,createdAt:FieldValue.serverTimestamp()});
+      return {fee,balance:balance-fee};
+    });
+    res.json({success:true,message:"Тэмцээнд амжилттай бүртгүүллээ.",...result});
+  } catch(e) { res.status(400).json({message:e.message||"Бүртгүүлэхэд алдаа гарлаа."}); }
+});
+app.post("/api/admin/tournaments", authUser, authAdmin, async (req,res) => {
+  try {
+    const name=String(req.body.name||"").trim(), mode=String(req.body.mode||"FREE").toUpperCase();
+    const entryFee=validAmount(req.body.entryFee)||0, maxPlayers=Number(req.body.maxPlayers||0);
+    const startAt=String(req.body.startAt||""), deadline=String(req.body.registrationDeadline||"");
+    const prizes=(Array.isArray(req.body.prizes)?req.body.prizes:[]).slice(0,3).map(validAmount);
+    if(name.length<3||name.length>70||!['FREE','BUYIN'].includes(mode)||!Number.isInteger(maxPlayers)||maxPlayers<2||maxPlayers>500||!startAt||!Number.isFinite(new Date(startAt).getTime())||!deadline||!Number.isFinite(new Date(deadline).getTime())||new Date(deadline)>=new Date(startAt)) return res.status(400).json({message:"Тэмцээний мэдээлэл буруу байна."});
+    if(mode==='FREE'&&entryFee!==0) return res.status(400).json({message:"FREE тэмцээн CHIP төлбөргүй байна."});
+    if(mode==='BUYIN'&&entryFee<1) return res.status(400).json({message:"BUY-IN тэмцээний CHIP төлбөр оруулна уу."});
+    if(!prizes.some(x=>x>0)||prizes.reduce((a,b)=>a+b,0)>1000000000) return res.status(400).json({message:"Шагналын дүн буруу байна."});
+    const ref=db.collection("tournaments").doc();
+    await ref.set({name,description:String(req.body.description||"").slice(0,500),mode,entryFee,maxPlayers,startAt,registrationDeadline:deadline,prizes,status:"scheduled",participantCount:0,createdBy:req.user.uid,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+    res.json({success:true,id:ref.id,message:"Тэмцээн үүслээ."});
+  } catch(e) { res.status(500).json({message:"Тэмцээн үүсгэхэд алдаа гарлаа."}); }
+});
+app.get("/api/admin/tournaments/:id/participants", authUser, authAdmin, async (req,res) => {
+  try { const snap=await db.collection("tournaments").doc(String(req.params.id||"")).collection("participants").orderBy("registeredAt","asc").limit(500).get(); res.json({participants:snap.docs.map(d=>({uid:d.id,...d.data()}))}); } catch(e) { res.status(500).json({message:"Оролцогчдын жагсаалт ачаалж чадсангүй."}); }
+});
+app.post("/api/admin/tournaments/:id/status", authUser, authAdmin, async (req,res) => {
+  try {
+    const status=String(req.body.status||""); if(!["scheduled","live","paused","cancelled"].includes(status)) return res.status(400).json({message:"Төлөв буруу байна."});
+    const ref=db.collection("tournaments").doc(String(req.params.id||""));
+    await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)throw new Error("Тэмцээн олдсонгүй.");if(["completed","cancelled"].includes(snap.data().status))throw new Error("Дууссан эсвэл цуцалсан тэмцээний төлөв өөрчлөхгүй.");if(status==="cancelled"&&Number(snap.data().entryFee||0)>0&&Number(snap.data().participantCount||0)>0)throw new Error("BUY-IN оролцогчтой тэмцээнийг одоогоор шууд цуцлахгүй. CHIP буцаалтын ажиллагаа шаардлагатай.");tx.update(ref,{status,updatedAt:FieldValue.serverTimestamp(),statusUpdatedBy:req.user.uid});});
+    res.json({success:true,message:"Тэмцээний төлөв шинэчлэгдлээ."});
+  } catch(e) { res.status(400).json({message:e.message||"Төлөв өөрчлөхөд алдаа гарлаа."}); }
+});
+app.post("/api/admin/tournaments/:id/settle", authUser, authAdmin, async (req,res) => {
+  try {
+    const winners=Array.isArray(req.body.winners)?req.body.winners.slice(0,3):[];
+    if(!winners.length||new Set(winners.map(w=>w&&w.uid)).size!==winners.length||winners.some(w=>!w||typeof w.uid!=="string"||!validAmount(w.amount))) return res.status(400).json({message:"Ялагч болон шагналын дүн оруулна уу."});
+    const ref=db.collection("tournaments").doc(String(req.params.id||""));
+    await db.runTransaction(async tx=>{
+      const snap=await tx.get(ref);if(!snap.exists)throw new Error("Тэмцээн олдсонгүй.");const t=snap.data();
+      if(t.status==="completed"||t.payoutCompleted===true)throw new Error("Шагналыг өмнө нь олгосон байна.");
+      if(t.status!=="live"&&t.status!=="paused")throw new Error("Зөвхөн эхэлсэн тэмцээнийг дүгнэнэ.");
+      if(winners.some((w,i)=>Number(w.amount)!==Number((t.prizes||[])[i]||0))) throw new Error("Шагналын дүн тэмцээн үүсгэхэд тохируулсан дүнтэй таарах ёстой.");
+      const refs=winners.map(w=>db.collection("users").doc(w.uid));
+      const userSnaps=[];for(const ur of refs) userSnaps.push(await tx.get(ur));
+      const participantSnaps=[];for(const w of winners) participantSnaps.push(await tx.get(ref.collection("participants").doc(w.uid)));
+      if(participantSnaps.some(x=>!x.exists))throw new Error("Ялагчдын нэг нь бүртгэлтэй оролцогч биш байна.");
+      winners.forEach((w,i)=>{if(!userSnaps[i].exists)throw new Error("Ялагчийн данс олдсонгүй.");tx.update(ref.collection("participants").doc(w.uid),{place:i+1,prize:w.amount,status:"winner"});tx.update(refs[i],{chips:FieldValue.increment(w.amount)});tx.create(db.collection("chipLedger").doc("tourney_prize_"+ref.id+"_"+w.uid),{uid:w.uid,type:"tournament_prize",amount:w.amount,tournamentId:ref.id,place:i+1,createdAt:FieldValue.serverTimestamp()});});
+      tx.update(ref,{status:"completed",payoutCompleted:true,winners:winners.map((w,i)=>({uid:w.uid,place:i+1,amount:w.amount})),completedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+    });
+    res.json({success:true,message:"Тэмцээн дуусаж, шагналууд CHIP хэлбэрээр олгогдлоо."});
+  } catch(e) { res.status(400).json({message:e.message||"Шагнал олгоход алдаа гарлаа."}); }
+});
+
 app.get("/api/history/hands", authUser, async (req, res) => {
   try {
     const snap = await db.collection("handHistory").orderBy("createdAt", "desc").limit(100).get();
