@@ -1319,6 +1319,8 @@ body:has(#authScreen:not([style*="display: none"])) {
 .poker-table[data-max-players="6"] .seat-6.seat-empty .empty-head{width:22px!important;height:22px!important;font-size:15px!important;}
 @media(max-width:700px){.poker-table[data-max-players="6"] .seat-6{left:4%!important;width:clamp(68px,18vw,82px)!important;height:58px!important;min-height:58px!important;}.poker-table[data-max-players="6"] .seat-6.seat-empty .seat-choose{min-height:58px!important;height:58px!important;}}
 
+
+.chip-shortage-inline{margin-top:10px;padding:12px;border:1px solid #805b35;border-radius:10px;background:#241b12;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.chip-shortage-inline strong{color:#f0bd69}.chip-shortage-inline span{color:#d5c6b0;font-size:12px}.chip-shortage-inline .bc-action{margin-left:auto}.chip-shortage-notice{display:none;position:fixed;z-index:10050;left:50%;bottom:24px;transform:translateX(-50%);width:min(440px,calc(100vw - 28px));padding:18px 16px 14px;border:1px solid #8a6538;border-radius:14px;background:#111b27;color:#f3eee5;box-shadow:0 16px 50px #000b}.chip-shortage-notice.show{display:block}.chip-shortage-head{font-weight:800;color:#f0bd69;font-size:15px;margin-bottom:8px}.chip-shortage-copy{font-size:13px;line-height:1.6;color:#d7dce3;padding-right:16px}.chip-shortage-notice>button:not(.chip-shortage-close){margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#d8ae5d;color:#17120a;font-weight:800;cursor:pointer}.chip-shortage-notice .chip-shortage-close{position:absolute;right:8px;top:6px;background:transparent;border:0;color:#ddd;font-size:23px;cursor:pointer}
 </style>
 </head>
 
@@ -1836,13 +1838,21 @@ function showMessage(id, message) { const el = $(id); if (el) el.textContent = m
 async function refreshMe() {
   const result = await apiGet("/api/me"); user = result.user || result; updateHeader();
 }
+function showChipShortage(required, context="Энэ үйлдэл"){
+  const balance=getBalance();
+  const missing=Math.max(0,Number(required||0)-balance);
+  let box=$("chipShortageNotice");
+  if(!box){box=document.createElement("div");box.id="chipShortageNotice";box.className="chip-shortage-notice";document.body.appendChild(box);}
+  box.innerHTML=`<div class="chip-shortage-head">◈ CHIP үлдэгдэл хүрэлцэхгүй байна</div><div class="chip-shortage-copy">${escapeHtml(context)} хийхэд <strong>${Number(required||0).toLocaleString()} CHIP</strong> хэрэгтэй. Таны үлдэгдэл <strong>${balance.toLocaleString()} CHIP</strong>, дутуу нь <strong>${missing.toLocaleString()} CHIP</strong>.</div><button type="button" onclick="openAccountSection('cashier');document.getElementById('chipShortageNotice')?.remove()">CHIP ЦЭНЭГЛЭХ</button><button type="button" class="chip-shortage-close" aria-label="Хаах" onclick="document.getElementById('chipShortageNotice')?.remove()">×</button>`;
+  box.classList.add("show");
+}
 async function loadTournaments(){
   const target=$("tournamentList"); if(!target)return;
-  try{const d=await apiGet("/api/tournaments"), rows=d.tournaments||[];
-    target.innerHTML=rows.length?rows.map(t=>`<div class="bc-request"><strong>${escapeHtml(t.name||"Tournament")}</strong> · ${t.mode==="FREE"?"FREE":Number(t.entryFee||0).toLocaleString()+" CHIP BUY-IN"}<br>Эхлэх: ${t.startAt?new Date(t.startAt).toLocaleString("mn-MN"):"-"}<br>Оролцогч: ${Number(t.participantCount||0)} / ${Number(t.maxPlayers||0)}<br>Шагнал: ${calculateTournamentAwards(t).map((x,i)=>`${i+1}-р ${Number(x).toLocaleString()}`).join(" / ")} CHIP<br>Төлөв: ${escapeHtml(t.status||"")}<br>${t.registered?'<span class="bc-status">БҮРТГҮҮЛСЭН</span>':t.status==="scheduled"?`<button class="bc-action" onclick="registerTournament('${escapeHtml(t.id)}')">ОРОЛЦОХ</button>`:""}${user?.isAdmin?`<div class="admin-chip-controls"><button class="admin-chip-add" onclick="setTournamentStatus('${escapeHtml(t.id)}','live')">ЭХЛҮҮЛЭХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','paused')">ТҮР ЗОГСООХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','cancelled')">ЦУЦЛАХ</button><button class="bc-action" onclick='loadTournamentParticipants("${escapeHtml(t.id)}",${JSON.stringify(t.prizes||[])},${JSON.stringify(t.prizeConfig||null)},${Number(t.entryFee||0)},${Number(t.participantCount||0)})'>ОРОЛЦОГЧИД / ШАГНАЛ</button><div id="tourParticipants_${escapeHtml(t.id)}"></div></div>`:""}</div>`).join(""):'<div class="bc-note">Одоогоор тэмцээн алга.</div>';
+  try{const d=await apiGet("/api/tournaments"), rows=d.tournaments||[];window.__tournaments=rows;
+    target.innerHTML=rows.length?rows.map(t=>{const fee=Number(t.entryFee||0), balance=getBalance(), short=t.mode!=="FREE"&&!t.registered&&balance<fee;return `<div class="bc-request"><strong>${escapeHtml(t.name||"Tournament")}</strong> · ${t.mode==="FREE"?"FREE":fee.toLocaleString()+" CHIP BUY-IN"}<br>Эхлэх: ${t.startAt?new Date(t.startAt).toLocaleString("mn-MN"):"-"}<br>Оролцогч: ${Number(t.participantCount||0)} / ${Number(t.maxPlayers||0)}<br>Шагнал: ${calculateTournamentAwards(t).map((x,i)=>`${i+1}-р ${Number(x).toLocaleString()}`).join(" / ")} CHIP<br>Төлөв: ${escapeHtml(t.status||"")}<br>${t.registered?'<span class="bc-status">БҮРТГҮҮЛСЭН</span>':t.status==="scheduled"?(short?`<div class="chip-shortage-inline"><strong>CHIP хүрэлцэхгүй</strong><span>Хэрэгтэй: ${fee.toLocaleString()} · Байгаа: ${balance.toLocaleString()} CHIP</span><button class="bc-action" onclick="openAccountSection('cashier')">CHIP ЦЭНЭГЛЭХ</button></div>`:`<button class="bc-action" onclick="registerTournament('${escapeHtml(t.id)}')">ОРОЛЦОХ</button>`):""}${user?.isAdmin?`<div class="admin-chip-controls"><button class="admin-chip-add" onclick="setTournamentStatus('${escapeHtml(t.id)}','live')">ЭХЛҮҮЛЭХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','paused')">ТҮР ЗОГСООХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','cancelled')">ЦУЦЛАХ</button><button class="bc-action" onclick='loadTournamentParticipants("${escapeHtml(t.id)}",${JSON.stringify(t.prizes||[])},${JSON.stringify(t.prizeConfig||null)},${Number(t.entryFee||0)},${Number(t.participantCount||0)})'>ОРОЛЦОГЧИД / ШАГНАЛ</button><div id="tourParticipants_${escapeHtml(t.id)}"></div></div>`:""}</div>`}).join(""):'<div class="bc-note">Одоогоор тэмцээн алга.</div>';
   }catch(e){target.textContent=e.message;}
 }
-async function registerTournament(id){if(!confirm("Энэ тэмцээнд бүртгүүлэх үү? BUY-IN бол CHIP хасагдана."))return;try{const r=await api(`/api/tournaments/${encodeURIComponent(id)}/register`,{});alert(r.message);await refreshMe();loadTournaments();}catch(e){alert(e.message);}}
+async function registerTournament(id){const t=(window.__tournaments||[]).find(x=>x.id===id);if(t&&t.mode!=="FREE"&&getBalance()<Number(t.entryFee||0)){showChipShortage(Number(t.entryFee||0),"Тэмцээнд бүртгүүлэх");return;}if(!confirm("Энэ тэмцээнд бүртгүүлэх үү? BUY-IN бол CHIP хасагдана."))return;try{const r=await api(`/api/tournaments/${encodeURIComponent(id)}/register`,{});alert(r.message);await refreshMe();loadTournaments();}catch(e){if(/CHIP.*хүрэлцэхгүй|үлдэгдэл хүрэлцэхгүй/i.test(e.message||"")){const t=(window.__tournaments||[]).find(x=>x.id===id);showChipShortage(Number(t?.entryFee||0),"Тэмцээнд бүртгүүлэх");}else alert(e.message);}}
 function renderTournamentPrizeInputs(){
   const box=$("tourPrizeInputs"); if(!box)return;
   const count=Math.max(1,Math.min(10,Number($("tourPlaceCount")?.value||3)));
@@ -2419,7 +2429,7 @@ function sitAtSeat(seatIndex) {
   }
   const min = Number(table.minBuyIn || 0);
   const max = Number(table.maxBuyIn || min);
-  if(getBalance()<min){alert(`Энэ ширээнд суухад хамгийн багадаа ${min.toLocaleString()} CHIP хэрэгтэй. Таны үлдэгдэл хүрэлцэхгүй байна.`);return;}
+  if(getBalance()<min){showChipShortage(min,"Ширээнд суух");return;}
   openBuyInModal(seatIndex,min,max,table);
 }
 
@@ -2441,7 +2451,7 @@ function confirmBuyIn(){
   const table=lastState?.table||lastState||{}; const min=Number(table.minBuyIn||0); const max=Number(table.maxBuyIn||min);
   const buyIn=Math.floor(Number(String($("buyInAmount").value||"").replace(/,/g,"")));
   if(!Number.isSafeInteger(buyIn)||buyIn<min||buyIn>max){alert(`Buy-in ${min.toLocaleString()}–${max.toLocaleString()} CHIP байх ёстой.`);return;}
-  if(buyIn>getBalance()){alert("Таны CHIP хүрэлцэхгүй байна. Касс хэсгээс цэнэглэнэ үү.");return;}
+  if(buyIn>getBalance()){showChipShortage(buyIn,"Ширээнд суух");return;}
   const seat=pendingSeatIndex;
   socket.emit("table:sit", { seat, buyIn }, result => {
     if (!result || result.success === false) {
