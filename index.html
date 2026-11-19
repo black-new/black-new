@@ -1596,10 +1596,6 @@ async function api(path, data = {}) {
   return result;
 }
 
-function isAdminUser() {
-  return user?.isAdmin === true || String(user?.role || "").toLowerCase() === "admin";
-}
-
 function getUsername() {
   const rawName = String(user?.username || user?.name || "Тоглогч").trim();
   // Keep the internal admin account name out of the public header/profile UI.
@@ -1665,21 +1661,8 @@ function openAccountSection(section) {
 
   if (section === "tournaments") {
     title.textContent = "BLACKCLUB · TOURNAMENT";
-    content.innerHTML = `<div class="cashier-card"><div class="bc-note">FREE болон CHIP төлбөртэй BUY-IN тэмцээнүүд. Бүртгэл, CHIP төлбөр сервер дээр баталгаажна.</div><button class="bc-action" onclick="loadTournaments()">↻ ТЭМЦЭЭН ШИНЭЧЛЭХ</button><div id="tournamentList">Тэмцээн ачаалж байна...</div></div>
-      <div class="cashier-card tournament-admin-card"><h3>🏆 ТЭМЦЭЭНИЙ УДИРДЛАГА</h3>
-      ${isAdminUser() ? `<div class="bc-note">Админ горим идэвхтэй. Тэмцээн үүсгэх, эхлүүлэх, түр зогсоох, цуцлах болон ялагчдад CHIP олгох боломжтой.</div>
-      <h4>ШИНЭ ТЭМЦЭЭН ҮҮСГЭХ</h4>
-      <label class="bc-field">Нэр<input id="tourName" maxlength="70" placeholder="BLACKCLUB WEEKLY"></label>
-      <label class="bc-field">Төрөл<select id="tourMode"><option value="FREE">FREE · Үнэгүй</option><option value="BUYIN">BUY-IN · CHIP төлбөртэй</option></select></label>
-      <label class="bc-field">Оролцох CHIP<input id="tourFee" type="number" min="0" value="0"></label>
-      <label class="bc-field">Дээд оролцогч<input id="tourMax" type="number" min="2" max="500" value="30"></label>
-      <label class="bc-field">Эхлэх цаг<input id="tourStart" type="datetime-local"></label>
-      <label class="bc-field">Бүртгэл хаах цаг<input id="tourDeadline" type="datetime-local"></label>
-      <label class="bc-field">1-р байрны шагнал CHIP<input id="tourPrize1" type="number" min="0" value="0"></label>
-      <label class="bc-field">2-р байрны шагнал CHIP<input id="tourPrize2" type="number" min="0" value="0"></label>
-      <label class="bc-field">3-р байрны шагнал CHIP<input id="tourPrize3" type="number" min="0" value="0"></label>
-      <button class="bc-action" onclick="createTournament()">ТЭМЦЭЭН ҮҮСГЭХ</button><div id="tourAdminMessage" class="bc-note"></div>` : `<div class="bc-note">Тэмцээний удирдлагын хэсэг энд байна. Тэмцээн үүсгэх болон удирдах үйлдэл хийхийн тулд энэ хэрэглэгчид сервер дээр админ эрх олгосон байх шаардлагатай.</div>`}
-      </div>`;
+    content.innerHTML = `<div class="cashier-card"><div class="bc-note">FREE болон CHIP төлбөртэй BUY-IN тэмцээнүүд. Бүртгэл, CHIP төлбөр сервер дээр баталгаажна.</div><button class="bc-action" onclick="loadTournaments()">↻ ТЭМЦЭЭН ШИНЭЧЛЭХ</button><div id="tournamentList">Тэмцээн ачаалж байна...</div></div>${user?.isAdmin?`<div class="cashier-card"><h3>ШИНЭ ТЭМЦЭЭН ҮҮСГЭХ</h3><label class="bc-field">Нэр<input id="tourName" maxlength="70" placeholder="BLACKCLUB WEEKLY"></label><label class="bc-field">Төрөл<select id="tourMode" onchange="if(this.value==='FREE'&&$('tourPrizeMode'))$('tourPrizeMode').value='fixed';renderTournamentPrizeInputs()"><option value="FREE">FREE · Үнэгүй</option><option value="BUYIN">BUY-IN · CHIP төлбөртэй</option></select></label><label class="bc-field">Оролцох CHIP<input id="tourFee" type="number" min="0" value="0"></label><label class="bc-field">Дээд оролцогч<input id="tourMax" type="number" min="2" max="500" value="30"></label><label class="bc-field">Эхлэх цаг<input id="tourStart" type="datetime-local"></label><label class="bc-field">Бүртгэл хаах цаг<input id="tourDeadline" type="datetime-local"></label><label class="bc-field">Шагналын төрөл<select id="tourPrizeMode" onchange="renderTournamentPrizeInputs()"><option value="percent">Хувиар хуваарилах (BUY-IN сангаас)</option><option value="fixed">Тогтмол CHIP дүн</option></select></label><label class="bc-field">Шагнал авах байрны тоо<select id="tourPlaceCount" onchange="renderTournamentPrizeInputs()">${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${i===2?'selected':''}>${i+1} байр</option>`).join('')}</select></label><div id="tourPrizeInputs"></div><div class="bc-note">BUY-IN үед бодит оролцогчдын төлсөн CHIP-ээр шагналын сан тооцно. Байрны хувь + зохион байгуулагч + нөөц = 100% байх ёстой.</div><label class="bc-field">Зохион байгуулагчийн хувь %<input id="tourOrganizerPercent" type="number" min="0" max="100" value="20"></label><label class="bc-field">Нөөц санд үлдэх хувь %<input id="tourReservePercent" type="number" min="0" max="100" value="10"></label><button class="bc-action" onclick="createTournament()">ТЭМЦЭЭН ҮҮСГЭХ</button><div id="tourAdminMessage" class="bc-note"></div></div>`:''}`;
+    renderTournamentPrizeInputs();
     loadTournaments();
   }
 
@@ -1856,32 +1839,62 @@ async function refreshMe() {
 async function loadTournaments(){
   const target=$("tournamentList"); if(!target)return;
   try{const d=await apiGet("/api/tournaments"), rows=d.tournaments||[];
-    target.innerHTML=rows.length?rows.map(t=>`<div class="bc-request"><strong>${escapeHtml(t.name||"Tournament")}</strong> · ${t.mode==="FREE"?"FREE":Number(t.entryFee||0).toLocaleString()+" CHIP BUY-IN"}<br>Эхлэх: ${t.startAt?new Date(t.startAt).toLocaleString("mn-MN"):"-"}<br>Оролцогч: ${Number(t.participantCount||0)} / ${Number(t.maxPlayers||0)}<br>Шагнал: ${(t.prizes||[]).map(x=>Number(x).toLocaleString()).join(" / ")} CHIP<br>Төлөв: ${escapeHtml(t.status||"")}<br>${t.registered?'<span class="bc-status">БҮРТГҮҮЛСЭН</span>':t.status==="scheduled"?`<button class="bc-action" onclick="registerTournament('${escapeHtml(t.id)}')">ОРОЛЦОХ</button>`:""}${isAdminUser()?`<div class="admin-chip-controls"><button class="admin-chip-add" onclick="setTournamentStatus('${escapeHtml(t.id)}','live')">ЭХЛҮҮЛЭХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','paused')">ТҮР ЗОГСООХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','cancelled')">ЦУЦЛАХ</button><button class="bc-action" onclick='loadTournamentParticipants("${escapeHtml(t.id)}",${JSON.stringify(t.prizes||[])})'>ОРОЛЦОГЧИД / ШАГНАЛ</button><div id="tourParticipants_${escapeHtml(t.id)}"></div></div>`:""}</div>`).join(""):'<div class="bc-note">Одоогоор тэмцээн алга.</div>';
+    target.innerHTML=rows.length?rows.map(t=>`<div class="bc-request"><strong>${escapeHtml(t.name||"Tournament")}</strong> · ${t.mode==="FREE"?"FREE":Number(t.entryFee||0).toLocaleString()+" CHIP BUY-IN"}<br>Эхлэх: ${t.startAt?new Date(t.startAt).toLocaleString("mn-MN"):"-"}<br>Оролцогч: ${Number(t.participantCount||0)} / ${Number(t.maxPlayers||0)}<br>Шагнал: ${calculateTournamentAwards(t).map((x,i)=>`${i+1}-р ${Number(x).toLocaleString()}`).join(" / ")} CHIP<br>Төлөв: ${escapeHtml(t.status||"")}<br>${t.registered?'<span class="bc-status">БҮРТГҮҮЛСЭН</span>':t.status==="scheduled"?`<button class="bc-action" onclick="registerTournament('${escapeHtml(t.id)}')">ОРОЛЦОХ</button>`:""}${user?.isAdmin?`<div class="admin-chip-controls"><button class="admin-chip-add" onclick="setTournamentStatus('${escapeHtml(t.id)}','live')">ЭХЛҮҮЛЭХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','paused')">ТҮР ЗОГСООХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','cancelled')">ЦУЦЛАХ</button><button class="bc-action" onclick='loadTournamentParticipants("${escapeHtml(t.id)}",${JSON.stringify(t.prizes||[])},${JSON.stringify(t.prizeConfig||null)},${Number(t.entryFee||0)},${Number(t.participantCount||0)})'>ОРОЛЦОГЧИД / ШАГНАЛ</button><div id="tourParticipants_${escapeHtml(t.id)}"></div></div>`:""}</div>`).join(""):'<div class="bc-note">Одоогоор тэмцээн алга.</div>';
   }catch(e){target.textContent=e.message;}
 }
 async function registerTournament(id){if(!confirm("Энэ тэмцээнд бүртгүүлэх үү? BUY-IN бол CHIP хасагдана."))return;try{const r=await api(`/api/tournaments/${encodeURIComponent(id)}/register`,{});alert(r.message);await refreshMe();loadTournaments();}catch(e){alert(e.message);}}
-async function createTournament(){try{const payload={name:$("tourName").value.trim(),mode:$("tourMode").value,entryFee:Number($("tourFee").value||0),maxPlayers:Number($("tourMax").value),startAt:new Date($("tourStart").value).toISOString(),registrationDeadline:new Date($("tourDeadline").value).toISOString(),prizes:[$("tourPrize1").value,$("tourPrize2").value,$("tourPrize3").value].map(Number)};const r=await api("/api/admin/tournaments",payload);showMessage("tourAdminMessage",r.message);loadTournaments();}catch(e){showMessage("tourAdminMessage",e.message||"Эхлэх болон бүртгэл хаах цагийг зөв оруулна уу.");}}
+function renderTournamentPrizeInputs(){
+  const box=$("tourPrizeInputs"); if(!box)return;
+  const count=Math.max(1,Math.min(10,Number($("tourPlaceCount")?.value||3)));
+  const mode=$("tourPrizeMode")?.value||"percent";
+  box.innerHTML=Array.from({length:count},(_,i)=>`<label class="bc-field">${i+1}-р байрны ${mode==="percent"?"хувь %":"шагнал CHIP"}<input class="tour-prize-value" type="number" min="0" ${mode==="percent"?"max=100":""} step="1" value="${mode==="percent"?[40,20,10,5,3,2,1,1,1,1][i]||0:0}"></label>`).join("");
+}
+function getTournamentPrizeConfig(){
+  const mode=$("tourPrizeMode")?.value||"percent";
+  const values=[...document.querySelectorAll(".tour-prize-value")].map(x=>Number(x.value||0));
+  return {mode,values,organizerPercent:mode==="percent"?Number($("tourOrganizerPercent")?.value||0):0,reservePercent:mode==="percent"?Number($("tourReservePercent")?.value||0):0};
+}
+function calculateTournamentAwards(t){
+  const cfg=t.prizeConfig||{mode:"fixed",values:t.prizes||[],organizerPercent:0,reservePercent:0};
+  const pool=Number(t.entryFee||0)*Number(t.participantCount||0);
+  if(cfg.mode==="percent") return (cfg.values||[]).map(v=>Math.floor(pool*Number(v||0)/100));
+  return (cfg.values||t.prizes||[]).map(Number);
+}
+async function createTournament(){
+  try{
+    const cfg=getTournamentPrizeConfig();
+    if(!cfg.values.length||cfg.values.some(x=>!Number.isFinite(x)||x<0))throw new Error("Байрны шагналын утгыг зөв оруулна уу.");
+    if(cfg.mode==="percent" && $("tourMode").value!=="BUYIN")throw new Error("Хувиар шагнах тохиргоо зөвхөн BUY-IN тэмцээнд ажиллана. FREE тэмцээнд тогтмол CHIP сонгоно уу.");
+    if(cfg.mode==="percent" && cfg.values.reduce((a,b)=>a+b,0)+cfg.organizerPercent+cfg.reservePercent!==100)throw new Error("Байрны хувь, зохион байгуулагч, нөөцийн нийлбэр яг 100% байх ёстой.");
+    const start=$("tourStart").value, deadline=$("tourDeadline").value;
+    const payload={name:$("tourName").value.trim(),mode:$("tourMode").value,entryFee:Number($("tourFee").value||0),maxPlayers:Number($("tourMax").value),startAt:new Date(start).toISOString(),registrationDeadline:new Date(deadline).toISOString(),prizeConfig:cfg,prizes:cfg.mode==="fixed"?cfg.values:[]};
+    const r=await api("/api/admin/tournaments",payload);showMessage("tourAdminMessage",r.message);loadTournaments();
+  }catch(e){showMessage("tourAdminMessage",e.message||"Мэдээллээ шалгана уу.");}
+}
 async function setTournamentStatus(id,status){try{const r=await api(`/api/admin/tournaments/${encodeURIComponent(id)}/status`,{status});alert(r.message);loadTournaments();}catch(e){alert(e.message);}}
-async function loadTournamentParticipants(id,prizes){
+async function loadTournamentParticipants(id,prizes,prizeConfig,entryFee,participantCount){
   const target=$(`tourParticipants_${id}`); if(!target)return;
   try{
     const d=await apiGet(`/api/admin/tournaments/${encodeURIComponent(id)}/participants`);
     const participants=d.participants||[];
     if(!participants.length){target.innerHTML='<div class="bc-note">Оролцогч бүртгэгдээгүй байна.</div>';return;}
+    const cfg=prizeConfig||{mode:"fixed",values:prizes||[]};
+    const pool=Number(entryFee||0)*participants.length;
+    const awards=cfg.mode==="percent"?(cfg.values||[]).map(v=>Math.floor(pool*Number(v||0)/100)):(cfg.values||prizes||[]).map(Number);
     const options=participants.map(p=>`<option value="${escapeHtml(p.uid)}">${escapeHtml(p.displayName||p.username||p.uid)} · ${escapeHtml(p.uid)}</option>`).join('');
-    const slots=(prizes||[]).map((amount,i)=>({amount:Number(amount||0),i})).filter(x=>x.amount>0);
-    target.innerHTML=`<div class="bc-request"><strong>Бүртгэлтэй оролцогч: ${participants.length}</strong>${participants.map(p=>`<div>${escapeHtml(p.displayName||p.username||p.uid)} · ${escapeHtml(p.uid)}</div>`).join('')}<hr>${slots.map(x=>`<label class="bc-field">${x.i+1}-р байр · ${x.amount.toLocaleString()} CHIP<select id="tourWinner_${id}_${x.i}">${options}</select></label>`).join('')}<button class="bc-action" onclick='settleTournament("${escapeHtml(id)}",${JSON.stringify(prizes||[])})'>ЯЛАГЧ ТОДРУУЛЖ CHIP ОЛГОХ</button><div id="tourSettleMessage_${id}" class="bc-note"></div></div>`;
+    const slots=awards.map((amount,i)=>({amount:Number(amount||0),i})).filter(x=>x.amount>0);
+    const share=cfg.mode==="percent"?`<div class="bc-note">Шагналын сан: ${pool.toLocaleString()} CHIP · Зохион байгуулагч: ${Math.floor(pool*Number(cfg.organizerPercent||0)/100).toLocaleString()} CHIP (${Number(cfg.organizerPercent||0)}%) · Нөөц: ${Math.floor(pool*Number(cfg.reservePercent||0)/100).toLocaleString()} CHIP (${Number(cfg.reservePercent||0)}%)</div>`:"";
+    target.innerHTML=`<div class="bc-request"><strong>Бүртгэлтэй оролцогч: ${participants.length}</strong>${share}${participants.map(p=>`<div>${escapeHtml(p.displayName||p.username||p.uid)} · ${escapeHtml(p.uid)}</div>`).join('')}<hr>${slots.map(x=>`<label class="bc-field">${x.i+1}-р байр · ${x.amount.toLocaleString()} CHIP<select id="tourWinner_${id}_${x.i}">${options}</select></label>`).join('')}<button class="bc-action" onclick='settleTournament("${escapeHtml(id)}",${JSON.stringify(awards)})'>ЯЛАГЧ ТОДРУУЛЖ CHIP ОЛГОХ</button><div id="tourSettleMessage_${id}" class="bc-note"></div></div>`;
   }catch(e){target.textContent=e.message;}
 }
 async function settleTournament(id,prizes){
   const slots=(prizes||[]).map((amount,i)=>({amount:Number(amount||0),i})).filter(x=>x.amount>0);
-  const winners=slots.map(x=>({uid:$(`tourWinner_${id}_${x.i}`)?.value||"",amount:x.amount}));
+  const winners=slots.map(x=>({uid:$(`tourWinner_${id}_${x.i}`)?.value||"",amount:x.amount,place:x.i+1}));
   if(winners.some(w=>!w.uid)){showMessage(`tourSettleMessage_${id}`,"Ялагч бүрийг сонгоно уу.");return;}
-  if(!confirm("Сонгосон ялагчдад тохируулсан CHIP шагналыг олгох уу? Энэ үйлдэл буцаагдахгүй."))return;
+  if(!confirm("Сонгосон ялагчдад CHIP шагналыг олгох уу? Энэ үйлдэл буцаагдахгүй."))return;
   try{const r=await api(`/api/admin/tournaments/${encodeURIComponent(id)}/settle`,{winners});showMessage(`tourSettleMessage_${id}`,r.message);loadTournaments();}
   catch(e){showMessage(`tourSettleMessage_${id}`,e.message);}
 }
-
 
 async function loadCashierInfo() {
   try {
