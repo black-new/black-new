@@ -1213,8 +1213,8 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
 // POKER TABLES
 // ==========================================
 
-// Blind түвшин бүрт Texas 3 ширээ, 9 суудалтай; Omaha 2 ширээ, 6 суудалтай.
-// Omaha нь 6 хувийн хөзөртэй (6-card Omaha) бөгөөд яг 2 хувийн + 3 нийтийн хөзөр ашиглана.
+// BLACKCLUB: 7 blind түвшин тус бүрт Omaha 9 суудал, Omaha 6 суудал,
+// Texas Hold’em 6 суудалтай тус бүр нэг ширээ = нийт 21 ширээ.
 const STAKES = [
   [100, 200], [250, 500], [500, 1000], [1000, 2000],
   [2500, 5000], [5000, 10000], [10000, 20000]
@@ -1222,22 +1222,22 @@ const STAKES = [
 const MIN_BUY_IN_BY_BIG_BLIND = { 200: 5000, 500: 7500, 1000: 10000, 2000: 20000, 5000: 50000, 10000: 100000, 20000: 250000 };
 const TABLE_CONFIG = [];
 for (const [smallBlind, bigBlind] of STAKES) {
-  for (const type of ["texas", "omaha"]) {
-    const copies = type === "omaha" ? 2 : 3;
-    for (let copy = 1; copy <= copies; copy++) {
-      const typeName = type === "texas" ? "HOLD'EM" : "OMAHA 6-CARD";
-      const id = `${type.toUpperCase()}_${smallBlind}_${bigBlind}_${copy}`;
-      TABLE_CONFIG.push({
-        id,
-        name: `${typeName} ${smallBlind.toLocaleString("en-US")}/${bigBlind.toLocaleString("en-US")} · ${copy}`,
-        type,
-        smallBlind,
-        bigBlind,
-        minBuyIn: MIN_BUY_IN_BY_BIG_BLIND[bigBlind] || bigBlind * 25,
-        maxBuyIn: bigBlind * 250,
-        maxPlayers: type === "omaha" ? 6 : 9
-      });
-    }
+  for (const spec of [
+    { type: "omaha", maxPlayers: 9, suffix: "9", label: "OMAHA 4-CARD · 9 MAX" },
+    { type: "omaha", maxPlayers: 6, suffix: "6", label: "OMAHA 4-CARD · 6 MAX" },
+    { type: "texas", maxPlayers: 6, suffix: "6", label: "TEXAS HOLD’EM · 6 MAX" }
+  ]) {
+    const id = `${spec.type.toUpperCase()}${spec.suffix}_${smallBlind}_${bigBlind}`;
+    TABLE_CONFIG.push({
+      id,
+      name: `${spec.label} ${smallBlind.toLocaleString("en-US")}/${bigBlind.toLocaleString("en-US")}`,
+      type: spec.type,
+      smallBlind,
+      bigBlind,
+      minBuyIn: MIN_BUY_IN_BY_BIG_BLIND[bigBlind] || bigBlind * 25,
+      maxBuyIn: bigBlind * 250,
+      maxPlayers: spec.maxPlayers
+    });
   }
 }
 
@@ -1286,6 +1286,7 @@ function getPublicTable(table, viewerUid = null) {
       bet: player.bet || 0,
       seat: Number.isInteger(player.seat) ? player.seat : index,
       online: player.online !== false,
+      connectionLabel: player.online === false ? "Холболт салсан" : "",
       folded: !!player.folded,
       allIn: !!player.allIn,
       cards: (viewerUid && player.uid === viewerUid) || (table.street === "showdown" && !player.folded) ? (player.cards || []) : []
@@ -1455,7 +1456,7 @@ function evaluatePlayer(table, player) {
   if (board.length !== 5) return [0];
   let pool;
   if (table.type === "omaha") {
-    if (player.cards.length !== 6) return [0];
+    if (player.cards.length !== 4) return [0];
     const scores=[];
     for (const hole of combinations(player.cards,2)) for (const community of combinations(board,3)) scores.push(scoreFive([...hole,...community]));
     return scores.sort((a,b)=>compareScores(b,a))[0] || [0];
@@ -1531,6 +1532,15 @@ function finishHand(table, forcedWinner = null) {
   batch.commit().then(async()=>{
     if (jackpotContribution > 0) await db.collection("casinoStats").doc("global").set({ jackpotPool:FieldValue.increment(jackpotContribution), totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
     else if (rake > 0) await db.collection("casinoStats").doc("global").set({ totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
+  }).then(async()=>{
+    const leaving = table.players.filter(p => p.leaveAfterHand);
+    for (const player of leaving) {
+      try {
+        await refundPlayerChips(player.uid, Math.max(0, Number(player.chips || 0)));
+        removePlayerFromTable(table, player.uid);
+      } catch (err) { console.error("Leaving player stack refund:", err); }
+    }
+    if (leaving.length) { sendTableUpdate(table); sendLobby(); }
   }).catch(err=>console.error("Hand/rake persistence:",err));
   sendTableUpdate(table); sendLobby();
 }
@@ -1576,10 +1586,12 @@ function startHand(table) {
   if (eligible.length<2 || table.handStarted) return false;
   table.deck=makeDeck(); table.communityCards=[]; table.pot=0; table.currentBet=0;
   table.handStarted=true; table.street="preflop"; table.handNumber+=1; table.lastResult=null; table.lastRaiseSize=table.bigBlind;
+  db.collection("tableCounters").doc(table.id).set({ handNumber: table.handNumber, updatedAt: FieldValue.serverTimestamp() }, { merge: true })
+    .catch(err => console.error("Hand counter persistence:", err));
   table.dealerIndex=(table.dealerIndex+1)%table.players.length;
   for (const p of table.players) { p.folded=p.online===false||p.chips<=0; p.bet=0; p.totalBet=0; p.acted=false; p.allIn=false; p.cards=[]; }
   const active=table.players.filter(p=>!p.folded);
-  const holeCount=table.type==="omaha"?6:2;
+  const holeCount=table.type==="omaha"?4:2;
   for(let n=0;n<holeCount;n++) for(const p of active) p.cards.push(table.deck.pop());
   const dealer=table.dealerIndex;
   let sbIndex,bbIndex;
@@ -1845,9 +1857,14 @@ io.on("connection", socket => {
       if (!table) return reply({ success: false, message: "Ширээ олдсонгүй." });
       const player = table.players.find(p => p.uid === session.uid);
       if (player && table.handStarted) {
-        return reply({ success: false, message: "Тоглолт дууссаны дараа ширээнээс гараарай." });
-      }
-      if (player) {
+        // Player may leave during a hand: fold them, keep their remaining stack
+        // on the table until settlement, then return it safely to their wallet.
+        player.online = false;
+        player.folded = true;
+        player.acted = true;
+        player.leaveAfterHand = true;
+        if (table.players[table.currentTurn]?.uid === session.uid) advanceTurnOrStreet(table);
+      } else if (player) {
         await refundPlayerChips(session.uid, player.chips);
         removePlayerFromTable(table, session.uid);
       }
@@ -1855,7 +1872,7 @@ io.on("connection", socket => {
       socketUsers.delete(socket.id);
       sendTableUpdate(table);
       sendLobby();
-      reply({ success: true });
+      reply({ success: true, leavingDuringHand: !!(player && table.handStarted) });
     } catch (error) {
       reply({ success: false, message: error.message || "Ширээнээс гарахад алдаа гарлаа." });
     }
@@ -1960,6 +1977,19 @@ app.get("/health", (req, res) => {
 // SERVER START
 // ==========================================
 
-server.listen(PORT, () => {
-  console.log(`BLACKCLUB Poker server running on port ${PORT}`);
+async function loadTableHandCounters() {
+  await Promise.all([...tables.values()].map(async table => {
+    try {
+      const snap = await db.collection("tableCounters").doc(table.id).get();
+      if (snap.exists) table.handNumber = Math.max(0, Number(snap.data().handNumber || 0));
+    } catch (error) {
+      console.error(`Table counter load failed (${table.id}):`, error.message);
+    }
+  }));
+}
+
+loadTableHandCounters().finally(() => {
+  server.listen(PORT, () => {
+    console.log(`BLACKCLUB Poker server running on port ${PORT}`);
+  });
 });
