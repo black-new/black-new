@@ -207,7 +207,7 @@ app.get("/api/tournaments", authUser, async (req,res) => {
     for (const d of snap.docs) {
       const v=d.data();
       const mine=await d.ref.collection("participants").doc(req.user.uid).get();
-      tournaments.push({id:d.id,name:v.name,description:v.description||"",mode:v.mode,entryFee:Number(v.entryFee||0),maxPlayers:Number(v.maxPlayers||0),startAt:v.startAt||null,registrationDeadline:v.registrationDeadline||null,status:v.status,prizes:v.prizes||[],prizeConfig:v.prizeConfig||null,participantCount:Number(v.participantCount||0),registered:mine.exists});
+      tournaments.push({id:d.id,name:v.name,description:v.description||"",mode:v.mode,entryFee:Number(v.entryFee||0),maxPlayers:Number(v.maxPlayers||0),startAt:v.startAt||null,registrationDeadline:v.registrationDeadline||null,status:v.status,prizes:v.prizes||[],participantCount:Number(v.participantCount||0),registered:mine.exists});
     }
     res.json({tournaments});
   } catch(e) { res.status(500).json({message:"Тэмцээний жагсаалт ачаалж чадсангүй."}); }
@@ -239,22 +239,13 @@ app.post("/api/admin/tournaments", authUser, authAdmin, async (req,res) => {
     const name=String(req.body.name||"").trim(), mode=String(req.body.mode||"FREE").toUpperCase();
     const entryFee=validAmount(req.body.entryFee)||0, maxPlayers=Number(req.body.maxPlayers||0);
     const startAt=String(req.body.startAt||""), deadline=String(req.body.registrationDeadline||"");
-    const rawCfg=req.body.prizeConfig||{}, prizeMode=String(rawCfg.mode||"fixed");
-    const rawValues=(Array.isArray(rawCfg.values)?rawCfg.values:(Array.isArray(req.body.prizes)?req.body.prizes:[])).slice(0,10);
-    const values=rawValues.map(v=>prizeMode==="percent"?Number(v):validAmount(v));
-    const organizerPercent=Number(rawCfg.organizerPercent||0), reservePercent=Number(rawCfg.reservePercent||0);
-    const prizeConfig={mode:prizeMode,values,organizerPercent,reservePercent};
+    const prizes=(Array.isArray(req.body.prizes)?req.body.prizes:[]).slice(0,3).map(validAmount);
     if(name.length<3||name.length>70||!['FREE','BUYIN'].includes(mode)||!Number.isInteger(maxPlayers)||maxPlayers<2||maxPlayers>500||!startAt||!Number.isFinite(new Date(startAt).getTime())||!deadline||!Number.isFinite(new Date(deadline).getTime())||new Date(deadline)>=new Date(startAt)) return res.status(400).json({message:"Тэмцээний мэдээлэл буруу байна."});
     if(mode==='FREE'&&entryFee!==0) return res.status(400).json({message:"FREE тэмцээн CHIP төлбөргүй байна."});
     if(mode==='BUYIN'&&entryFee<1) return res.status(400).json({message:"BUY-IN тэмцээний CHIP төлбөр оруулна уу."});
-    if(!['fixed','percent'].includes(prizeMode)||!values.length||values.some(x=>!Number.isSafeInteger(x)||x<=0)) return res.status(400).json({message:"Шагналын байр болон дүн буруу байна."});
-    if(prizeMode==='percent'){
-      if(mode!=='BUYIN'||!Number.isFinite(organizerPercent)||!Number.isFinite(reservePercent)||organizerPercent<0||reservePercent<0||values.reduce((a,b)=>a+b,0)+organizerPercent+reservePercent!==100) return res.status(400).json({message:"Байрны шагнал, зохион байгуулагч, нөөцийн хувь нийлээд 100% байх ёстой. Хувийн хуваарилалт BUY-IN тэмцээнд хэрэглэнэ."});
-    }
-    if(prizeMode==='fixed'&&(values.reduce((a,b)=>a+b,0)>1000000000||organizerPercent!==0||reservePercent!==0)) return res.status(400).json({message:"Тогтмол CHIP шагналын тохиргоо буруу байна."});
-    const prizes=prizeMode==='fixed'?values:[];
+    if(!prizes.some(x=>x>0)||prizes.reduce((a,b)=>a+b,0)>1000000000) return res.status(400).json({message:"Шагналын дүн буруу байна."});
     const ref=db.collection("tournaments").doc();
-    await ref.set({name,description:String(req.body.description||"").slice(0,500),mode,entryFee,maxPlayers,startAt,registrationDeadline:deadline,prizes,prizeConfig,status:"scheduled",participantCount:0,createdBy:req.user.uid,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+    await ref.set({name,description:String(req.body.description||"").slice(0,500),mode,entryFee,maxPlayers,startAt,registrationDeadline:deadline,prizes,status:"scheduled",participantCount:0,createdBy:req.user.uid,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
     res.json({success:true,id:ref.id,message:"Тэмцээн үүслээ."});
   } catch(e) { res.status(500).json({message:"Тэмцээн үүсгэхэд алдаа гарлаа."}); }
 });
@@ -271,27 +262,20 @@ app.post("/api/admin/tournaments/:id/status", authUser, authAdmin, async (req,re
 });
 app.post("/api/admin/tournaments/:id/settle", authUser, authAdmin, async (req,res) => {
   try {
-    const winners=Array.isArray(req.body.winners)?req.body.winners.slice(0,10):[];
+    const winners=Array.isArray(req.body.winners)?req.body.winners.slice(0,3):[];
     if(!winners.length||new Set(winners.map(w=>w&&w.uid)).size!==winners.length||winners.some(w=>!w||typeof w.uid!=="string"||!validAmount(w.amount))) return res.status(400).json({message:"Ялагч болон шагналын дүн оруулна уу."});
     const ref=db.collection("tournaments").doc(String(req.params.id||""));
     await db.runTransaction(async tx=>{
       const snap=await tx.get(ref);if(!snap.exists)throw new Error("Тэмцээн олдсонгүй.");const t=snap.data();
       if(t.status==="completed"||t.payoutCompleted===true)throw new Error("Шагналыг өмнө нь олгосон байна.");
       if(t.status!=="live"&&t.status!=="paused")throw new Error("Зөвхөн эхэлсэн тэмцээнийг дүгнэнэ.");
-      const cfg=t.prizeConfig||{mode:"fixed",values:t.prizes||[],organizerPercent:0,reservePercent:0};
-      const expected=cfg.mode==="percent"?(cfg.values||[]).map(v=>Math.floor(Number(t.entryFee||0)*Number(t.participantCount||0)*Number(v||0)/100)):(cfg.values||t.prizes||[]).map(Number);
-      const expectedSlots=expected.map((amount,i)=>({amount,i})).filter(x=>x.amount>0);
-      if(winners.length!==expectedSlots.length||winners.some((w,i)=>Number(w.amount)!==Number(expectedSlots[i]?.amount)||Number(w.place||i+1)!==i+1)) throw new Error("Ялагчдын байр эсвэл шагналын дүн тохиргоотой таарахгүй байна.");
+      if(winners.some((w,i)=>Number(w.amount)!==Number((t.prizes||[])[i]||0))) throw new Error("Шагналын дүн тэмцээн үүсгэхэд тохируулсан дүнтэй таарах ёстой.");
       const refs=winners.map(w=>db.collection("users").doc(w.uid));
       const userSnaps=[];for(const ur of refs) userSnaps.push(await tx.get(ur));
       const participantSnaps=[];for(const w of winners) participantSnaps.push(await tx.get(ref.collection("participants").doc(w.uid)));
       if(participantSnaps.some(x=>!x.exists))throw new Error("Ялагчдын нэг нь бүртгэлтэй оролцогч биш байна.");
       winners.forEach((w,i)=>{if(!userSnaps[i].exists)throw new Error("Ялагчийн данс олдсонгүй.");tx.update(ref.collection("participants").doc(w.uid),{place:i+1,prize:w.amount,status:"winner"});tx.update(refs[i],{chips:FieldValue.increment(w.amount)});tx.create(db.collection("chipLedger").doc("tourney_prize_"+ref.id+"_"+w.uid),{uid:w.uid,type:"tournament_prize",amount:w.amount,tournamentId:ref.id,place:i+1,createdAt:FieldValue.serverTimestamp()});});
-      const pool=Number(t.entryFee||0)*Number(t.participantCount||0);
-      const organizerAmount=cfg.mode==="percent"?Math.floor(pool*Number(cfg.organizerPercent||0)/100):0;
-      const reserveAmount=cfg.mode==="percent"?Math.floor(pool*Number(cfg.reservePercent||0)/100):0;
-      if(organizerAmount>0){const organizerRef=db.collection("users").doc(String(t.createdBy||"")), organizerSnap=await tx.get(organizerRef);if(!organizerSnap.exists)throw new Error("Тэмцээн зохион байгуулагчийн бүртгэл олдсонгүй.");tx.update(organizerRef,{chips:FieldValue.increment(organizerAmount)});tx.create(db.collection("chipLedger").doc("tourney_organizer_"+ref.id),{uid:t.createdBy,type:"tournament_organizer_share",amount:organizerAmount,tournamentId:ref.id,createdAt:FieldValue.serverTimestamp()});}
-      tx.update(ref,{status:"completed",payoutCompleted:true,winners:winners.map((w,i)=>({uid:w.uid,place:i+1,amount:w.amount})),organizerPayout:organizerAmount,reserveHeld:reserveAmount,completedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+      tx.update(ref,{status:"completed",payoutCompleted:true,winners:winners.map((w,i)=>({uid:w.uid,place:i+1,amount:w.amount})),completedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
     });
     res.json({success:true,message:"Тэмцээн дуусаж, шагналууд CHIP хэлбэрээр олгогдлоо."});
   } catch(e) { res.status(400).json({message:e.message||"Шагнал олгоход алдаа гарлаа."}); }
@@ -1196,25 +1180,19 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
 // POKER TABLES
 // ==========================================
 
-const BASE_TABLE_CONFIG = [
-  { id: "BEGINNER", name: "BEGINNER", type: "texas", smallBlind: 100, bigBlind: 200, minBuyIn: 5000, maxBuyIn: 50000, maxPlayers: 6 },
-  { id: "SILVER", name: "SILVER", type: "texas", smallBlind: 500, bigBlind: 1000, minBuyIn: 10000, maxBuyIn: 250000, maxPlayers: 6 },
-  { id: "GOLD", name: "GOLD", type: "texas", smallBlind: 1000, bigBlind: 2000, minBuyIn: 20000, maxBuyIn: 500000, maxPlayers: 6 },
-  { id: "BLACK", name: "BLACK", type: "omaha", smallBlind: 5000, bigBlind: 10000, minBuyIn: 100000, maxBuyIn: 2500000, maxPlayers: 6 }
-];
-
-// New 9-seat tables: three tables per blind level for both Texas Hold'em and Omaha.
-// Minimum buy-in is the exact amount requested for each blind level; maximum remains 250 BB.
+// Blind түвшин бүрт Texas 3 ширээ, 9 суудалтай; Omaha 2 ширээ, 6 суудалтай.
+// Omaha нь 6 хувийн хөзөртэй (6-card Omaha) бөгөөд яг 2 хувийн + 3 нийтийн хөзөр ашиглана.
 const STAKES = [
   [100, 200], [250, 500], [500, 1000], [1000, 2000],
   [2500, 5000], [5000, 10000], [10000, 20000]
 ];
 const MIN_BUY_IN_BY_BIG_BLIND = { 200: 5000, 500: 7500, 1000: 10000, 2000: 20000, 5000: 50000, 10000: 100000, 20000: 250000 };
-const TABLE_CONFIG = [...BASE_TABLE_CONFIG];
+const TABLE_CONFIG = [];
 for (const [smallBlind, bigBlind] of STAKES) {
   for (const type of ["texas", "omaha"]) {
-    for (let copy = 1; copy <= 3; copy++) {
-      const typeName = type === "texas" ? "HOLD'EM" : "OMAHA";
+    const copies = type === "omaha" ? 2 : 3;
+    for (let copy = 1; copy <= copies; copy++) {
+      const typeName = type === "texas" ? "HOLD'EM" : "OMAHA 6-CARD";
       const id = `${type.toUpperCase()}_${smallBlind}_${bigBlind}_${copy}`;
       TABLE_CONFIG.push({
         id,
@@ -1224,7 +1202,7 @@ for (const [smallBlind, bigBlind] of STAKES) {
         bigBlind,
         minBuyIn: MIN_BUY_IN_BY_BIG_BLIND[bigBlind] || bigBlind * 25,
         maxBuyIn: bigBlind * 250,
-        maxPlayers: 9
+        maxPlayers: type === "omaha" ? 6 : 9
       });
     }
   }
@@ -1444,7 +1422,7 @@ function evaluatePlayer(table, player) {
   if (board.length !== 5) return [0];
   let pool;
   if (table.type === "omaha") {
-    if (player.cards.length !== 4) return [0];
+    if (player.cards.length !== 6) return [0];
     const scores=[];
     for (const hole of combinations(player.cards,2)) for (const community of combinations(board,3)) scores.push(scoreFive([...hole,...community]));
     return scores.sort((a,b)=>compareScores(b,a))[0] || [0];
@@ -1568,7 +1546,7 @@ function startHand(table) {
   table.dealerIndex=(table.dealerIndex+1)%table.players.length;
   for (const p of table.players) { p.folded=p.online===false||p.chips<=0; p.bet=0; p.totalBet=0; p.acted=false; p.allIn=false; p.cards=[]; }
   const active=table.players.filter(p=>!p.folded);
-  const holeCount=table.type==="omaha"?4:2;
+  const holeCount=table.type==="omaha"?6:2;
   for(let n=0;n<holeCount;n++) for(const p of active) p.cards.push(table.deck.pop());
   const dealer=table.dealerIndex;
   let sbIndex,bbIndex;
