@@ -1740,28 +1740,27 @@ io.on("connection", socket => {
     try {
       const user = await getSocketUser(socket);
 
-      socketUsers.set(socket.id, {
-        uid: user.uid,
-        tableId: null
-      });
+      // Preserve a table session established by table:join even when the player
+      // has not selected a seat yet. lobby:get can run asynchronously after join;
+      // resetting tableId to null here caused table:sit to reject valid requests.
+      const priorSession = socketUsers.get(socket.id);
+      let activeTableId = priorSession?.uid === user.uid ? priorSession.tableId : null;
+      if (activeTableId && !tables.has(activeTableId)) activeTableId = null;
+
       if (user.role === "admin" || user.isAdmin === true || ADMIN_UIDS.includes(user.uid)) socket.join("admins");
 
       for (const table of tables.values()) {
         const player = table.players.find(p => p.uid === user.uid);
-
         if (player) {
           player.online = true;
-
-          socketUsers.set(socket.id, {
-            uid: user.uid,
-            tableId: table.id
-          });
-
+          activeTableId = table.id;
           socket.join("table:" + table.id);
           sendTableUpdate(table);
           break;
         }
       }
+      socketUsers.set(socket.id, { uid: user.uid, tableId: activeTableId });
+      if (activeTableId) socket.join("table:" + activeTableId);
 
       sendLobby();
 
