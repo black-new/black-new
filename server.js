@@ -1547,12 +1547,19 @@ function finishHand(table, forcedWinner = null) {
   // Persist stack, immutable hand history and rake ledger. Rake is recorded once per settled hand.
   const batch = db.batch();
   batch.set(db.collection("handHistory").doc(`${table.id}_${table.handNumber || Date.now()}`), handRecord);
-  if (rake > 0) batch.set(db.collection("rakeLedger").doc(`${table.id}_${table.handNumber || Date.now()}`), { tableId:table.id, handNumber:table.handNumber||0, grossPot, rake, jackpotContribution, rakePercent:casinoSettings.rakePercent, createdAt:FieldValue.serverTimestamp() });
+  if (rake > 0) {
+    batch.set(db.collection("rakeLedger").doc(`${table.id}_${table.handNumber || Date.now()}`), { tableId:table.id, handNumber:table.handNumber||0, grossPot, rake, jackpotContribution, rakePercent:casinoSettings.rakePercent, rakeCapBB:casinoSettings.rakeCapBB, rakeEligible, createdAt:FieldValue.serverTimestamp() });
+    // Update lifetime totals in the SAME Firestore batch as the hand and ledger.
+    // This prevents a saved hand/ledger with missing aggregate totals after a restart.
+    const statsUpdate = { totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() };
+    if (jackpotContribution > 0) {
+      statsUpdate.jackpotPool = FieldValue.increment(jackpotContribution);
+      statsUpdate.totalJackpotContributed = FieldValue.increment(jackpotContribution);
+    }
+    batch.set(db.collection("casinoStats").doc("global"), statsUpdate, {merge:true});
+  }
   for (const player of table.players) batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  batch.commit().then(async()=>{
-    if (jackpotContribution > 0) await db.collection("casinoStats").doc("global").set({ jackpotPool:FieldValue.increment(jackpotContribution), totalJackpotContributed:FieldValue.increment(jackpotContribution), totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
-    else if (rake > 0) await db.collection("casinoStats").doc("global").set({ totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
-  }).catch(err=>console.error("Hand/rake persistence:",err));
+  batch.commit().catch(err=>console.error("Hand/rake persistence:",err));
   sendTableUpdate(table); sendLobby();
 }
 
