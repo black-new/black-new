@@ -336,7 +336,7 @@ app.get("/api/casino/pools", authUser, async (req, res) => {
 });
 
 app.get("/api/admin/casino/settings", authUser, authAdmin, (req, res) => {
-  res.json({ settings: { ...casinoSettings } });
+  res.json({ settings: { ...casinoSettings, jackpotRules: { texas: "Бүх blind", omaha4: "2500/5000 болон түүнээс дээш", omaha6: "Идэвхгүй", texasBadBeat: "AAATT буюу түүнээс дээш", omaha4BadBeat: "Дөрвөн 2 буюу түүнээс дээш", bothHoleCardsRequired: true } } });
 });
 app.post("/api/admin/casino/settings", authUser, authAdmin, async (req, res) => {
   try {
@@ -375,6 +375,13 @@ app.post("/api/admin/chat/mute", authUser, authAdmin, async (req,res) => {
     await db.collection("users").doc(uid).set({chatMuted:muted,chatMutedBy:req.user.uid,chatMutedAt:FieldValue.serverTimestamp()},{merge:true});
     res.json({ok:true,muted});
   } catch(e){res.status(500).json({message:"Chat эрх өөрчилж чадсангүй."});}
+});
+
+app.get("/api/admin/casino/badbeat", authUser, authAdmin, async (req,res) => {
+  try {
+    const snap=await db.collection("badBeatHits").orderBy("createdAt","desc").limit(50).get();
+    res.json({hits:snap.docs.map(d=>({id:d.id,...d.data()}))});
+  } catch(error) { res.status(500).json({message:"Bad Beat бүртгэл уншиж чадсангүй."}); }
 });
 
 app.get("/api/admin/casino/report", authUser, authAdmin, async (req, res) => {
@@ -1465,19 +1472,54 @@ function compareScores(a,b) {
   }
   return 0;
 }
-function evaluatePlayer(table, player) {
-  const board = table.communityCards;
-  if (board.length !== 5) return [0];
-  let pool;
+function evaluatePlayerDetailed(table, player) {
+  const board = table.communityCards || [];
+  if (board.length !== 5) return { score:[0], holeCardsUsed:0 };
+  const holeCards = player.cards || [];
+  let best = null;
   if (isOmahaType(table.type)) {
     const requiredHoleCards = getHoleCardCount(table.type);
-    if (player.cards.length !== requiredHoleCards) return [0];
-    const scores=[];
-    for (const hole of combinations(player.cards,2)) for (const community of combinations(board,3)) scores.push(scoreFive([...hole,...community]));
-    return scores.sort((a,b)=>compareScores(b,a))[0] || [0];
+    if (holeCards.length !== requiredHoleCards) return { score:[0], holeCardsUsed:0 };
+    // Omaha: exactly 2 private cards + exactly 3 community cards.
+    for (const hole of combinations(holeCards,2)) for (const community of combinations(board,3)) {
+      const score=scoreFive([...hole,...community]);
+      if (!best || compareScores(score,best.score)>0) best={score,holeCardsUsed:2};
+    }
+  } else {
+    // Hold'em: any 5 of 7; track whether BOTH private cards form the best hand.
+    const all=[...holeCards,...board];
+    for (const five of combinations(all,5)) {
+      const score=scoreFive(five);
+      const used=holeCards.filter(card=>five.includes(card)).length;
+      if (!best || compareScores(score,best.score)>0 || (compareScores(score,best.score)===0 && used>best.holeCardsUsed)) best={score,holeCardsUsed:used};
+    }
   }
-  pool = [...player.cards,...board];
-  return combinations(pool,5).map(scoreFive).sort((a,b)=>compareScores(b,a))[0] || [0];
+  return best || {score:[0],holeCardsUsed:0};
+}
+function evaluatePlayer(table, player) { return evaluatePlayerDetailed(table,player).score; }
+function isJackpotEligibleTable(table) {
+  const type=String(table?.type||"").toLowerCase();
+  if(type==="texas") return true; // Hold'em: every blind level.
+  if(type==="omaha4") return Number(table.bigBlind||0)>=5000; // 2500/5000 and higher.
+  return false; // Omaha 6-card is excluded.
+}
+function badBeatThreshold(type) {
+  if(String(type||"").toLowerCase()==="texas") return [6,14,10]; // Aces full of Tens (AAATT) or stronger.
+  if(String(type||"").toLowerCase()==="omaha4") return [6,14,10]; // Keep the agreed AAATT threshold on eligible 4-card Omaha tables.
+  return null;
+}
+function findBadBeatHit(table, players) {
+  if(!isJackpotEligibleTable(table) || (table.communityCards||[]).length!==5) return null;
+  const threshold=badBeatThreshold(table.type);
+  if(!threshold) return null;
+  const evaluated=players.filter(p=>!p.folded).map(p=>({player:p,...evaluatePlayerDetailed(table,p)}));
+  if(evaluated.length<2) return null;
+  const best=evaluated.reduce((a,b)=>compareScores(b.score,a.score)>0?b:a);
+  const losers=evaluated.filter(x=>compareScores(x.score,threshold)>=0 && compareScores(x.score,best.score)<0 && x.holeCardsUsed===2);
+  const winner=best;
+  if(winner.holeCardsUsed!==2 || !losers.length) return null;
+  const loser=losers.sort((a,b)=>compareScores(b.score,a.score))[0];
+  return {tableId:table.id,tableName:table.name||table.id,gameType:table.type,smallBlind:Number(table.smallBlind||0),bigBlind:Number(table.bigBlind||0),handNumber:Number(table.handNumber||0),winnerUid:winner.player.uid,winnerName:winner.player.username,loserUid:loser.player.uid,loserName:loser.player.username,losingHand:handName(loser.score),losingScore:loser.score,threshold:threshold,createdAt:FieldValue.serverTimestamp()};
 }
 function handName(score) {
   return ["Өндөр карт","Хос","Хоёр хос","Гурвал","Дараалал","Өнгө","Фулл хаус","Дөрөв","Стрэйт флэш"][score[0]] || "";
@@ -1498,7 +1540,8 @@ function finishHand(table, forcedWinner = null) {
   const grossPot = Math.max(0, Number(table.pot || 0));
   const rakeEligible = (table.communityCards || []).length >= 3;
   const rake = rakeEligible ? Math.min(grossPot, Math.floor(grossPot * casinoSettings.rakePercent / 100), Math.floor(Number(table.bigBlind || 0) * casinoSettings.rakeCapBB)) : 0;
-  const jackpotContribution = Math.floor(rake * casinoSettings.jackpotRakePercent / 100);
+  const jackpotContribution = isJackpotEligibleTable(table) ? Math.floor(rake * casinoSettings.jackpotRakePercent / 100) : 0;
+  const badBeatHit = forcedWinner ? null : findBadBeatHit(table, table.players);
   let winners = forcedWinner ? [forcedWinner] : [];
   let winningScore = null;
   let rakeRemaining = rake;
@@ -1542,7 +1585,8 @@ function finishHand(table, forcedWinner = null) {
   // Persist stack, immutable hand history and rake ledger. Rake is recorded once per settled hand.
   const batch = db.batch();
   batch.set(db.collection("handHistory").doc(`${table.id}_${table.handNumber || Date.now()}`), handRecord);
-  if (rake > 0) batch.set(db.collection("rakeLedger").doc(`${table.id}_${table.handNumber || Date.now()}`), { tableId:table.id, handNumber:table.handNumber||0, grossPot, rake, jackpotContribution, rakePercent:casinoSettings.rakePercent, createdAt:FieldValue.serverTimestamp() });
+  if (rake > 0) batch.set(db.collection("rakeLedger").doc(`${table.id}_${table.handNumber || Date.now()}`), { tableId:table.id, handNumber:table.handNumber||0, grossPot, rake, jackpotContribution, rakePercent:casinoSettings.rakePercent, jackpotEligible:isJackpotEligibleTable(table), createdAt:FieldValue.serverTimestamp() });
+  if (badBeatHit) batch.set(db.collection("badBeatHits").doc(`${table.id}_${table.handNumber || Date.now()}`), badBeatHit);
   for (const player of table.players) batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   batch.commit().then(async()=>{
     if (jackpotContribution > 0) await db.collection("casinoStats").doc("global").set({ jackpotPool:FieldValue.increment(jackpotContribution), totalRake:FieldValue.increment(rake), updatedAt:FieldValue.serverTimestamp() },{merge:true});
@@ -1674,9 +1718,11 @@ io.on("connection", socket => {
   socket.on("chat:history", async (data={}) => {
     try {
       const user=await getSocketUser(socket); const mode=["table","global","support"].includes(data.mode)?data.mode:"table";
+      socket.emit("chat:settings",{enabled:chatSettings.enabled});
       const snap=await db.collection("chatMessages").where("mode","==",mode).limit(100).get();
       let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
       const isAdmin=ADMIN_UIDS.includes(user.uid)||user.role==="admin"||user.isAdmin===true;
+      if(!chatSettings.enabled && !isAdmin) rows=[];
       if(mode==="support"&&!isAdmin) rows=rows.filter(m=>m.uid===user.uid);
       if(mode==="table") { const tid=String(data.tableId||""); rows=rows.filter(m=>m.tableId===tid); }
       socket.emit("chat:history",rows.slice(-80).reverse());
@@ -1708,7 +1754,8 @@ io.on("connection", socket => {
     const reply=v=>{if(typeof callback==="function")callback(v);};
     try {
       const user=await getSocketUser(socket); const uref=db.collection("users").doc(user.uid); const usnap=await uref.get();
-      if(!chatSettings.enabled && user.role!=="admin" && !user.isAdmin && !ADMIN_UIDS.includes(user.uid)) return reply({ok:false,message:"Админ чатыг түр хаасан байна."});
+      const isAdmin=ADMIN_UIDS.includes(user.uid)||user.role==="admin"||user.isAdmin===true;
+      if(!chatSettings.enabled && !isAdmin) return reply({ok:false,message:"Админ чатыг түр хаасан байна."});
       if(usnap.data()?.chatMuted===true) return reply({ok:false,message:"Таны чат бичих эрхийг админ түр хаасан байна."});
       const now=Date.now(), prev=chatRate.get(user.uid)||[]; const recent=prev.filter(t=>now-t<10000);
       if(recent.length>=5 || (recent.length && now-recent[recent.length-1]<1200)) return reply({ok:false,message:"Хэт олон мессеж илгээлээ. Түр хүлээнэ үү."});
