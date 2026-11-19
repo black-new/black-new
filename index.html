@@ -720,8 +720,20 @@ body.classic-cards .playing-card.red{color:#d21e28}
 }
 .table-inner{inset:13px;border:2px solid rgba(238,198,111,.8);border-radius:50%}
 .table-name{top:20%;font-size:clamp(11px,1vw,15px);color:#f5d78e;text-shadow:0 2px 8px #000;letter-spacing:3px}
-.pot{top:29%;font-size:clamp(15px,1.5vw,21px);text-shadow:0 2px 7px #000}
+ .pot{top:29%;font-size:clamp(15px,1.5vw,21px);text-shadow:0 2px 7px #000}
 .pot small{font-size:11px}
+.pot-chip-visual{position:relative;width:124px;height:42px;margin:5px auto 0;pointer-events:none;display:flex;justify-content:center;align-items:flex-end;gap:5px;z-index:0}
+.pot-chip-stack{position:relative;width:22px;height:30px;display:flex;flex-direction:column-reverse;align-items:center;filter:drop-shadow(0 3px 3px #0009);animation:pot-chip-drop .28s ease-out both}
+.pot-chip{width:21px;height:7px;border-radius:50%;border:1px dashed rgba(255,255,255,.82);box-shadow:0 1px 0 rgba(0,0,0,.55);margin-top:-2px}
+.pot-chip.red{background:linear-gradient(90deg,#8e1424,#f15b61,#8e1424)}
+.pot-chip.blue{background:linear-gradient(90deg,#123d83,#4d9bfa,#123d83)}
+.pot-chip.green{background:linear-gradient(90deg,#075b3c,#39c58a,#075b3c)}
+.pot-chip.gold{background:linear-gradient(90deg,#94651a,#ffe08a,#94651a)}
+.pot-chip.purple{background:linear-gradient(90deg,#4b267d,#b78af2,#4b267d)}
+.pot-chip-stack.payout{animation:pot-chip-award .9s cubic-bezier(.2,.7,.25,1) forwards}
+@keyframes pot-chip-drop{from{opacity:0;transform:translateY(-15px) scale(.7)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes pot-chip-award{0%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1;transform:translateY(-68px) scale(.8)}100%{opacity:0;transform:translateY(-112px) scale(.35)}}
+@media(prefers-reduced-motion:reduce){.pot-chip-stack{animation:none}.pot-chip-stack.payout{animation:none;opacity:0}}
 .board{top:53%;gap:clamp(5px,.7vw,10px)}
 .playing-card{width:clamp(38px,4.2vw,62px);height:clamp(54px,6vw,86px);font-size:clamp(18px,2vw,27px);border-radius:7px;border:2px solid #f3d58a;box-shadow:0 5px 12px #0008}
 .seat{
@@ -1682,7 +1694,7 @@ body:has(#authScreen:not([style*="display: none"])) {
       <div class="poker-table">
         <div class="table-inner"></div>
         <div class="table-name"><span class="table-spade">♠</span> BLACKCLUB</div>
-        <div class="pot"><small>POT</small><span id="potAmount">0</span></div>
+        <div class="pot"><small>POT</small><span id="potAmount">0</span><div class="pot-chip-visual" id="potChipVisual" aria-hidden="true"></div></div>
         <div class="board" id="boardCards"></div>
         <div class="my-hand-wrap"><small>ТАНЫ ХӨЗӨР</small><div class="my-hand" id="myHandCards"></div></div>
         <div class="seat seat-1" id="seat0"></div>
@@ -2679,20 +2691,43 @@ function updateTurnCountdown() {
   document.querySelectorAll('[data-turn-clock="1"]').forEach(el => { el.textContent = `${seconds}s`; });
 }
 
+function renderPotChipVisual(table) {
+  const layer = $("potChipVisual");
+  if (!layer) return;
+  const amount = Math.max(0, Number(table.pot || 0));
+  const result = table.lastResult;
+  const handNo = Number(result?.handNumber || 0);
+  if (amount > 0) {
+    if (layer.dataset.mode !== "pot" || layer.dataset.amount !== String(amount)) {
+      layer.dataset.mode = "pot";
+      layer.dataset.amount = String(amount);
+      const colors = ["red", "blue", "green", "gold", "purple"];
+      const stackCount = Math.min(5, Math.max(1, Math.ceil(Math.log10(amount + 1))));
+      layer.innerHTML = Array.from({length:stackCount}, (_,i) => {
+        const height = Math.min(7, 2 + Math.floor(Math.log10(amount + 1)) + (i % 2));
+        return `<span class="pot-chip-stack">${Array.from({length:height}, () => `<i class="pot-chip ${colors[i % colors.length]}"></i>`).join("")}</span>`;
+      }).join("");
+    }
+    return;
+  }
+  if (handNo && layer.dataset.payoutHand !== String(handNo) && Number(result?.pot || 0) > 0) {
+    layer.dataset.mode = "payout";
+    layer.dataset.payoutHand = String(handNo);
+    const colors = ["red", "blue", "green", "gold", "purple"];
+    layer.innerHTML = Array.from({length:5}, (_,i) => `<span class="pot-chip-stack payout">${Array.from({length:4 + (i % 3)}, () => `<i class="pot-chip ${colors[i % colors.length]}"></i>`).join("")}</span>`).join("");
+    setTimeout(() => { if (layer.dataset.payoutHand === String(handNo)) { layer.innerHTML = ""; layer.dataset.mode = "empty"; } }, 950);
+  } else if (layer.dataset.mode !== "payout") {
+    layer.innerHTML = "";
+    layer.dataset.mode = "empty";
+  }
+}
+
 function renderTable(state) {
   if (!state) return;
   const table = state.table || state;
   const players = table.players || state.players || [];
   const myUidForActions = user?.uid || user?.id || user?.userId;
   const isSeatedHere = players.some(p => (p.uid || p.id || p.userId) === myUidForActions || p.username === user?.username);
-  if (!table.handStarted && table.street === "showdown" && isSeatedHere && currentTable && autoNextScheduledHand !== Number(table.handNumber || 0)) {
-    autoNextScheduledHand = Number(table.handNumber || 0);
-    const finishedHand = Number(table.handNumber || 0);
-    setTimeout(() => {
-      const latest = lastState?.table || lastState;
-      if (currentTable && latest && !latest.handStarted && latest.street === "showdown" && Number(latest.handNumber || 0) === finishedHand && socket?.connected) nextHand();
-    }, 5000);
-  }
   $("tableTitle").textContent = table.name || table.title || "BLACKCLUB POKER";
   const handCounter = $("tableHandCounter");
   if (handCounter) handCounter.textContent = `#${Math.max(1, Number(table.handNumber || 0))}`;
@@ -2708,6 +2743,7 @@ function renderTable(state) {
     : " · СУЛ СУУДЛАА СОНГОНО УУ";
   $("tableInfo").textContent = `${String(table.type||"").toUpperCase()} · ${streetNames[table.street]||table.street||""}${dealStatus}${turnText}${resultText}`;
   $("potAmount").textContent = Number(table.pot ?? state.pot ?? 0).toLocaleString("en-US");
+  renderPotChipVisual(table);
   const board = table.communityCards || state.communityCards || [];
   $("boardCards").innerHTML = board.map(cardHtml).join("");
   $("myHandCards").innerHTML = (me?.cards || []).map(cardHtml).join("");

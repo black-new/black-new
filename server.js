@@ -1277,6 +1277,7 @@ for (const config of TABLE_CONFIG) {
     street: "waiting",
     deck: [],
     handNumber: 0,
+    nextHandTimer: null,
     lastRaiseSize: config.bigBlind,
     lastResult: null
   });
@@ -1541,7 +1542,7 @@ function finishHand(table, forcedWinner = null) {
     }
   }
   const handRecord = { tableId: table.id, tableName: table.name || table.id, handNumber: table.handNumber || 0, gameType: table.type || "texas", street: table.street, communityCards: (table.communityCards || []).map(c=>({...c})), players: table.players.map(p=>({ uid:p.uid, username:p.username, cards:(p.cards||[]).map(c=>({...c})), totalBet:Number(p.totalBet||0), folded:!!p.folded })), winners: winners.map(p=>({ uid:p.uid, username:p.username })), hand: winningScore ? handName(winningScore) : "Бусад нь бууж өгсөн", grossPot, rake, jackpotContribution, netPot:grossPot-rake, createdAt: FieldValue.serverTimestamp() };
-  table.lastResult = { winners: winners.map(p=>p.username), hand: handRecord.hand, pot: grossPot-rake, rake };
+  table.lastResult = { winners: winners.map(p=>p.username), hand: handRecord.hand, pot: grossPot-rake, rake, handNumber: table.handNumber };
   table.pot = 0; table.currentBet = 0; table.handStarted = false; table.street = "showdown"; table.currentTurn = -1;
   for (const player of table.players) { player.bet=0; player.acted=false; player.allIn=false; player.cards=player.cards||[]; }
   // Persist stack, immutable hand history and rake ledger. Rake is recorded once per settled hand.
@@ -1561,6 +1562,16 @@ function finishHand(table, forcedWinner = null) {
   for (const player of table.players) batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   batch.commit().catch(err=>console.error("Hand/rake persistence:",err));
   sendTableUpdate(table); sendLobby();
+  // Дараагийн гарыг сервер өөрөө эхлүүлнэ — тоглогчийн browser нээлттэй байх шаардлагагүй.
+  if (table.nextHandTimer) clearTimeout(table.nextHandTimer);
+  const finishedHand = table.handNumber;
+  table.nextHandTimer = setTimeout(() => {
+    table.nextHandTimer = null;
+    if (table.handStarted || table.handNumber !== finishedHand) return;
+    const ready = table.players.filter(p => p.online !== false && p.chips > 0);
+    if (ready.length >= 2) startHand(table);
+  }, 5000);
+  if (typeof table.nextHandTimer.unref === "function") table.nextHandTimer.unref();
 }
 
 function bettingRoundComplete(table) {
@@ -1600,6 +1611,7 @@ function advanceStreet(table) {
   sendTableUpdate(table);
 }
 function startHand(table) {
+  if (table.nextHandTimer) { clearTimeout(table.nextHandTimer); table.nextHandTimer = null; }
   const eligible=table.players.filter(p=>p.online!==false&&p.chips>0);
   if (eligible.length<2 || table.handStarted) return false;
   table.deck=makeDeck(); table.communityCards=[]; table.pot=0; table.currentBet=0;
