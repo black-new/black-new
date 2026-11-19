@@ -1230,6 +1230,19 @@ body:has(#authScreen:not([style*="display: none"])) {
 .chat-launcher{position:fixed;right:22px;bottom:22px;z-index:1200;display:flex;align-items:center;gap:9px;padding:9px 16px 9px 9px;border:1px solid #c49a4c;border-radius:28px;background:linear-gradient(135deg,#172b26,#081711);color:#f3d28b;font-weight:800;letter-spacing:1px;box-shadow:0 8px 28px #000b}
 .chat-launcher-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(145deg,#f0d28a,#94652a);color:#142018;font-size:21px}
 .chat-launcher i{width:8px;height:8px;border-radius:50%;background:#55dc8b;display:none}
+/* Remove the dark square behind the back arrow; keep the arrow itself visible. */
+.game-topline .back-arrow{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+}
+.game-topline .back-arrow:hover{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+
 /* Hand number: remove any card/panel styling and place it just after the back arrow. */
 .game-topline{position:relative!important}
 .game-topline .table-hand-counter{
