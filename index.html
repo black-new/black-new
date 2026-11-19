@@ -1596,6 +1596,10 @@ async function api(path, data = {}) {
   return result;
 }
 
+function isAdminUser() {
+  return user?.isAdmin === true || String(user?.role || "").toLowerCase() === "admin";
+}
+
 function getUsername() {
   const rawName = String(user?.username || user?.name || "Тоглогч").trim();
   // Keep the internal admin account name out of the public header/profile UI.
@@ -1661,7 +1665,21 @@ function openAccountSection(section) {
 
   if (section === "tournaments") {
     title.textContent = "BLACKCLUB · TOURNAMENT";
-    content.innerHTML = `<div class="cashier-card"><div class="bc-note">FREE болон CHIP төлбөртэй BUY-IN тэмцээнүүд. Бүртгэл, CHIP төлбөр сервер дээр баталгаажна.</div><button class="bc-action" onclick="loadTournaments()">↻ ТЭМЦЭЭН ШИНЭЧЛЭХ</button><div id="tournamentList">Тэмцээн ачаалж байна...</div></div>${user?.isAdmin?`<div class="cashier-card"><h3>ШИНЭ ТЭМЦЭЭН ҮҮСГЭХ</h3><label class="bc-field">Нэр<input id="tourName" maxlength="70" placeholder="BLACKCLUB WEEKLY"></label><label class="bc-field">Төрөл<select id="tourMode"><option value="FREE">FREE · Үнэгүй</option><option value="BUYIN">BUY-IN · CHIP төлбөртэй</option></select></label><label class="bc-field">Оролцох CHIP<input id="tourFee" type="number" min="0" value="0"></label><label class="bc-field">Дээд оролцогч<input id="tourMax" type="number" min="2" max="500" value="30"></label><label class="bc-field">Эхлэх цаг<input id="tourStart" type="datetime-local"></label><label class="bc-field">Бүртгэл хаах цаг<input id="tourDeadline" type="datetime-local"></label><label class="bc-field">1-р байрны шагнал CHIP<input id="tourPrize1" type="number" min="0" value="0"></label><label class="bc-field">2-р байрны шагнал CHIP<input id="tourPrize2" type="number" min="0" value="0"></label><label class="bc-field">3-р байрны шагнал CHIP<input id="tourPrize3" type="number" min="0" value="0"></label><button class="bc-action" onclick="createTournament()">ТЭМЦЭЭН ҮҮСГЭХ</button><div id="tourAdminMessage" class="bc-note"></div></div>`:''}`;
+    content.innerHTML = `<div class="cashier-card"><div class="bc-note">FREE болон CHIP төлбөртэй BUY-IN тэмцээнүүд. Бүртгэл, CHIP төлбөр сервер дээр баталгаажна.</div><button class="bc-action" onclick="loadTournaments()">↻ ТЭМЦЭЭН ШИНЭЧЛЭХ</button><div id="tournamentList">Тэмцээн ачаалж байна...</div></div>
+      <div class="cashier-card tournament-admin-card"><h3>🏆 ТЭМЦЭЭНИЙ УДИРДЛАГА</h3>
+      ${isAdminUser() ? `<div class="bc-note">Админ горим идэвхтэй. Тэмцээн үүсгэх, эхлүүлэх, түр зогсоох, цуцлах болон ялагчдад CHIP олгох боломжтой.</div>
+      <h4>ШИНЭ ТЭМЦЭЭН ҮҮСГЭХ</h4>
+      <label class="bc-field">Нэр<input id="tourName" maxlength="70" placeholder="BLACKCLUB WEEKLY"></label>
+      <label class="bc-field">Төрөл<select id="tourMode"><option value="FREE">FREE · Үнэгүй</option><option value="BUYIN">BUY-IN · CHIP төлбөртэй</option></select></label>
+      <label class="bc-field">Оролцох CHIP<input id="tourFee" type="number" min="0" value="0"></label>
+      <label class="bc-field">Дээд оролцогч<input id="tourMax" type="number" min="2" max="500" value="30"></label>
+      <label class="bc-field">Эхлэх цаг<input id="tourStart" type="datetime-local"></label>
+      <label class="bc-field">Бүртгэл хаах цаг<input id="tourDeadline" type="datetime-local"></label>
+      <label class="bc-field">1-р байрны шагнал CHIP<input id="tourPrize1" type="number" min="0" value="0"></label>
+      <label class="bc-field">2-р байрны шагнал CHIP<input id="tourPrize2" type="number" min="0" value="0"></label>
+      <label class="bc-field">3-р байрны шагнал CHIP<input id="tourPrize3" type="number" min="0" value="0"></label>
+      <button class="bc-action" onclick="createTournament()">ТЭМЦЭЭН ҮҮСГЭХ</button><div id="tourAdminMessage" class="bc-note"></div>` : `<div class="bc-note">Тэмцээний удирдлагын хэсэг энд байна. Тэмцээн үүсгэх болон удирдах үйлдэл хийхийн тулд энэ хэрэглэгчид сервер дээр админ эрх олгосон байх шаардлагатай.</div>`}
+      </div>`;
     loadTournaments();
   }
 
@@ -1838,7 +1856,7 @@ async function refreshMe() {
 async function loadTournaments(){
   const target=$("tournamentList"); if(!target)return;
   try{const d=await apiGet("/api/tournaments"), rows=d.tournaments||[];
-    target.innerHTML=rows.length?rows.map(t=>`<div class="bc-request"><strong>${escapeHtml(t.name||"Tournament")}</strong> · ${t.mode==="FREE"?"FREE":Number(t.entryFee||0).toLocaleString()+" CHIP BUY-IN"}<br>Эхлэх: ${t.startAt?new Date(t.startAt).toLocaleString("mn-MN"):"-"}<br>Оролцогч: ${Number(t.participantCount||0)} / ${Number(t.maxPlayers||0)}<br>Шагнал: ${(t.prizes||[]).map(x=>Number(x).toLocaleString()).join(" / ")} CHIP<br>Төлөв: ${escapeHtml(t.status||"")}<br>${t.registered?'<span class="bc-status">БҮРТГҮҮЛСЭН</span>':t.status==="scheduled"?`<button class="bc-action" onclick="registerTournament('${escapeHtml(t.id)}')">ОРОЛЦОХ</button>`:""}${user?.isAdmin?`<div class="admin-chip-controls"><button class="admin-chip-add" onclick="setTournamentStatus('${escapeHtml(t.id)}','live')">ЭХЛҮҮЛЭХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','paused')">ТҮР ЗОГСООХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','cancelled')">ЦУЦЛАХ</button><button class="bc-action" onclick='loadTournamentParticipants("${escapeHtml(t.id)}",${JSON.stringify(t.prizes||[])})'>ОРОЛЦОГЧИД / ШАГНАЛ</button><div id="tourParticipants_${escapeHtml(t.id)}"></div></div>`:""}</div>`).join(""):'<div class="bc-note">Одоогоор тэмцээн алга.</div>';
+    target.innerHTML=rows.length?rows.map(t=>`<div class="bc-request"><strong>${escapeHtml(t.name||"Tournament")}</strong> · ${t.mode==="FREE"?"FREE":Number(t.entryFee||0).toLocaleString()+" CHIP BUY-IN"}<br>Эхлэх: ${t.startAt?new Date(t.startAt).toLocaleString("mn-MN"):"-"}<br>Оролцогч: ${Number(t.participantCount||0)} / ${Number(t.maxPlayers||0)}<br>Шагнал: ${(t.prizes||[]).map(x=>Number(x).toLocaleString()).join(" / ")} CHIP<br>Төлөв: ${escapeHtml(t.status||"")}<br>${t.registered?'<span class="bc-status">БҮРТГҮҮЛСЭН</span>':t.status==="scheduled"?`<button class="bc-action" onclick="registerTournament('${escapeHtml(t.id)}')">ОРОЛЦОХ</button>`:""}${isAdminUser()?`<div class="admin-chip-controls"><button class="admin-chip-add" onclick="setTournamentStatus('${escapeHtml(t.id)}','live')">ЭХЛҮҮЛЭХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','paused')">ТҮР ЗОГСООХ</button><button class="admin-chip-remove" onclick="setTournamentStatus('${escapeHtml(t.id)}','cancelled')">ЦУЦЛАХ</button><button class="bc-action" onclick='loadTournamentParticipants("${escapeHtml(t.id)}",${JSON.stringify(t.prizes||[])})'>ОРОЛЦОГЧИД / ШАГНАЛ</button><div id="tourParticipants_${escapeHtml(t.id)}"></div></div>`:""}</div>`).join(""):'<div class="bc-note">Одоогоор тэмцээн алга.</div>';
   }catch(e){target.textContent=e.message;}
 }
 async function registerTournament(id){if(!confirm("Энэ тэмцээнд бүртгүүлэх үү? BUY-IN бол CHIP хасагдана."))return;try{const r=await api(`/api/tournaments/${encodeURIComponent(id)}/register`,{});alert(r.message);await refreshMe();loadTournaments();}catch(e){alert(e.message);}}
