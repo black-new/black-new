@@ -1220,15 +1220,21 @@ const STAKES = [
 ];
 const MIN_BUY_IN_BY_BIG_BLIND = { 200: 5000, 500: 7500, 1000: 10000, 2000: 20000, 5000: 50000, 10000: 100000, 20000: 250000 };
 const TABLE_VARIANTS = [
+  // Одоогийн 28 ширээ — тохиргоог нь хэвээр хадгалав.
   { type: "texas", maxPlayers: 6, label: "HOLD'EM 6-MAX" },
   { type: "omaha4", maxPlayers: 6, label: "OMAHA 4-CARD 6-MAX" },
   { type: "omaha4", maxPlayers: 9, label: "OMAHA 4-CARD 9-MAX" },
-  { type: "omaha6", maxPlayers: 6, label: "OMAHA 6-CARD 6-MAX" }
+  { type: "omaha6", maxPlayers: 6, label: "OMAHA 6-CARD 6-MAX" },
+  // Нэмэлт 21 ширээ: blind түвшин бүрд 3 ширхэг Hold'em 9-Max.
+  { type: "texas", maxPlayers: 9, copy: 1, label: "HOLD'EM 9-MAX · 1" },
+  { type: "texas", maxPlayers: 9, copy: 2, label: "HOLD'EM 9-MAX · 2" },
+  { type: "texas", maxPlayers: 9, copy: 3, label: "HOLD'EM 9-MAX · 3" }
 ];
 const TABLE_CONFIG = [];
 for (const [smallBlind, bigBlind] of STAKES) {
   for (const variant of TABLE_VARIANTS) {
-    const id = `${variant.type.toUpperCase()}_${variant.maxPlayers}_${smallBlind}_${bigBlind}`;
+    const copySuffix = variant.copy ? `_${variant.copy}` : "";
+    const id = `${variant.type.toUpperCase()}_${variant.maxPlayers}_${smallBlind}_${bigBlind}${copySuffix}`;
     TABLE_CONFIG.push({
       id,
       name: `${variant.label} ${smallBlind.toLocaleString("en-US")}/${bigBlind.toLocaleString("en-US")}`,
