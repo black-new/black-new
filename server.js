@@ -207,7 +207,7 @@ app.get("/api/tournaments", authUser, async (req,res) => {
     for (const d of snap.docs) {
       const v=d.data();
       const mine=await d.ref.collection("participants").doc(req.user.uid).get();
-      tournaments.push({id:d.id,name:v.name,description:v.description||"",mode:v.mode,entryFee:Number(v.entryFee||0),maxPlayers:Number(v.maxPlayers||0),startAt:v.startAt||null,registrationDeadline:v.registrationDeadline||null,status:v.status,prizes:v.prizes||[],participantCount:Number(v.participantCount||0),registered:mine.exists});
+      tournaments.push({id:d.id,name:v.name,description:v.description||"",mode:v.mode,entryFee:Number(v.entryFee||0),maxPlayers:Number(v.maxPlayers||0),startAt:v.startAt||null,registrationDeadline:v.registrationDeadline||null,status:v.status,prizes:v.prizes||[],prizeMode:v.prizeMode||"fixed",prizePercentages:v.prizePercentages||[],organizerPercent:Number(v.organizerPercent||0),reservePercent:Number(v.reservePercent||0),placeCount:Number(v.placeCount||(v.prizes||[]).length||3),participantCount:Number(v.participantCount||0),registered:mine.exists});
     }
     res.json({tournaments});
   } catch(e) { res.status(500).json({message:"Тэмцээний жагсаалт ачаалж чадсангүй."}); }
@@ -224,7 +224,7 @@ app.post("/api/tournaments/:id/register", authUser, async (req,res) => {
       if(Number(t.participantCount||0)>=Number(t.maxPlayers||0)) throw new Error("Оролцогчдын тоо дүүрсэн байна.");
       const fee=Number(t.entryFee||0), userRef=db.collection("users").doc(req.user.uid), us=await tx.get(userRef);
       if(!us.exists) throw new Error("Хэрэглэгч олдсонгүй.");
-      const balance=Number(us.data().chips||0); if(balance<fee) throw new Error("CHIP хүрэлцэхгүй байна.");
+      const balance=Number(us.data().chips||0); if(balance<fee) { const short=fee-balance; throw new Error(`CHIP хүрэлцэхгүй байна. Шаардлагатай: ${fee.toLocaleString()} CHIP · Үлдэгдэл: ${balance.toLocaleString()} CHIP · Дутуу: ${short.toLocaleString()} CHIP. Касс хэсгээс цэнэглэнэ үү.`); }
       if(fee>0) tx.update(userRef,{chips:balance-fee});
       tx.create(participant,{uid:req.user.uid,username:req.user.username||"",displayName:req.user.displayName||req.user.username||"",entryFee:fee,status:"registered",registeredAt:FieldValue.serverTimestamp()});
       tx.update(ref,{participantCount:FieldValue.increment(1),updatedAt:FieldValue.serverTimestamp()});
@@ -239,15 +239,25 @@ app.post("/api/admin/tournaments", authUser, authAdmin, async (req,res) => {
     const name=String(req.body.name||"").trim(), mode=String(req.body.mode||"FREE").toUpperCase();
     const entryFee=validAmount(req.body.entryFee)||0, maxPlayers=Number(req.body.maxPlayers||0);
     const startAt=String(req.body.startAt||""), deadline=String(req.body.registrationDeadline||"");
-    const prizes=(Array.isArray(req.body.prizes)?req.body.prizes:[]).slice(0,3).map(validAmount);
+    const placeCount=Number(req.body.placeCount||0);
     if(name.length<3||name.length>70||!['FREE','BUYIN'].includes(mode)||!Number.isInteger(maxPlayers)||maxPlayers<2||maxPlayers>500||!startAt||!Number.isFinite(new Date(startAt).getTime())||!deadline||!Number.isFinite(new Date(deadline).getTime())||new Date(deadline)>=new Date(startAt)) return res.status(400).json({message:"Тэмцээний мэдээлэл буруу байна."});
     if(mode==='FREE'&&entryFee!==0) return res.status(400).json({message:"FREE тэмцээн CHIP төлбөргүй байна."});
     if(mode==='BUYIN'&&entryFee<1) return res.status(400).json({message:"BUY-IN тэмцээний CHIP төлбөр оруулна уу."});
-    if(!prizes.some(x=>x>0)||prizes.reduce((a,b)=>a+b,0)>1000000000) return res.status(400).json({message:"Шагналын дүн буруу байна."});
+    if(!Number.isInteger(placeCount)||placeCount<1||placeCount>10) return res.status(400).json({message:"Шагналын байр 1–10 хооронд байна."});
+    let prizes=[], prizePercentages=[], organizerPercent=0, reservePercent=0;
+    if(mode==='FREE') {
+      prizes=(Array.isArray(req.body.prizes)?req.body.prizes:[]).slice(0,placeCount).map(validAmount);
+      if(prizes.length!==placeCount||prizes.some(x=>!Number.isSafeInteger(x)||x<0)||!prizes.some(x=>x>0)||prizes.reduce((a,b)=>a+b,0)>1000000000) return res.status(400).json({message:"FREE тэмцээний байр тус бүрийн CHIP шагналыг зөв оруулна уу."});
+    } else {
+      prizePercentages=(Array.isArray(req.body.prizePercentages)?req.body.prizePercentages:[]).slice(0,placeCount).map(Number);
+      organizerPercent=Number(req.body.organizerPercent||0); reservePercent=Number(req.body.reservePercent||0);
+      const all=[...prizePercentages,organizerPercent,reservePercent];
+      if(prizePercentages.length!==placeCount||all.some(x=>!Number.isFinite(x)||x<0||x>100)||Math.abs(all.reduce((a,b)=>a+b,0)-100)>0.000001||!prizePercentages.some(x=>x>0)) return res.status(400).json({message:"Шагнал, зохион байгуулагч, нөөцийн хувь нийлээд яг 100% байх ёстой."});
+    }
     const ref=db.collection("tournaments").doc();
-    await ref.set({name,description:String(req.body.description||"").slice(0,500),mode,entryFee,maxPlayers,startAt,registrationDeadline:deadline,prizes,status:"scheduled",participantCount:0,createdBy:req.user.uid,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+    await ref.set({name,description:String(req.body.description||"").slice(0,500),mode,entryFee,maxPlayers,startAt,registrationDeadline:deadline,placeCount,prizeMode:mode==='BUYIN'?'percentage':'fixed',prizes,prizePercentages,organizerPercent,reservePercent,status:"scheduled",participantCount:0,createdBy:req.user.uid,createdAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
     res.json({success:true,id:ref.id,message:"Тэмцээн үүслээ."});
-  } catch(e) { res.status(500).json({message:"Тэмцээн үүсгэхэд алдаа гарлаа."}); }
+  } catch(e) { res.status(500).json({message:e.message||"Тэмцээн үүсгэхэд алдаа гарлаа."}); }
 });
 app.get("/api/admin/tournaments/:id/participants", authUser, authAdmin, async (req,res) => {
   try { const snap=await db.collection("tournaments").doc(String(req.params.id||"")).collection("participants").orderBy("registeredAt","asc").limit(500).get(); res.json({participants:snap.docs.map(d=>({uid:d.id,...d.data()}))}); } catch(e) { res.status(500).json({message:"Оролцогчдын жагсаалт ачаалж чадсангүй."}); }
@@ -262,22 +272,45 @@ app.post("/api/admin/tournaments/:id/status", authUser, authAdmin, async (req,re
 });
 app.post("/api/admin/tournaments/:id/settle", authUser, authAdmin, async (req,res) => {
   try {
-    const winners=Array.isArray(req.body.winners)?req.body.winners.slice(0,3):[];
-    if(!winners.length||new Set(winners.map(w=>w&&w.uid)).size!==winners.length||winners.some(w=>!w||typeof w.uid!=="string"||!validAmount(w.amount))) return res.status(400).json({message:"Ялагч болон шагналын дүн оруулна уу."});
+    const winners=Array.isArray(req.body.winners)?req.body.winners.slice(0,10):[];
+    if(!winners.length||new Set(winners.map(w=>w&&w.uid)).size!==winners.length||winners.some(w=>!w||typeof w.uid!=="string"||!w.uid.trim())) return res.status(400).json({message:"Ялагч бүрийг зөв сонгоно уу."});
     const ref=db.collection("tournaments").doc(String(req.params.id||""));
     await db.runTransaction(async tx=>{
       const snap=await tx.get(ref);if(!snap.exists)throw new Error("Тэмцээн олдсонгүй.");const t=snap.data();
       if(t.status==="completed"||t.payoutCompleted===true)throw new Error("Шагналыг өмнө нь олгосон байна.");
       if(t.status!=="live"&&t.status!=="paused")throw new Error("Зөвхөн эхэлсэн тэмцээнийг дүгнэнэ.");
-      if(winners.some((w,i)=>Number(w.amount)!==Number((t.prizes||[])[i]||0))) throw new Error("Шагналын дүн тэмцээн үүсгэхэд тохируулсан дүнтэй таарах ёстой.");
-      const refs=winners.map(w=>db.collection("users").doc(w.uid));
-      const userSnaps=[];for(const ur of refs) userSnaps.push(await tx.get(ur));
-      const participantSnaps=[];for(const w of winners) participantSnaps.push(await tx.get(ref.collection("participants").doc(w.uid)));
+      const placeCount=Number(t.placeCount||((t.prizes||[]).length)||3);
+      if(winners.length>placeCount)throw new Error("Тохируулсан шагналын байрнаас олон ялагч сонгосон байна.");
+      const participantRefs=winners.map(w=>ref.collection("participants").doc(w.uid));
+      const userRefs=winners.map(w=>db.collection("users").doc(w.uid));
+      const participantSnaps=[];for(const pr of participantRefs)participantSnaps.push(await tx.get(pr));
+      const userSnaps=[];for(const ur of userRefs)userSnaps.push(await tx.get(ur));
       if(participantSnaps.some(x=>!x.exists))throw new Error("Ялагчдын нэг нь бүртгэлтэй оролцогч биш байна.");
-      winners.forEach((w,i)=>{if(!userSnaps[i].exists)throw new Error("Ялагчийн данс олдсонгүй.");tx.update(ref.collection("participants").doc(w.uid),{place:i+1,prize:w.amount,status:"winner"});tx.update(refs[i],{chips:FieldValue.increment(w.amount)});tx.create(db.collection("chipLedger").doc("tourney_prize_"+ref.id+"_"+w.uid),{uid:w.uid,type:"tournament_prize",amount:w.amount,tournamentId:ref.id,place:i+1,createdAt:FieldValue.serverTimestamp()});});
-      tx.update(ref,{status:"completed",payoutCompleted:true,winners:winners.map((w,i)=>({uid:w.uid,place:i+1,amount:w.amount})),completedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
+      if(userSnaps.some(x=>!x.exists))throw new Error("Ялагчийн данс олдсонгүй.");
+      let amounts=[];let organizerAmount=0;let reserveAmount=0;
+      if(t.mode==="BUYIN" && t.prizeMode==="percentage") {
+        const pool=Number(t.participantCount||0)*Number(t.entryFee||0), percents=t.prizePercentages||[];
+        amounts=winners.map((w,i)=>Math.floor(pool*Number(percents[i]||0)/100));
+        organizerAmount=Math.floor(pool*Number(t.organizerPercent||0)/100);
+        reserveAmount=pool-amounts.reduce((a,b)=>a+b,0)-organizerAmount;
+        if(reserveAmount<0)throw new Error("Шагналын хувь буруу байна.");
+      } else {
+        const fixed=Array.isArray(t.prizes)?t.prizes:[];
+        amounts=winners.map((w,i)=>Number(fixed[i]||0));
+        if(amounts.some((a,i)=>a!==Number(fixed[i]||0)))throw new Error("Тогтмол шагналын тохиргоо зөрсөн байна.");
+      }
+      const creatorRef=db.collection("users").doc(String(t.createdBy||""));
+      let creatorSnap=null;
+      if(organizerAmount>0){creatorSnap=await tx.get(creatorRef);if(!creatorSnap.exists)throw new Error("Зохион байгуулагчийн данс олдсонгүй.");}
+      winners.forEach((w,i)=>{
+        const amount=amounts[i];
+        tx.update(participantRefs[i],{place:i+1,prize:amount,status:"winner"});
+        if(amount>0){tx.update(userRefs[i],{chips:FieldValue.increment(amount)});tx.create(db.collection("chipLedger").doc("tourney_prize_"+ref.id+"_"+w.uid),{uid:w.uid,type:"tournament_prize",amount,tournamentId:ref.id,place:i+1,createdAt:FieldValue.serverTimestamp()});}
+      });
+      if(organizerAmount>0){tx.update(creatorRef,{chips:FieldValue.increment(organizerAmount)});tx.create(db.collection("chipLedger").doc("tourney_organizer_"+ref.id),{uid:t.createdBy,type:"tournament_organizer_share",amount:organizerAmount,tournamentId:ref.id,createdAt:FieldValue.serverTimestamp()});}
+      tx.update(ref,{status:"completed",payoutCompleted:true,winners:winners.map((w,i)=>({uid:w.uid,place:i+1,amount:amounts[i]})),organizerAmount,reserveAmount,prizePool:Number(t.participantCount||0)*Number(t.entryFee||0),completedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()});
     });
-    res.json({success:true,message:"Тэмцээн дуусаж, шагналууд CHIP хэлбэрээр олгогдлоо."});
+    res.json({success:true,message:"Тэмцээн дуусаж, тохируулсан шагналууд CHIP хэлбэрээр олгогдлоо."});
   } catch(e) { res.status(400).json({message:e.message||"Шагнал олгоход алдаа гарлаа."}); }
 });
 
@@ -1774,7 +1807,7 @@ io.on("connection", socket => {
         const snap = await transaction.get(userRef);
         if (!snap.exists) throw new Error("Хэрэглэгч олдсонгүй.");
         const balance = Number(snap.data().chips || 0);
-        if (!Number.isSafeInteger(balance) || balance < buyIn) throw new Error("CHIP хүрэлцэхгүй байна.");
+        if (!Number.isSafeInteger(balance) || balance < buyIn) { const short=Math.max(0,buyIn-balance); throw new Error(`CHIP хүрэлцэхгүй байна. Шаардлагатай: ${buyIn.toLocaleString()} CHIP · Үлдэгдэл: ${balance.toLocaleString()} CHIP · Дутуу: ${short.toLocaleString()} CHIP.`); }
         walletAfter = balance - buyIn;
         transaction.update(userRef, { chips: walletAfter, activeTable: table.id, tableStack: buyIn });
       });
