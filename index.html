@@ -2630,3 +2630,52 @@ loadVisualPreferences(); rotateRewardLabel(); if(!rewardRotationTimer)rewardRota
 .poker-table[data-game-type="omaha"] .seat.is-me .seat-cards{width:150px!important}
 .poker-table[data-game-type="omaha"] .seat.is-me .seat-cards .playing-card{width:25px!important;min-width:25px!important;height:37px!important;font-size:12px!important}
 </style>
+
+<style id="blackclub-seat-cards-visibility-fix">
+/* Top seats: render pocket cards below the seat, inside the felt area.
+   This prevents the game-panel's overflow clipping from hiding them. */
+.poker-table .seat-1 .seat-cards,
+.poker-table .seat-2 .seat-cards,
+.poker-table[data-max-players="9"] .seat-9 .seat-cards {
+  top:auto!important; bottom:-39px!important; left:50%!important;
+  transform:translateX(-50%)!important;
+}
+/* Slightly larger, clearer pocket cards on desktop. */
+.poker-table .seat .seat-cards {gap:2px!important;}
+.poker-table .seat .seat-cards .playing-card {
+  width:22px!important; min-width:22px!important; height:33px!important;
+  font-size:10px!important;
+}
+.poker-table[data-game-type="omaha"] .seat .seat-cards {width:138px!important;}
+.poker-table[data-game-type="omaha"] .seat .seat-cards .playing-card {
+  width:22px!important; min-width:22px!important; height:33px!important;
+  font-size:10px!important;
+}
+.poker-table[data-game-type="omaha"] .seat.is-me .seat-cards {width:166px!important;}
+.poker-table[data-game-type="omaha"] .seat.is-me .seat-cards .playing-card {
+  width:27px!important; min-width:27px!important; height:40px!important;
+  font-size:13px!important;
+}
+@media(max-width:650px) {
+  .poker-table .seat-1 .seat-cards,
+  .poker-table .seat-2 .seat-cards,
+  .poker-table[data-max-players="9"] .seat-9 .seat-cards {
+    top:auto!important; bottom:-34px!important; left:50%!important;
+    transform:translateX(-50%)!important;
+  }
+  .poker-table .seat .seat-cards .playing-card {
+    width:19px!important; min-width:19px!important; height:29px!important;
+    font-size:9px!important;
+  }
+  .poker-table[data-game-type="omaha"] .seat .seat-cards {width:118px!important;}
+  .poker-table[data-game-type="omaha"] .seat .seat-cards .playing-card {
+    width:19px!important; min-width:19px!important; height:29px!important;
+    font-size:9px!important;
+  }
+  .poker-table[data-game-type="omaha"] .seat.is-me .seat-cards {width:152px!important;}
+  .poker-table[data-game-type="omaha"] .seat.is-me .seat-cards .playing-card {
+    width:25px!important; min-width:25px!important; height:37px!important;
+    font-size:12px!important;
+  }
+}
+</style>
