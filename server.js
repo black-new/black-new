@@ -1213,24 +1213,24 @@ app.post("/api/admin/chips", authUser, authAdmin, async (req, res) => {
 // POKER TABLES
 // ==========================================
 
-// 7 blind түвшин тус бүрт 4 хувилбар: нийт 28 ширээ.
-// Omaha 4/6 картын аль аль нь яг 2 хувийн + 3 нийтийн хөзөр ашиглана.
+// Blind түвшин бүрт 4 төрлийн ширээ: Texas 6-max, Omaha 4-card 6/9-max, Omaha 6-card 6-max.
 const STAKES = [
   [100, 200], [250, 500], [500, 1000], [1000, 2000],
   [2500, 5000], [5000, 10000], [10000, 20000]
 ];
 const MIN_BUY_IN_BY_BIG_BLIND = { 200: 5000, 500: 7500, 1000: 10000, 2000: 20000, 5000: 50000, 10000: 100000, 20000: 250000 };
 const TABLE_VARIANTS = [
+  { type: "texas", maxPlayers: 6, label: "HOLD'EM 6-MAX" },
   { type: "omaha4", maxPlayers: 6, label: "OMAHA 4-CARD 6-MAX" },
   { type: "omaha4", maxPlayers: 9, label: "OMAHA 4-CARD 9-MAX" },
-  { type: "omaha6", maxPlayers: 6, label: "OMAHA 6-CARD" },
-  { type: "texas", maxPlayers: 6, label: "HOLD'EM" }
+  { type: "omaha6", maxPlayers: 6, label: "OMAHA 6-CARD 6-MAX" }
 ];
 const TABLE_CONFIG = [];
 for (const [smallBlind, bigBlind] of STAKES) {
   for (const variant of TABLE_VARIANTS) {
+    const id = `${variant.type.toUpperCase()}_${variant.maxPlayers}_${smallBlind}_${bigBlind}`;
     TABLE_CONFIG.push({
-      id: `${variant.type.toUpperCase()}_${variant.maxPlayers}_${smallBlind}_${bigBlind}`,
+      id,
       name: `${variant.label} ${smallBlind.toLocaleString("en-US")}/${bigBlind.toLocaleString("en-US")}`,
       type: variant.type,
       smallBlind,
@@ -1241,6 +1241,14 @@ for (const [smallBlind, bigBlind] of STAKES) {
     });
   }
 }
+
+function getHoleCardCount(type) {
+  const value = String(type || "").toLowerCase();
+  if (value === "omaha4" || value.includes("omaha4") || value.includes("4-card")) return 4;
+  if (value === "omaha6" || value === "omaha" || value.includes("omaha6") || value.includes("6-card")) return 6;
+  return 2;
+}
+function isOmahaType(type) { return getHoleCardCount(type) === 4 || getHoleCardCount(type) === 6; }
 
 const tables = new Map();
 const socketUsers = new Map();
@@ -1451,27 +1459,19 @@ function compareScores(a,b) {
   }
   return 0;
 }
-function getHoleCardCount(type) {
-  const value = String(type || "").toLowerCase();
-  if (value === "omaha4" || value.includes("omaha4") || value.includes("4-card")) return 4;
-  if (value === "omaha6" || value === "omaha" || value.includes("omaha6") || value.includes("6-card")) return 6;
-  return 2;
-}
-function isOmahaType(type) { return getHoleCardCount(type) === 4 || getHoleCardCount(type) === 6; }
 function evaluatePlayer(table, player) {
   const board = table.communityCards;
   if (board.length !== 5) return [0];
-  const holeCount = getHoleCardCount(table.type);
+  let pool;
   if (isOmahaType(table.type)) {
-    if (!Array.isArray(player.cards) || player.cards.length !== holeCount) return [0];
-    const scores = [];
-    for (const hole of combinations(player.cards, 2)) {
-      for (const community of combinations(board, 3)) scores.push(scoreFive([...hole, ...community]));
-    }
+    const requiredHoleCards = getHoleCardCount(table.type);
+    if (player.cards.length !== requiredHoleCards) return [0];
+    const scores=[];
+    for (const hole of combinations(player.cards,2)) for (const community of combinations(board,3)) scores.push(scoreFive([...hole,...community]));
     return scores.sort((a,b)=>compareScores(b,a))[0] || [0];
   }
-  const pool = [...player.cards, ...board];
-  return combinations(pool, 5).map(scoreFive).sort((a,b)=>compareScores(b,a))[0] || [0];
+  pool = [...player.cards,...board];
+  return combinations(pool,5).map(scoreFive).sort((a,b)=>compareScores(b,a))[0] || [0];
 }
 function handName(score) {
   return ["Өндөр карт","Хос","Хоёр хос","Гурвал","Дараалал","Өнгө","Фулл хаус","Дөрөв","Стрэйт флэш"][score[0]] || "";
