@@ -1243,6 +1243,9 @@ body:has(#authScreen:not([style*="display: none"])) {
   box-shadow:none!important;
 }
 
+/* Hide uninitialized seat placeholders so an empty black rectangle never appears. */
+.poker-table .seat:empty{display:none!important;}
+
 /* Hand number: remove any card/panel styling and place it just after the back arrow. */
 .game-topline{position:relative!important}
 .game-topline .table-hand-counter{
