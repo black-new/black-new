@@ -2035,6 +2035,7 @@ function openAccountSection(section) {
         <div class="bc-note">Админы хяналтын самбар. Нэвтрэлт, Firebase эрх, CHIP-ийн үндсэн бүртгэл, кассын хэрэглэгчийн үйлдэл болон серверийн нууц тохиргоонд хүрэхгүй.</div>
         <button class="bc-action" onclick="openAccountSection('adminUsers')">♟ ТОГЛОГЧИЙН УДИРДЛАГА · ПРОФАЙЛ / BLOCK</button>
         <button class="bc-action" onclick="openAccountSection('adminUsers')">🏦 ТОГЛОГЧИЙН БҮРТГЭЛТЭЙ ДАНС УДИРДАХ</button>
+        <button class="bc-action" onclick="openAccountSection('adminCashier')">🔔 КАССЫН ХҮСЭЛТ · ЦЭНЭГЛЭЛТ / ТАТАЛТ <span id="adminCashierBadge" class="bc-status" style="margin-left:8px">0</span></button>
         <button class="bc-action" onclick="openAccountSection('adminTables')">♧ LIVE ШИРЭЭ · ТОГЛОЛТЫН ТӨЛӨВ</button>
         <button class="bc-action" onclick="openAccountSection('adminHands')">🂠 ДУУССАН ГАР · ХӨЗРИЙН АУДИТ</button>
         <button class="bc-action" onclick="openAccountSection('adminBots')">🤖 БОТЫН ТОХИРГОО</button>
@@ -2046,7 +2047,14 @@ function openAccountSection(section) {
         <div class="cashier-card"><h3>RAKE / JACKPOT УДИРДЛАГА</h3><div id="adminCasinoSettings">Ачаалж байна...</div><div id="adminCasinoReport" class="bc-note"></div></div>
         <button class="bc-action bc-secondary" onclick="closeAccountSection()">ӨӨРӨӨ ШИРЭЭНД СУУХ · LOBBY</button>
       </div>`;
-    setTimeout(()=>{renderChatAdmin();renderCasinoAdmin();}, 0);
+    setTimeout(()=>{renderChatAdmin();renderCasinoAdmin();loadAdminCashierBadge();}, 0);
+  }
+
+  if (section === "adminCashier") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "КАССЫН ХҮСЭЛТ · ЦЭНЭГЛЭЛТ / ТАТАЛТ";
+    content.innerHTML = `<div class="cashier-card"><div class="bc-note">Тоглогчдын цэнэглэлт болон CHIP таталтын хүсэлтүүд энд харагдана. Таталтын хүсэлтэд тоглогчийн бүртгэлтэй банк, дансны мэдээлэл хавсарна. Зөвшөөрөх эсвэл татгалзах шийдвэр сервер дээр админ эрхээр баталгаажна.</div><button class="bc-action" onclick="loadAdminCashier()">↻ ХҮСЭЛТ ШИНЭЧЛЭХ</button><div id="adminCashierSummary" class="bc-note">Хүсэлт ачаалж байна...</div><div id="adminCashierList">Хүсэлт ачаалж байна...</div></div>`;
+    loadAdminCashier();
   }
 
   if (section === "adminHands") {
@@ -2205,10 +2213,30 @@ async function loadSecondaryAdmins(){
 }
 async function setSecondaryAdmin(enabled){const uid=$("secondaryAdminUid")?.value.trim()||"";if(!uid){showMessage("secondaryAdminMessage","Firebase UID оруулна уу.");return;}if(!confirm(enabled?"Энэ хэрэглэгчид дэд админы эрх өгөх үү?":"Энэ хэрэглэгчийн дэд админы эрхийг цуцлах уу?"))return;try{const r=await api("/api/admin/admins/set",{uid,enabled});showMessage("secondaryAdminMessage",r.message);loadSecondaryAdmins();}catch(e){showMessage("secondaryAdminMessage",e.message);}}
 
+async function loadAdminCashierBadge() {
+  const badge = $("adminCashierBadge");
+  if (!badge || !user?.isAdmin) return;
+  try { const d = await apiGet("/api/admin/cashier/list"); badge.textContent = String((d.requests || []).length); }
+  catch (_) { badge.textContent = "!"; }
+}
+
 async function loadAdminCashier() {
-  try { const d = await apiGet("/api/admin/cashier/list"); const list = d.requests || [];
-    $("adminCashierList").innerHTML = list.length ? list.map(r => `<div class="bc-request"><strong>${r.type === "deposit" ? "Цэнэглэх" : "Татах"} · ${Number(r.amount).toLocaleString()} CHIP</strong><br>Хэрэглэгч: ${escapeHtml(r.username || r.displayName || "-")}<br>Данс: ${escapeHtml(r.bankName || "-")} ${escapeHtml(r.bankAccount || "")} ${escapeHtml(r.bankHolder || "")}<br>Баримт: ${escapeHtml(r.reference || "-")}<div class="bc-actions"><button class="bc-approve" onclick="decideCashier('${r.id}','approve')">Зөвшөөрөх</button><button class="bc-reject" onclick="decideCashier('${r.id}','reject')">Татгалзах</button></div></div>`).join("") : '<div class="bc-note">Хүлээгдэж буй хүсэлт алга.</div>';
-  } catch(e) { showMessage("adminCashierList", e.message); }
+  try {
+    const d = await apiGet("/api/admin/cashier/list");
+    const list = d.requests || [];
+    const badge = $("adminCashierBadge");
+    if (badge) badge.textContent = String(list.length);
+    const summary = $("adminCashierSummary");
+    if (summary) summary.textContent = `Шийдвэр хүлээж буй хүсэлт: ${list.length} · Таталт: ${list.filter(r=>r.type === "withdraw").length} · Цэнэглэлт: ${list.filter(r=>r.type === "deposit").length}`;
+    const target = $("adminCashierList");
+    if (!target) return;
+    target.innerHTML = list.length ? list.map(r => `<div class="bc-request"><strong>${r.type === "deposit" ? "ЦЭНЭГЛЭХ ХҮСЭЛТ" : "ТАТАЛТЫН ХҮСЭЛТ"} · ${Number(r.amount).toLocaleString()} CHIP</strong><br>Хэрэглэгч: ${escapeHtml(r.username || r.displayName || "-")}<br>Банк: ${escapeHtml(r.bankName || "-")}<br>Данс: ${escapeHtml(r.bankAccount || "-")}<br>Эзэмшигч: ${escapeHtml(r.bankHolder || "-")}<br>Баримт: ${escapeHtml(r.reference || "-")}<br>Илгээсэн: ${r.createdAt ? new Date(r.createdAt).toLocaleString("mn-MN") : "-"}<div class="bc-actions"><button class="bc-approve" onclick="decideCashier('${r.id}','approve')">ЗӨВШӨӨРӨХ</button><button class="bc-reject" onclick="decideCashier('${r.id}','reject')">ТАТГАЛЗАХ</button></div></div>`).join("") : '<div class="bc-note">Хүлээгдэж буй хүсэлт алга.</div>';
+  } catch(e) {
+    const target = $("adminCashierList");
+    if (target) target.textContent = e.message;
+    const summary = $("adminCashierSummary");
+    if (summary) summary.textContent = "Кассын хүсэлт ачаалж чадсангүй.";
+  }
 }
 let cachedAdminUsers = [];
 
