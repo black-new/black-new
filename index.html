@@ -1368,6 +1368,43 @@ body:has(#authScreen:not([style*="display: none"])) {
   font-size:10px!important;font-weight:400!important;line-height:1!important;
   letter-spacing:.15px!important;pointer-events:none!important;flex:0 0 auto!important;
 }
+
+/* ===== RAISE POPUP + PLAYER GAME SETTINGS ===== */
+.raise-popup-backdrop{position:fixed;inset:0;z-index:120;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
+.raise-popup-backdrop.open{display:flex}
+.raise-popup{width:min(360px,calc(100vw - 28px));padding:18px;border:1px solid #b88b43;border-radius:15px;background:linear-gradient(150deg,#101e30,#050b14 72%);box-shadow:0 20px 70px #000d,0 0 0 3px #d8ad5a14;color:#f5f0e5}
+.raise-popup-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.raise-popup-head small{color:#b99a5e;font-size:9px;letter-spacing:2px}
+.raise-popup-head h3{margin:4px 0 0;color:#f2d28a;font-size:20px;letter-spacing:2px}
+.raise-popup-close{width:30px;height:30px;border:1px solid #68512e;border-radius:8px;background:#0a1320;color:#e8bd62;font-size:21px}
+.raise-popup-amount{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid #765b31;border-radius:10px;background:#050b13}
+.raise-popup-amount input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font-size:22px;font-weight:800}
+.raise-popup-amount span{color:#e8bd62;font-size:10px;font-weight:800}
+.raise-slider{width:100%;margin:17px 0 12px;accent-color:#e8bd62}
+.raise-popup-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.raise-popup-shortcuts button{height:39px;border:1px solid #9b773e;border-radius:9px;background:linear-gradient(145deg,#173253,#09182b);color:#f6d98e;font-weight:900}
+.raise-popup-pot{display:flex;justify-content:space-between;align-items:center;margin:14px 1px;color:#9eacbd;font-size:11px}
+.raise-popup-pot strong{color:#f2d28a;font-size:13px}
+.raise-popup-actions{display:flex;gap:9px}
+.raise-popup-actions button{height:42px;flex:1;border-radius:9px;font-size:11px;font-weight:900}
+.raise-popup-cancel{border:1px solid #52647b;background:#101d2c;color:#dce4ee}
+.raise-popup-confirm{border:0;background:linear-gradient(135deg,#f5d889,#bd8730);color:#171008}
+.settings-group{padding:13px 0;border-bottom:1px solid #2d3d50}
+.settings-group:last-child{border-bottom:0}
+.settings-group-title{margin-bottom:10px;color:#e8bd62;font-size:11px;font-weight:900;letter-spacing:1.5px}
+.setting-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:39px;color:#e7edf5;font-size:13px;cursor:pointer}
+.setting-row input{position:absolute;opacity:0;pointer-events:none}
+.setting-row i{position:relative;width:39px;height:22px;flex:0 0 39px;border:1px solid #52647b;border-radius:20px;background:#172436;transition:.18s}
+.setting-row i:after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#9aa8b8;transition:.18s}
+.setting-row input:checked+i{background:#8b672d;border-color:#e8bd62}
+.setting-row input:checked+i:after{left:20px;background:#fff0c4}
+.settings-help{margin:10px 0 0;color:#9babbc;font-size:11px;line-height:1.5}
+@media(max-width:650px){
+ .raise-popup{padding:15px;width:min(340px,calc(100vw - 24px))}
+ .raise-popup-head h3{font-size:18px}
+ .raise-popup-amount input{font-size:20px}
+}
+
 </style>
 
 <style id="blackclub-recovered-layout-css">
@@ -1712,12 +1749,30 @@ body:has(#authScreen:not([style*="display: none"])) {
         <button class="secondary-btn fold-btn" onclick="sendAction('fold')">FOLD</button>
         <button class="secondary-btn" onclick="sendAction('check')">CHECK</button>
         <button class="secondary-btn" onclick="sendAction('call')">CALL</button>
-        <label class="raise-field"><span>Raise Amount</span><input id="raiseAmount" type="number" min="1" placeholder="250000"></label>
-        <button class="gold-btn" onclick="sendAction('raise')">RAISE</button>
+        <button class="gold-btn raise-open-btn" onclick="openRaisePopup()">RAISE</button>
       </div>
     </section>
   </section>
 </main>
+<div class="raise-popup-backdrop" id="raisePopup" onclick="if(event.target===this)closeRaisePopup()" aria-hidden="true">
+  <section class="raise-popup" role="dialog" aria-modal="true" aria-labelledby="raisePopupTitle">
+    <div class="raise-popup-head">
+      <div><small>BLACKCLUB · BETTING</small><h3 id="raisePopupTitle">RAISE</h3></div>
+      <button type="button" class="raise-popup-close" onclick="closeRaisePopup()" aria-label="Хаах">×</button>
+    </div>
+    <div class="raise-popup-amount"><input id="raiseAmount" type="number" inputmode="numeric" min="1" step="1" placeholder="Мөрийний дүн" oninput="syncRaiseSliderFromInput()"><span>CHIP</span></div>
+    <input id="raiseSlider" class="raise-slider" type="range" min="1" max="100000" value="1" oninput="syncRaiseInputFromSlider()">
+    <div class="raise-popup-shortcuts">
+      <button type="button" onclick="setRaisePreset(0.5)">½ POT</button>
+      <button type="button" onclick="setRaisePreset(1)">POT</button>
+    </div>
+    <div class="raise-popup-pot"><span>Одоогийн POT</span><strong id="raisePotValue">0 CHIP</strong></div>
+    <div class="raise-popup-actions">
+      <button type="button" class="raise-popup-cancel" onclick="closeRaisePopup()">БОЛИХ</button>
+      <button type="button" class="raise-popup-confirm" onclick="confirmRaise()">CONFIRM RAISE</button>
+    </div>
+  </section>
+</div>
       <button id="chatLauncher" class="chat-launcher" type="button" onclick="toggleTableChat(true)" aria-label="Чат нээх"><span class="chat-launcher-avatar">♟</span><span>CHAT</span><i id="chatUnreadDot"></i></button>
       <section class="cashier-card table-chat-float" id="tableChatPanel" aria-label="BLACKCLUB чат">
         <div class="chat-float-head"><strong><span class="chat-head-mark">♠</span> BLACKCLUB CHAT</strong><div class="chat-head-actions"><button id="chatClearButton" type="button" style="display:none" onclick="clearAllChats()" title="Бүх чатыг устгах" aria-label="Бүх чатыг устгах">⌫</button><button type="button" onclick="minimizeTableChat()" title="Жижигрүүлэх" aria-label="Жижигрүүлэх">−</button><button type="button" onclick="toggleTableChat(false)" title="Хаах" aria-label="Хаах">×</button></div></div>
@@ -1826,6 +1881,10 @@ document.addEventListener("click", event => {
   }
 });
 
+function settingToggle(id,label,checked,handler){
+  return `<label class="setting-row"><span>${label}</span><input type="checkbox" id="${id}" ${checked?"checked":""} onchange="${handler}('${id}',this.checked)"><i aria-hidden="true"></i></label>`;
+}
+
 function openAccountSection(section) {
   closeAccountMenu();
 
@@ -1880,22 +1939,44 @@ function openAccountSection(section) {
 
   if (section === "settings") {
     title.textContent = "ХУВИЙН ТОХИРГОО";
+    const prefs = getGamePreferences();
     content.innerHTML = `
-      <div style="color:#e8bd62;font-weight:bold">Ширээний өнгө</div>
-      <div class="theme-options">
-        <button class="theme-swatch" style="background:#07366f" onclick="setTableTheme('#07366f',this)" aria-label="Хөх"></button>
-        <button class="theme-swatch" style="background:#075536" onclick="setTableTheme('#075536',this)" aria-label="Ногоон"></button>
-        <button class="theme-swatch" style="background:#651d2b" onclick="setTableTheme('#651d2b',this)" aria-label="Улаан"></button>
-        <button class="theme-swatch" style="background:#263344" onclick="setTableTheme('#263344',this)" aria-label="Саарал"></button>
+      <div class="settings-group">
+        <div class="settings-group-title">ШИРЭЭНИЙ ӨНГӨ</div>
+        <div class="theme-options">
+          <button class="theme-swatch" style="background:#07366f" onclick="setTableTheme('#07366f',this)" aria-label="Хөх"></button>
+          <button class="theme-swatch" style="background:#075536" onclick="setTableTheme('#075536',this)" aria-label="Ногоон"></button>
+          <button class="theme-swatch" style="background:#651d2b" onclick="setTableTheme('#651d2b',this)" aria-label="Улаан"></button>
+          <button class="theme-swatch" style="background:#263344" onclick="setTableTheme('#263344',this)" aria-label="Саарал"></button>
+        </div>
       </div>
-      <div style="color:#e8bd62;font-weight:bold">Хөзрийн загвар</div>
-      <div class="card-options">
-        <button class="card-choice" onclick="setCardTheme('gold',this)">GOLD</button>
-        <button class="card-choice" onclick="setCardTheme('classic',this)">CLASSIC</button>
+      <div class="settings-group">
+        <div class="settings-group-title">ХӨЗРИЙН ЗАГВАР</div>
+        <div class="card-options">
+          <button class="card-choice" onclick="setCardTheme('gold',this)">GOLD</button>
+          <button class="card-choice" onclick="setCardTheme('classic',this)">CLASSIC</button>
+        </div>
       </div>
-      <div style="color:#e8bd62;font-weight:bold;margin-top:16px">Тоглолтын тохиргоо</div>
-      <label style="display:flex;align-items:center;gap:10px;margin-top:10px;color:#e7edf5"><input id="autoNextHandToggle" type="checkbox" onchange="setAutoNextHand(this.checked)"> Гар дуусмагц дараагийн гарыг автоматаар эхлүүлэх</label>
-      <p style="color:#9babbc;font-size:12px;margin-top:14px">Таны сонголт энэ төхөөрөмж дээр хадгалагдана. Ээлжийн хугацаа 30 секунд; хугацаа дуусвал автоматаар FOLD хийгээд ширээнд үлдэнэ.</p>
+      <div class="settings-group">
+        <div class="settings-group-title">SOUND · ТОГЛОЛТЫН ДУУ</div>
+        ${settingToggle("soundEnabled","Ерөнхий дуу",prefs.soundEnabled,"setGamePreference")}
+        ${settingToggle("gameSound","Хөзөр, чипний дуу",prefs.gameSound,"setGamePreference")}
+        ${settingToggle("buttonSound","Товч дарах дуу",prefs.buttonSound,"setGamePreference")}
+        ${settingToggle("notificationSound","Мэдэгдлийн дуу",prefs.notificationSound,"setGamePreference")}
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">VIBRATION · ЧИЧИРГЭЭ</div>
+        ${settingToggle("vibrationEnabled","Чичиргээ асаах",prefs.vibrationEnabled,"setGamePreference")}
+        ${settingToggle("turnVibration","Таны ээлж болоход",prefs.turnVibration,"setGamePreference")}
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">GAMEPLAY · ТОГЛОЛТ</div>
+        <p class="settings-help">Дуу болон чичиргээний тохиргоо энэ төхөөрөмж дээр хадгалагдана. Чичиргээ нь дэмждэг гар утасны browser дээр ажиллана.</p>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">BETTING · МӨРИЙ</div>
+        <div class="settings-help">RAISE товчийг дарахад жижиг цонх нээгдэнэ. ½ POT эсвэл POT сонгож, slider-аар дүнгээ тохируулна.</div>
+      </div>
     `;
     setTimeout(markSelectedThemes,0);
   }
@@ -2413,6 +2494,14 @@ function connectSocket() {
   });
 
   socket.on("table:update", state => {
+    const previous=lastState?.table||lastState||{};
+    const next=state?.table||state||{};
+    const prevTurn=(previous.players||[])[Number(previous.currentTurn)];
+    const nextTurn=(next.players||[])[Number(next.currentTurn)];
+    const myId=user?.uid||user?.id||user?.userId;
+    const isMyNextTurn=!!next.handStarted&&!!nextTurn&&((nextTurn.uid||nextTurn.id||nextTurn.userId)===myId||nextTurn.username===user?.username);
+    const wasMyTurn=!!previous.handStarted&&!!prevTurn&&((prevTurn.uid||prevTurn.id||prevTurn.userId)===myId||prevTurn.username===user?.username);
+    if(isMyNextTurn&&!wasMyTurn){playGameSound("turn");const p=getGamePreferences();if(p.turnVibration)triggerGameVibration([45,35,45]);}
     lastState = state;
     renderTable(state);
   });
@@ -2422,6 +2511,7 @@ function connectSocket() {
   socket.on("chat:settings", s => { if(s.enabled===false) addChatLine({username:"SYSTEM",text:"Админ чатыг түр хаалаа."}); });
 
   socket.on("notice", message => {
+    playGameSound("notify");
     const text = typeof message === "string"
       ? message
       : message.message || "Мэдэгдэл";
@@ -2777,18 +2867,98 @@ function renderTable(state) {
   if (!turnCountdownTimer) turnCountdownTimer = setInterval(updateTurnCountdown, 250);
 }
 
-function sendAction(action) {
+const GAME_PREF_DEFAULTS = {
+  soundEnabled:true, gameSound:true, buttonSound:true, notificationSound:true,
+  vibrationEnabled:false, turnVibration:true
+};
+function getGamePreferences(){
+  try{return {...GAME_PREF_DEFAULTS,...JSON.parse(localStorage.getItem("blackclub_game_preferences")||"{}")};}
+  catch(e){return {...GAME_PREF_DEFAULTS};}
+}
+function setGamePreference(id,value){
+  const prefs=getGamePreferences();
+  if(!(id in GAME_PREF_DEFAULTS))return;
+  prefs[id]=!!value;
+  localStorage.setItem("blackclub_game_preferences",JSON.stringify(prefs));
+  if(id==="vibrationEnabled" && value) triggerGameVibration(25);
+  if(id==="soundEnabled" && value) playGameSound("click");
+}
+function playGameSound(kind="click"){
+  const p=getGamePreferences();
+  if(!p.soundEnabled || (kind==="click" && !p.buttonSound) || (kind==="notify" && !p.notificationSound) || (kind!=="click" && kind!=="notify" && !p.gameSound))return;
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx)return;
+    const ctx=new Ctx(), osc=ctx.createOscillator(), gain=ctx.createGain();
+    const freq=kind==="deal"?620:kind==="win"?880:kind==="turn"?740:480;
+    osc.type="sine";osc.frequency.setValueAtTime(freq,ctx.currentTime);
+    gain.gain.setValueAtTime(.0001,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.055,ctx.currentTime+.012);
+    gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.12);
+    osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.13);
+    osc.onended=()=>ctx.close();
+  }catch(e){}
+}
+function triggerGameVibration(pattern=35){
+  const p=getGamePreferences();
+  if(p.vibrationEnabled && typeof navigator!=="undefined" && navigator.vibrate){
+    try{navigator.vibrate(pattern);}catch(e){}
+  }
+}
+function openRaisePopup(){
+  if(!socket || !socket.connected || !currentTable){alert("Ширээнд холбогдоогүй байна.");return;}
+  const table=lastState?.table||lastState||{};
+  const pot=Math.max(0,Number(table.pot||0));
+  const me=(table.players||[]).find(p=>(p.uid||p.id||p.userId)===(user?.uid||user?.id||user?.userId)||p.username===user?.username);
+  const stack=Math.max(1,Number((me?.chips ?? me?.stack ?? me?.balance ?? getBalance()) || 1));
+  const input=$("raiseAmount"),slider=$("raiseSlider");
+  const max=Math.max(1,Math.floor(stack));
+  slider.max=String(max);
+  slider.value=String(Math.max(1,Math.min(max,Math.round(pot*.5)||1)));
+  input.value=slider.value;
+  $("raisePotValue").textContent=pot.toLocaleString("en-US")+" CHIP";
+  $("raisePopup").classList.add("open");
+  $("raisePopup").setAttribute("aria-hidden","false");
+  playGameSound("click");
+}
+function closeRaisePopup(){
+  $("raisePopup")?.classList.remove("open");
+  $("raisePopup")?.setAttribute("aria-hidden","true");
+}
+function setRaisePreset(fraction){
+  const table=lastState?.table||lastState||{};
+  const pot=Math.max(0,Number(table.pot||0));
+  const me=(table.players||[]).find(p=>(p.uid||p.id||p.userId)===(user?.uid||user?.id||user?.userId)||p.username===user?.username);
+  const stack=Math.max(1,Math.floor(Number((me?.chips ?? me?.stack ?? me?.balance ?? getBalance()) || 1)));
+  const value=Math.max(1,Math.min(stack,Math.round(pot*fraction)||1));
+  $("raiseAmount").value=String(value);
+  $("raiseSlider").value=String(value);
+  playGameSound("click");
+}
+function syncRaiseSliderFromInput(){
+  const input=$("raiseAmount"),slider=$("raiseSlider");
+  let value=Math.max(1,Math.floor(Number(input.value)||1));
+  value=Math.min(Number(slider.max)||value,value);
+  input.value=String(value);slider.value=String(value);
+}
+function syncRaiseInputFromSlider(){
+  $("raiseAmount").value=$("raiseSlider").value;
+}
+function confirmRaise(){
+  const amount=Math.floor(Number($("raiseAmount").value)||0);
+  if(!Number.isFinite(amount)||amount<1){alert("Мөрийний дүнгээ оруулна уу.");return;}
+  closeRaisePopup();
+  sendAction("raise",amount);
+}
+function sendAction(action, suppliedAmount) {
   if (!socket || !socket.connected || !currentTable) {
     alert("Ширээнд холбогдоогүй байна.");
     return;
   }
-
-  const amount = Number($("raiseAmount").value || 0);
-
-  socket.emit("game:action", {
-    action,
-    amount
-  });
+  const amount = Number(suppliedAmount ?? $("raiseAmount")?.value ?? 0);
+  playGameSound("click");
+  triggerGameVibration(25);
+  socket.emit("game:action", { action, amount });
 }
 
 function nextHand() {
