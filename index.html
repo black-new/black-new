@@ -3229,9 +3229,9 @@ function nextHand() {
 }
 
 function leaveTable() {
-  const modal = $("leaveConfirmModal");
+  // Standard poker-room behavior: leave immediately; no pending leave request UI.
   if (!currentTable || !socket) { showLobby(); return; }
-  if (modal) { modal.classList.add("open"); modal.setAttribute("aria-hidden", "false"); }
+  confirmLeaveTable();
 }
 function closeLeaveConfirm() {
   const modal = $("leaveConfirmModal");
@@ -3279,3 +3279,16 @@ loadVisualPreferences(); rotateRewardLabel(); if(!rewardRotationTimer)rewardRota
 
 </body>
 </html>
+
+/* BLACKCLUB corrective polish: blue felt retained, compact table, clearer own-seat cards */
+.poker-table{background:radial-gradient(ellipse at 50% 44%,#1760a7 0%,#0b4788 56%,#05264d 100%)!important;box-shadow:inset 0 0 0 3px #d8bd80,inset 0 0 0 8px #123c29,inset 0 0 55px #001126,0 9px 30px #000d,0 0 12px #b28a45!important}
+body.game-active #tablePage .poker-table{width:min(96%,calc((100dvh - 225px)*1.82))!important;max-height:calc(100dvh - 235px)!important}
+@media(max-width:650px){body.game-active #tablePage .poker-table{width:min(91vw,calc(100dvh - 190px))!important;max-height:calc(100dvh - 185px)!important}}
+.seat.is-me .seat-cards{top:-45px!important;left:50%!important;transform:translateX(-50%)!important;width:82px!important;height:38px!important;z-index:14!important}
+.seat.is-me .seat-cards .playing-card{width:25px!important;height:36px!important;min-width:25px!important;font-size:12px!important}
+.seat.is-me .seat-info{position:relative!important;z-index:5!important}
+.seat.is-me .chip-display{white-space:nowrap!important;overflow:visible!important;line-height:1.2!important}
+@media(max-width:650px){.seat.is-me .seat-cards{top:-36px!important;width:62px!important;height:30px!important}.seat.is-me .seat-cards .playing-card{width:19px!important;height:28px!important;min-width:19px!important;font-size:9px!important}}
+/* Replace browser's stark white alert box with a small branded notification. */
+#bcToast{position:fixed;z-index:99999;left:50%;bottom:26px;transform:translate(-50%,18px);width:min(420px,calc(100vw - 28px));padding:13px 16px;border:1px solid #c7a35e;border-radius:12px;background:linear-gradient(145deg,#10243a,#071321);color:#f4e7c8;box-shadow:0 14px 42px #000b;font:600 13px/1.5 system-ui,sans-serif;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+#bcToast.show{opacity:1;transform:translate(-50%,0)}

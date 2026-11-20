@@ -1539,7 +1539,17 @@ async function finishHand(table, forcedWinner = null) {
   if (table.turnTimer) clearTimeout(table.turnTimer);
   table.turnTimer = null;
   const active = getActivePlayers(table);
-  if (!active.length) return;
+  // If every remaining player leaves/folds in the same hand, nobody wins the pot.
+  // Return each player's own committed contribution before cashing out their remaining stack.
+  if (!active.length) {
+    for (const player of table.players) {
+      const committed = Math.max(0, Math.floor(Number(player.totalBet || 0)));
+      player.chips = Math.max(0, Math.floor(Number(player.chips || 0))) + committed;
+      player.totalBet = 0;
+      player.bet = 0;
+    }
+    table.pot = 0;
+  }
   const grossPot = Math.max(0, Number(table.pot || 0));
   const rakeEligible = (table.communityCards || []).length >= 3;
   const rake = rakeEligible ? Math.min(grossPot, Math.floor(grossPot * casinoSettings.rakePercent / 100), Math.floor(Number(table.bigBlind || 0) * casinoSettings.rakeCapBB)) : 0;
@@ -1726,12 +1736,15 @@ async function cashoutPlayerStack(table, player, reasonKey) {
     const wallet = Math.max(0, Math.floor(Number(userSnap.data().chips || 0)));
     walletAfter = wallet + amount;
     if (!Number.isSafeInteger(walletAfter)) throw new Error("Дансны CHIP дээд хэмжээнээс хэтэрлээ.");
-    transaction.update(userRef, {
-      chips: walletAfter,
-      activeTable: FieldValue.delete(),
-      tableStack: FieldValue.delete(),
-      updatedAt: FieldValue.serverTimestamp()
-    });
+    const userData = userSnap.data() || {};
+    const update = { chips: walletAfter, updatedAt: FieldValue.serverTimestamp() };
+    // A player may already be seated at another table while this hand is settling.
+    // Never clear the newer table's active session or stack during the old cashout.
+    if (userData.activeTable === table.id) {
+      update.activeTable = FieldValue.delete();
+      update.tableStack = FieldValue.delete();
+    }
+    transaction.update(userRef, update);
     transaction.set(cashoutRef, {
       uid: player.uid, tableId: table.id, amount, reason: reasonKey,
       handNumber: Number(table.handNumber || 0), createdAt: FieldValue.serverTimestamp()
@@ -1917,7 +1930,7 @@ io.on("connection", socket => {
       }
       if (!existing) {
         for (const otherTable of tables.values()) {
-          if (otherTable.players.some(p => p.uid === user.uid)) {
+          if (otherTable.players.some(p => p.uid === user.uid && !p.leaveRequested)) {
             return reply({ success: false, message: "Та өөр ширээнд суусан байна." });
           }
         }
@@ -2017,8 +2030,8 @@ io.on("connection", socket => {
         return reply({ success: true, pendingSettlement: true });
       }
       if (player && (table.handStarted || table.settlementPending)) {
-        // Тоглогч UI-гаасаа шууд гарна. Hand идэвхтэй бол автоматаар fold хийнэ;
-        // settlement үргэлжилж байвал тухайн hand-ийн баталгаатай дүнг хүлээгээд cashout хийнэ.
+        // Player leaves the visible table immediately. The old stack remains locked
+        // only for this hand's settlement; the player may sit at another table now.
         player.leaveRequested = true;
         player.online = false;
         if (table.handStarted) {
