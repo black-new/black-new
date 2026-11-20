@@ -1369,6 +1369,20 @@ body:has(#authScreen:not([style*="display: none"])) {
   letter-spacing:.15px!important;pointer-events:none!important;flex:0 0 auto!important;
 }
 
+/* ===== CONFIRM LEAVE TABLE ===== */
+.leave-confirm-backdrop{position:fixed;inset:0;z-index:125;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
+.leave-confirm-backdrop.open{display:flex}
+.leave-confirm-card{width:min(390px,calc(100vw - 30px));padding:24px 22px 20px;border:1px solid #b98a42;border-radius:18px;background:radial-gradient(ellipse at top,#173354 0%,#0a1727 48%,#050b13 100%);box-shadow:0 24px 80px #000d,0 0 0 3px #d8ad5a12;color:#f5f0e5;text-align:center}
+.leave-confirm-icon{width:54px;height:54px;margin:0 auto 14px;border:1px solid #9b773e;border-radius:50%;display:grid;place-items:center;background:#101e30;color:#f2cf82;font-size:25px;box-shadow:0 8px 24px #0008}
+.leave-confirm-card h3{margin:0 0 9px;color:#f2d28a;font-size:19px;letter-spacing:.4px}
+.leave-confirm-card p{margin:0;color:#b9c5d3;font-size:12px;line-height:1.65}
+.leave-confirm-note{margin:14px 0 18px;padding:11px 12px;border:1px solid #6d5734;border-radius:10px;background:#050d18;color:#e6d3a8;font-size:11px;line-height:1.55}
+.leave-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.leave-confirm-actions button{height:43px;border-radius:10px;font-size:11px;font-weight:900;letter-spacing:.4px}
+.connection-lost-label{display:inline-block;margin-top:3px;padding:2px 5px;border:1px solid #8a6637;border-radius:5px;background:#392514;color:#ffd28a;font-size:8px!important;font-weight:900;letter-spacing:.25px}
+.leave-confirm-cancel{border:1px solid #53667b;background:#142236;color:#e2e9f1}
+.leave-confirm-yes{border:1px solid #a87832;background:linear-gradient(135deg,#f2d58e,#bd8735);color:#171008}
+
 /* ===== RAISE POPUP + PLAYER GAME SETTINGS ===== */
 .raise-popup-backdrop{position:fixed;inset:0;z-index:120;background:#0009;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)}
 .raise-popup-backdrop.open{display:flex}
@@ -1381,7 +1395,7 @@ body:has(#authScreen:not([style*="display: none"])) {
 .raise-popup-amount input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font-size:22px;font-weight:800}
 .raise-popup-amount span{color:#e8bd62;font-size:10px;font-weight:800}
 .raise-slider{width:100%;margin:17px 0 12px;accent-color:#e8bd62}
-.raise-popup-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.raise-popup-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
 .raise-popup-shortcuts button{height:39px;border:1px solid #9b773e;border-radius:9px;background:linear-gradient(145deg,#173253,#09182b);color:#f6d98e;font-weight:900}
 .raise-popup-pot{display:flex;justify-content:space-between;align-items:center;margin:14px 1px;color:#9eacbd;font-size:11px}
 .raise-popup-pot strong{color:#f2d28a;font-size:13px}
@@ -1857,12 +1871,25 @@ body:has(#authScreen:not([style*="display: none"])) {
     <input id="raiseSlider" class="raise-slider" type="range" min="1" max="100000" value="1" oninput="syncRaiseInputFromSlider()">
     <div class="raise-popup-shortcuts">
       <button type="button" onclick="setRaisePreset(0.5)">½ POT</button>
+      <button type="button" onclick="setRaisePreset(0.6667)">⅔ POT</button>
       <button type="button" onclick="setRaisePreset(1)">POT</button>
     </div>
     <div class="raise-popup-pot"><span>Одоогийн POT</span><strong id="raisePotValue">0 CHIP</strong></div>
     <div class="raise-popup-actions">
       <button type="button" class="raise-popup-cancel" onclick="closeRaisePopup()">БОЛИХ</button>
       <button type="button" class="raise-popup-confirm" onclick="confirmRaise()">CONFIRM RAISE</button>
+    </div>
+  </section>
+</div>
+<div class="leave-confirm-backdrop" id="leaveConfirmModal" onclick="if(event.target===this)closeLeaveConfirm()" aria-hidden="true">
+  <section class="leave-confirm-card" role="dialog" aria-modal="true" aria-labelledby="leaveConfirmTitle">
+    <div class="leave-confirm-icon">↗</div>
+    <h3 id="leaveConfirmTitle">Ширээнээс гарах уу?</h3>
+    <p>Та ширээнээс одоо гарч, үндсэн нүүр рүү буцна.</p>
+    <div class="leave-confirm-note">Одоогийн hand дуусах хүртэл таны CHIP-ийн тооцоо серверт хадгалагдана. Hand дуусмагц үлдсэн CHIP таны account руу автоматаар буцна.</div>
+    <div class="leave-confirm-actions">
+      <button type="button" class="leave-confirm-cancel" onclick="closeLeaveConfirm()">ҮГҮЙ, ҮЛДЭХ</button>
+      <button type="button" class="leave-confirm-yes" id="confirmLeaveButton" onclick="confirmLeaveTable()">ТИЙМ, ГАРАХ</button>
     </div>
   </section>
 </div>
@@ -2673,12 +2700,37 @@ function connectSocket() {
 
   socket.on("connect", () => {
     socket.emit("lobby:get");
+    if (currentTable) {
+      const reconnectTableId = currentTable;
+      const previousTable = lastState?.table || lastState || {};
+      const myUid = user?.uid || user?.id || user?.userId;
+      const wasSeatedBeforeDisconnect = (previousTable.players || []).some(p => (p.uid || p.id || p.userId) === myUid || p.username === user?.username);
+      socket.emit("table:join", { tableId: reconnectTableId, watch: true }, result => {
+        if (currentTable !== reconnectTableId) return;
+        if (result?.success && result.table) {
+          if (wasSeatedBeforeDisconnect && !result.seated) {
+            showLobby();
+            refreshMe().catch(() => {});
+            return;
+          }
+          lastState = result.table;
+          renderTable(result.table);
+        }
+      });
+    }
+    refreshMe().catch(() => {});
     // Нэвтэрсний дараах нүүр хуудсанд нийтийн чатны түүхийг шууд бэлдэнэ.
     if (!currentTable && $("chatMode")) { $("chatMode").value="global"; loadChatHistory(); }
   });
 
   socket.on("connect_error", error => {
     console.error("Socket холболтын алдаа:", error.message);
+  });
+  socket.on("wallet:update", data => {
+    if (user && Number.isSafeInteger(Number(data?.chips))) {
+      user.chips = Number(data.chips);
+      updateHeader();
+    } else refreshMe().catch(() => {});
   });
 
   socket.on("lobby:update", data => {
@@ -2962,6 +3014,7 @@ function renderSeat(player, seatIndex, table = {}, playerIndex = -1) {
   const isTurn = !!table.handStarted && !!turnPlayer && (turnPlayer.uid || turnPlayer.id) === (player.uid || player.id);
   seat.className = "seat seat-" + (seatIndex + 1) + (isTurn ? " is-turn" : "") + (isMe ? " is-me" : "") + (player.folded ? " is-folded" : "");
   const timer = isTurn && table.turnDeadline ? `<small class="turn-clock" data-turn-clock="1">${Math.max(0,Math.ceil((Number(table.turnDeadline)-Date.now())/1000))}s</small>` : "";
+  const disconnectTimer = player.online === false && player.disconnectDeadline ? `<small class="connection-lost-label" data-disconnect-deadline="${Number(player.disconnectDeadline)}">ХОЛБОЛТ ТАСАРСАН · 03:00</small>` : "";
   seat.innerHTML = `
     ${playerPocketHtml(player, table, isMe)}
     <div class="avatar">${escapeHtml(initial)}</div>
@@ -2969,6 +3022,7 @@ function renderSeat(player, seatIndex, table = {}, playerIndex = -1) {
       <strong>${escapeHtml(name)}</strong>
       <div class="chip-display"><span class="chip-stack" aria-hidden="true"><i></i><i></i><i></i></span><span>${chips} CHIP</span></div>
       ${timer}
+      ${disconnectTimer}
       ${player.folded ? '<small class="folded-label">FOLD</small>' : (player.allIn ? '<small>ALL-IN</small>' : "")}
       ${isMe ? '<small class="seat-me">ТАНЫ СУУДАЛ</small>' : ""}
     </div>`;
@@ -2976,9 +3030,16 @@ function renderSeat(player, seatIndex, table = {}, playerIndex = -1) {
 
 function updateTurnCountdown() {
   const table = lastState?.table || lastState;
-  if (!table?.handStarted || !table.turnDeadline) return;
-  const seconds = Math.max(0, Math.ceil((Number(table.turnDeadline) - Date.now()) / 1000));
-  document.querySelectorAll('[data-turn-clock="1"]').forEach(el => { el.textContent = `${seconds}s`; });
+  if (table?.handStarted && table.turnDeadline) {
+    const seconds = Math.max(0, Math.ceil((Number(table.turnDeadline) - Date.now()) / 1000));
+    document.querySelectorAll('[data-turn-clock="1"]').forEach(el => { el.textContent = `${seconds}s`; });
+  }
+  document.querySelectorAll('[data-disconnect-deadline]').forEach(el => {
+    const remaining = Math.max(0, Math.ceil((Number(el.dataset.disconnectDeadline) - Date.now()) / 1000));
+    const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+    const seconds = String(remaining % 60).padStart(2, '0');
+    el.textContent = `ХОЛБОЛТ ТАСАРСАН · ${minutes}:${seconds}`;
+  });
 }
 
 function renderPotChipVisual(table) {
@@ -3168,14 +3229,29 @@ function nextHand() {
 }
 
 function leaveTable() {
-  if (!socket || !currentTable) { showLobby(); return; }
+  const modal = $("leaveConfirmModal");
+  if (!currentTable || !socket) { showLobby(); return; }
+  if (modal) { modal.classList.add("open"); modal.setAttribute("aria-hidden", "false"); }
+}
+function closeLeaveConfirm() {
+  const modal = $("leaveConfirmModal");
+  if (modal) { modal.classList.remove("open"); modal.setAttribute("aria-hidden", "true"); }
+}
+function confirmLeaveTable() {
+  if (!socket || !currentTable) { closeLeaveConfirm(); showLobby(); return; }
+  const button = $("confirmLeaveButton");
+  if (button) { button.disabled = true; button.textContent = "ТҮР ХҮЛЭЭНЭ ҮҮ…"; }
   socket.emit("table:leave", result => {
+    if (button) { button.disabled = false; button.textContent = "ТИЙМ, ГАРАХ"; }
     if (!result || result.success === false) {
+      closeLeaveConfirm();
       alert(result?.message || "Ширээнээс гарахад алдаа гарлаа.");
       return;
     }
-    refreshMe().catch(() => {});
+    closeLeaveConfirm();
     showLobby();
+    // Wallet нь hand дуусахад серверээс wallet:update event-ээр шинэчлэгдэнэ.
+    refreshMe().catch(() => {});
   });
 }
 

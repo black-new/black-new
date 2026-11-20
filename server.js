@@ -1322,6 +1322,8 @@ function getTable(tableId) {
 }
 
 function getPublicTable(table, viewerUid = null) {
+  const visiblePlayers = table.players.map((player, internalIndex) => ({ player, internalIndex })).filter(entry => !entry.player.leaveRequested);
+  const publicCurrentTurn = visiblePlayers.findIndex(entry => entry.internalIndex === table.currentTurn);
   return {
     id: table.id,
     name: table.name,
@@ -1332,7 +1334,7 @@ function getPublicTable(table, viewerUid = null) {
     maxBuyIn: table.maxBuyIn,
     maxPlayers: table.maxPlayers,
     turnDeadline: table.turnDeadline || null,
-    players: table.players.map((player, index) => ({
+    players: visiblePlayers.map(({ player, internalIndex }, index) => ({
       id: player.uid,
       uid: player.uid,
       username: player.username,
@@ -1341,6 +1343,8 @@ function getPublicTable(table, viewerUid = null) {
       bet: player.bet || 0,
       seat: Number.isInteger(player.seat) ? player.seat : index,
       online: player.online !== false,
+      disconnectedAt: player.disconnectedAt || null,
+      disconnectDeadline: player.disconnectedAt ? player.disconnectedAt + 180000 : null,
       folded: !!player.folded,
       allIn: !!player.allIn,
       cards: (viewerUid && player.uid === viewerUid) || (table.street === "showdown" && !player.folded) ? (player.cards || []) : []
@@ -1348,7 +1352,7 @@ function getPublicTable(table, viewerUid = null) {
     communityCards: table.communityCards || [],
     pot: table.pot || 0,
     currentBet: table.currentBet || 0,
-    currentTurn: table.currentTurn || 0,
+    currentTurn: publicCurrentTurn,
     handStarted: !!table.handStarted,
     street: table.street,
     handNumber: table.handNumber,
@@ -1419,7 +1423,7 @@ function sendLobby() {
     minBuyIn: table.minBuyIn,
     maxBuyIn: table.maxBuyIn,
     maxPlayers: table.maxPlayers,
-    players: table.players.map(player => ({
+    players: table.players.filter(player => !player.leaveRequested).map(player => ({
       uid: player.uid,
       username: player.username,
       chips: player.chips,
@@ -1525,11 +1529,12 @@ function handName(score) {
 function persistStacks(table) {
   const batch = db.batch();
   for (const player of table.players) {
+    if (player.leaveRequested) continue;
     batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   }
   return batch.commit();
 }
-function finishHand(table, forcedWinner = null) {
+async function finishHand(table, forcedWinner = null) {
   if (!table.handStarted) return; // Давхар settle хийхээс хамгаална.
   if (table.turnTimer) clearTimeout(table.turnTimer);
   table.turnTimer = null;
@@ -1577,7 +1582,7 @@ function finishHand(table, forcedWinner = null) {
   }
   const handRecord = { tableId: table.id, tableName: table.name || table.id, handNumber: table.handNumber || 0, gameType: table.type || "texas", street: table.street, communityCards: (table.communityCards || []).map(c=>({...c})), players: table.players.map(p=>({ uid:p.uid, username:p.username, cards:(p.cards||[]).map(c=>({...c})), totalBet:Number(p.totalBet||0), folded:!!p.folded })), winners: winners.map(p=>({ uid:p.uid, username:p.username })), hand: winningScore ? handName(winningScore) : "Бусад нь бууж өгсөн", grossPot, rake, jackpotContribution, netPot:grossPot-rake, createdAt: FieldValue.serverTimestamp() };
   table.lastResult = { winners: winners.map(p=>p.username), hand: handRecord.hand, pot: grossPot-rake, rake, handNumber: table.handNumber };
-  table.pot = 0; table.currentBet = 0; table.handStarted = false; table.street = "showdown"; table.currentTurn = -1;
+  table.pot = 0; table.currentBet = 0; table.handStarted = false; table.settlementPending = true; table.street = "showdown"; table.currentTurn = -1;
   for (const player of table.players) { player.bet=0; player.acted=false; player.allIn=false; player.cards=player.cards||[]; }
   // Persist stack, immutable hand history and rake ledger. Rake is recorded once per settled hand.
   const batch = db.batch();
@@ -1593,16 +1598,33 @@ function finishHand(table, forcedWinner = null) {
     }
     batch.set(db.collection("casinoStats").doc("global"), statsUpdate, {merge:true});
   }
-  for (const player of table.players) batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  batch.commit().catch(err=>console.error("Hand/rake persistence:",err));
+  for (const player of table.players) {
+    if (player.leaveRequested) continue;
+    batch.set(db.collection("users").doc(player.uid), { activeTable: table.id, tableStack: player.chips, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  }
+  try {
+    await batch.commit();
+    // Гарах хүсэлт өгсөн тоглогчдын үлдэгдлийг зөвхөн hand бүрэн settle болсны дараа буцаана.
+    // Firestore transaction + cashout document нь retry/restart үед давхар CHIP олгохоос хамгаална.
+    const leavingPlayers = table.players.filter(p => p.leaveRequested);
+    for (const player of leavingPlayers) {
+      const settled = await cashoutPlayerStack(table, player, `hand_${table.handNumber}`);
+      if (settled) removePlayerFromTable(table, player.uid);
+      else scheduleCashoutRetry(table, player, `hand_${table.handNumber}`);
+    }
+  } catch (err) {
+    console.error("Hand/rake persistence:", err);
+    for (const player of table.players.filter(p => p.leaveRequested)) scheduleCashoutRetry(table, player, `hand_${table.handNumber}`);
+  }
+  table.settlementPending = table.players.some(p => p.leaveRequested);
   sendTableUpdate(table); sendLobby();
   // Дараагийн гарыг сервер өөрөө эхлүүлнэ — тоглогчийн browser нээлттэй байх шаардлагагүй.
   if (table.nextHandTimer) clearTimeout(table.nextHandTimer);
   const finishedHand = table.handNumber;
   table.nextHandTimer = setTimeout(() => {
     table.nextHandTimer = null;
-    if (table.handStarted || table.handNumber !== finishedHand) return;
-    const ready = table.players.filter(p => p.online !== false && p.chips > 0);
+    if (table.handStarted || table.settlementPending || table.handNumber !== finishedHand) return;
+    const ready = table.players.filter(p => !p.leaveRequested && p.online !== false && p.chips > 0);
     if (ready.length >= 2) startHand(table);
   }, 5000);
   if (typeof table.nextHandTimer.unref === "function") table.nextHandTimer.unref();
@@ -1645,13 +1667,14 @@ function advanceStreet(table) {
   sendTableUpdate(table);
 }
 function startHand(table) {
+  if (table.settlementPending) return false;
   if (table.nextHandTimer) { clearTimeout(table.nextHandTimer); table.nextHandTimer = null; }
-  const eligible=table.players.filter(p=>p.online!==false&&p.chips>0);
+  const eligible=table.players.filter(p=>!p.leaveRequested&&p.online!==false&&p.chips>0);
   if (eligible.length<2 || table.handStarted) return false;
   table.deck=makeDeck(); table.communityCards=[]; table.pot=0; table.currentBet=0;
   table.handStarted=true; table.street="preflop"; table.handNumber+=1; table.lastResult=null; table.lastRaiseSize=table.bigBlind;
   table.dealerIndex=(table.dealerIndex+1)%table.players.length;
-  for (const p of table.players) { p.folded=p.online===false||p.chips<=0; p.bet=0; p.totalBet=0; p.acted=false; p.allIn=false; p.cards=[]; }
+  for (const p of table.players) { p.folded=!!p.leaveRequested||p.online===false||p.chips<=0; p.bet=0; p.totalBet=0; p.acted=false; p.allIn=false; p.cards=[]; }
   const active=table.players.filter(p=>!p.folded);
   const holeCount=getHoleCardCount(table.type);
   for(let n=0;n<holeCount;n++) for(const p of active) p.cards.push(table.deck.pop());
@@ -1686,6 +1709,62 @@ async function getSocketUser(socket) {
     ...snap.data(),
     uid: decoded.uid
   };
+}
+
+async function cashoutPlayerStack(table, player, reasonKey) {
+  if (!table || !player || !player.uid) return false;
+  const amount = Math.max(0, Math.floor(Number(player.chips || 0)));
+  if (!Number.isSafeInteger(amount)) throw new Error("CHIP үлдэгдлийн утга буруу байна.");
+  const userRef = db.collection("users").doc(player.uid);
+  const cashoutRef = db.collection("tableCashouts").doc(`${table.id}_${player.uid}_${reasonKey}`);
+  let walletAfter = null;
+  await db.runTransaction(async transaction => {
+    const cashoutSnap = await transaction.get(cashoutRef);
+    if (cashoutSnap.exists) return; // Энэ гаргалт өмнө нь бүртгэгдсэн.
+    const userSnap = await transaction.get(userRef);
+    if (!userSnap.exists) throw new Error("Хэрэглэгчийн бүртгэл олдсонгүй.");
+    const wallet = Math.max(0, Math.floor(Number(userSnap.data().chips || 0)));
+    walletAfter = wallet + amount;
+    if (!Number.isSafeInteger(walletAfter)) throw new Error("Дансны CHIP дээд хэмжээнээс хэтэрлээ.");
+    transaction.update(userRef, {
+      chips: walletAfter,
+      activeTable: FieldValue.delete(),
+      tableStack: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp()
+    });
+    transaction.set(cashoutRef, {
+      uid: player.uid, tableId: table.id, amount, reason: reasonKey,
+      handNumber: Number(table.handNumber || 0), createdAt: FieldValue.serverTimestamp()
+    });
+  });
+  if (walletAfter !== null) io.to(`user:${player.uid}`).emit("wallet:update", { chips: walletAfter, tableId: table.id, amount });
+  return true;
+}
+
+function scheduleCashoutRetry(table, player, reasonKey) {
+  if (player.cashoutRetryTimer) return;
+  player.cashoutRetryTimer = setTimeout(async () => {
+    player.cashoutRetryTimer = null;
+    try {
+      const ok = await cashoutPlayerStack(table, player, reasonKey);
+      if (ok) {
+        removePlayerFromTable(table, player.uid);
+        table.settlementPending = table.players.some(p => p.leaveRequested);
+        sendTableUpdate(table); sendLobby();
+        if (!table.settlementPending && !table.handStarted && !table.nextHandTimer) {
+          table.nextHandTimer = setTimeout(() => {
+            table.nextHandTimer = null;
+            if (!table.handStarted && !table.settlementPending && table.players.filter(p => !p.leaveRequested && p.online !== false && p.chips > 0).length >= 2) startHand(table);
+          }, 1000);
+          if (typeof table.nextHandTimer.unref === "function") table.nextHandTimer.unref();
+        }
+      }
+    } catch (error) {
+      console.error("CHIP cashout retry:", error);
+      scheduleCashoutRetry(table, player, reasonKey);
+    }
+  }, 5000);
+  if (typeof player.cashoutRetryTimer.unref === "function") player.cashoutRetryTimer.unref();
 }
 
 async function refundPlayerChips(uid, amount) {
@@ -1797,14 +1876,18 @@ io.on("connection", socket => {
 
       for (const table of tables.values()) {
         const player = table.players.find(p => p.uid === user.uid);
-        if (player) {
+        if (player && !player.leaveRequested) {
+          if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
+          player.disconnectTimer = null;
           player.online = true;
+          player.disconnectedAt = null;
           activeTableId = table.id;
           socket.join("table:" + table.id);
           sendTableUpdate(table);
           break;
         }
       }
+      socket.join("user:" + user.uid);
       socketUsers.set(socket.id, { uid: user.uid, tableId: activeTableId });
       if (activeTableId) socket.join("table:" + activeTableId);
 
@@ -1825,6 +1908,13 @@ io.on("connection", socket => {
       if (!table) return reply({ success: false, message: "Ширээ олдсонгүй." });
 
       const existing = table.players.find(p => p.uid === user.uid);
+      if (existing?.leaveRequested) return reply({ success: false, message: "Та энэ ширээнээс гарах хүсэлт өгсөн байна." });
+      if (existing) {
+        if (existing.disconnectTimer) clearTimeout(existing.disconnectTimer);
+        existing.disconnectTimer = null;
+        existing.online = true;
+        existing.disconnectedAt = null;
+      }
       if (!existing) {
         for (const otherTable of tables.values()) {
           if (otherTable.players.some(p => p.uid === user.uid)) {
@@ -1836,6 +1926,7 @@ io.on("connection", socket => {
       }
 
       socketUsers.set(socket.id, { uid: user.uid, tableId: table.id });
+      socket.join("user:" + user.uid);
       socket.join("table:" + table.id);
       sendTableUpdate(table);
       sendLobby();
@@ -1897,7 +1988,10 @@ io.on("connection", socket => {
         cards: [],
         acted: false,
         allIn: false,
-        totalBet: 0
+        totalBet: 0,
+        seatSessionId: crypto.randomUUID(),
+        leaveRequested: false,
+        disconnectedAt: null
       });
       table.players.sort((a, b) => (Number.isInteger(a.seat) ? a.seat : 99) - (Number.isInteger(b.seat) ? b.seat : 99));
       if (!table.handStarted && table.players.filter(p => p.online !== false && p.chips > 0).length >= 2) startHand(table);
@@ -1917,18 +2011,32 @@ io.on("connection", socket => {
       const table = getTable(session.tableId);
       if (!table) return reply({ success: false, message: "Ширээ олдсонгүй." });
       const player = table.players.find(p => p.uid === session.uid);
-      if (player && table.handStarted) {
-        return reply({ success: false, message: "Тоглолт дууссаны дараа ширээнээс гараарай." });
+      if (player?.leaveRequested) {
+        socket.leave("table:" + table.id);
+        socketUsers.set(socket.id, { uid: session.uid, tableId: null });
+        return reply({ success: true, pendingSettlement: true });
       }
-      if (player) {
-        await refundPlayerChips(session.uid, player.chips);
+      if (player && (table.handStarted || table.settlementPending)) {
+        // Тоглогч UI-гаасаа шууд гарна. Hand идэвхтэй бол автоматаар fold хийнэ;
+        // settlement үргэлжилж байвал тухайн hand-ийн баталгаатай дүнг хүлээгээд cashout хийнэ.
+        player.leaveRequested = true;
+        player.online = false;
+        if (table.handStarted) {
+          player.folded = true;
+          player.acted = true;
+          if (table.players[table.currentTurn]?.uid === session.uid) advanceTurnOrStreet(table);
+        } else {
+          scheduleCashoutRetry(table, player, `hand_${table.handNumber}`);
+        }
+      } else if (player) {
+        await cashoutPlayerStack(table, player, `manual_${player.seatSessionId || crypto.randomUUID()}`);
         removePlayerFromTable(table, session.uid);
       }
       socket.leave("table:" + table.id);
-      socketUsers.delete(socket.id);
+      socketUsers.set(socket.id, { uid: session.uid, tableId: null });
       sendTableUpdate(table);
       sendLobby();
-      reply({ success: true });
+      reply({ success: true, pendingSettlement: !!player && !!player.leaveRequested });
     } catch (error) {
       reply({ success: false, message: error.message || "Ширээнээс гарахад алдаа гарлаа." });
     }
@@ -1988,25 +2096,47 @@ io.on("connection", socket => {
 
   socket.on("disconnect", () => {
     const session = socketUsers.get(socket.id);
-
     if (session?.tableId) {
       const table = getTable(session.tableId);
-
       if (table) {
         const player = table.players.find(p => p.uid === session.uid);
-
-        if (player) {
+        if (player && !player.leaveRequested) {
+          if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
           player.online = false;
-          if (table.handStarted && !player.folded) {
-            player.folded = true;
-            player.acted = true;
-            if (table.players[table.currentTurn]?.uid === session.uid) advanceTurnOrStreet(table);
-          }
+          player.disconnectedAt = Date.now();
+          const seatSessionId = player.seatSessionId || crypto.randomUUID();
+          player.seatSessionId = seatSessionId;
+          player.disconnectTimer = setTimeout(async () => {
+            player.disconnectTimer = null;
+            const stillSeated = table.players.find(p => p.uid === session.uid);
+            if (!stillSeated || stillSeated.online !== false || stillSeated.leaveRequested) return;
+            if (table.handStarted) {
+              // 3 минут өнгөрсөн бол hand-ээс гаргах хүсэлт болгон тэмдэглэнэ.
+              // Тухайн hand settle болоход stack wallet руу автоматаар буцна.
+              stillSeated.leaveRequested = true;
+              stillSeated.folded = true;
+              stillSeated.acted = true;
+              if (table.players[table.currentTurn]?.uid === session.uid) advanceTurnOrStreet(table);
+              sendTableUpdate(table); sendLobby();
+            } else {
+              stillSeated.leaveRequested = true;
+              table.settlementPending = true;
+              try {
+                await cashoutPlayerStack(table, stillSeated, `disconnect_${seatSessionId}`);
+                removePlayerFromTable(table, session.uid);
+                table.settlementPending = table.players.some(p => p.leaveRequested);
+                sendTableUpdate(table); sendLobby();
+              } catch (error) {
+                console.error("Disconnect cashout:", error);
+                scheduleCashoutRetry(table, stillSeated, `disconnect_${seatSessionId}`);
+              }
+            }
+          }, 3 * 60 * 1000);
+          if (typeof player.disconnectTimer.unref === "function") player.disconnectTimer.unref();
           sendTableUpdate(table);
         }
       }
     }
-
     socketUsers.delete(socket.id);
     sendLobby();
   });
