@@ -1405,6 +1405,19 @@ body:has(#authScreen:not([style*="display: none"])) {
  .raise-popup-amount input{font-size:20px}
 }
 
+
+/* BLACKCLUB table polish: preserve the existing blue felt and chat. */
+.seat{transition:opacity .18s ease,filter .18s ease,transform .18s ease;}
+.seat.is-turn{border-color:#f2d18a;box-shadow:0 0 0 2px #e8bd6240,0 5px 18px #000b;}
+.seat.is-folded{opacity:.48;filter:grayscale(.82);border-color:#536174!important;box-shadow:0 2px 8px #0008!important;}
+.seat.is-folded .avatar{border-color:#697789!important;}
+.seat.is-folded .seat-info{background:linear-gradient(180deg,#101722,#080d14)!important;}
+.folded-label{display:inline-block!important;padding:2px 7px;border-radius:10px;background:#632d37;color:#ffd7d9!important;font-size:9px!important;letter-spacing:.7px;}
+.actions button:disabled{opacity:.34!important;filter:grayscale(.8);cursor:not-allowed!important;transform:none!important;}
+.admin-user-bank{margin-top:10px;padding:9px 10px;border:1px solid #293d53;border-radius:8px;background:#07111d;color:#aebdce;font-size:11px;line-height:1.65;overflow-wrap:anywhere;}
+.admin-user-bank strong{color:#e8bd62;}
+.admin-bank-edit{background:#b98a3b;color:#17120a;}
+.bank-readonly{padding:12px;border:1px solid #2a4058;border-radius:8px;background:#071321;overflow-wrap:anywhere;}
 </style>
 
 <style id="blackclub-recovered-layout-css">
@@ -1528,6 +1541,24 @@ body:has(#authScreen:not([style*="display: none"])) {
   .poker-table[data-max-players="9"] .seat-6 .seat-cards,
   .poker-table[data-max-players="9"] .seat-9 .seat-cards{top:-47px!important;left:50%!important;transform:translateX(-50%)!important}
 }
+</style>
+
+<style id="blackclub-final-table-overrides">
+/* Final visual pass: keep the established BLACKCLUB blue felt, not green. */
+.poker-table{background:radial-gradient(ellipse at 50% 44%,#1760a7 0%,#0b4788 56%,#05264d 100%)!important;box-shadow:inset 0 0 0 3px #e5c477,inset 0 0 0 8px #102f54,inset 0 0 55px #001126,0 9px 30px #000d,0 0 14px #b28a4555!important;}
+.table-inner{border-color:#d9b45b!important;box-shadow:0 0 10px #d6c08a33!important;}
+.seat{width:124px!important;height:62px!important;min-height:62px!important;padding:19px 6px 4px!important;border-radius:9px!important;background:linear-gradient(180deg,#10243bfa,#071321f7)!important;border-color:#b18a49!important;}
+.seat .avatar{width:39px!important;height:39px!important;top:-15px!important;border-color:#e8bd62!important;background:radial-gradient(circle at 35% 25%,#8c713e,#102039 76%)!important;}
+.seat-info{padding:3px 4px 2px!important;background:linear-gradient(180deg,#102039,#07111d)!important;border-color:#30465f!important;}
+.seat strong{font-size:10px!important;}
+.seat .chip-display{font-size:9px!important;background:transparent!important;color:#f1ce79!important;}
+.seat.is-me{width:138px!important;height:70px!important;min-height:70px!important;padding-top:22px!important;}
+.seat.is-me .avatar{width:43px!important;height:43px!important;top:-17px!important;}
+.seat.is-folded{opacity:.43!important;filter:grayscale(1)!important;}
+.seat.is-folded .seat-cards{opacity:.52!important;filter:grayscale(1)!important;}
+.seat.is-folded .folded-label{background:#5b2730!important;color:#ffdadd!important;}
+@media(max-width:900px){.seat{width:108px!important;height:57px!important;min-height:57px!important;padding-top:17px!important}.seat.is-me{width:120px!important;height:64px!important;min-height:64px!important;padding-top:19px!important}}
+@media(max-width:650px){.poker-table{background:radial-gradient(ellipse at 50% 44%,#1760a7 0%,#0b4788 56%,#05264d 100%)!important}.seat{width:clamp(68px,18vw,80px)!important;height:57px!important;min-height:57px!important;padding:17px 2px 2px!important}.seat .avatar{width:32px!important;height:32px!important;top:-12px!important}.seat-info{padding:2px 2px!important}.seat strong{font-size:clamp(7px,2vw,9px)!important}.seat .chip-display{font-size:clamp(6px,1.8vw,8px)!important}.seat.is-me{width:clamp(78px,21vw,90px)!important;height:65px!important;min-height:65px!important;padding-top:19px!important}.seat.is-me .avatar{width:36px!important;height:36px!important;top:-14px!important}}
 </style>
 </head>
 
@@ -1993,7 +2024,7 @@ function openAccountSection(section) {
   }
 
   if (section === "account") {
-    content.innerHTML += `<div class="cashier-card"><h3>Профайл / Банкны мэдээлэл</h3><label class="bc-field">Тоглоомын нэр<input id="profileDisplayName" maxlength="18" value="${escapeHtml(user?.displayName || getUsername())}"></label><label class="bc-field">Банкны нэр<input id="profileBankName" value="${escapeHtml(user?.bankName || "")}" placeholder="Хаан банк гэх мэт"></label><label class="bc-field">Дансны дугаар<input id="profileBankAccount" value="${escapeHtml(user?.bankAccount || "")}" placeholder="Дансны дугаар"></label><label class="bc-field">Данс эзэмшигчийн нэр<input id="profileBankHolder" value="${escapeHtml(user?.bankHolder || "")}" placeholder="Овог нэр"></label><button class="bc-action" onclick="saveProfile()">МЭДЭЭЛЭЛ ХАДГАЛАХ</button><div id="profileMessage" class="bc-note"></div></div>`;
+    content.innerHTML += `<div class="cashier-card"><h3>Профайл / Банкны мэдээлэл</h3><label class="bc-field">Тоглоомын нэр<input id="profileDisplayName" maxlength="18" value="${escapeHtml(user?.displayName || getUsername())}"></label><div class="bc-note bank-readonly"><strong>Бүртгэлтэй банк:</strong> ${escapeHtml(user?.bankName || "Бүртгээгүй")}<br><strong>Дансны дугаар:</strong> ${escapeHtml(user?.bankAccount || "Бүртгээгүй")}<br><strong>Данс эзэмшигч:</strong> ${escapeHtml(user?.bankHolder || "Бүртгээгүй")}<br><br>Банкны дансыг хэрэглэгч өөрөө өөрчлөх боломжгүй. Шаардлагатай бол админд хандана уу.</div><button class="bc-action" onclick="saveProfile()">НЭРЭЭ ХАДГАЛАХ</button><div id="profileMessage" class="bc-note"></div></div>`;
   }
 
   if (section === "adminHome") {
@@ -2003,6 +2034,7 @@ function openAccountSection(section) {
       <div class="cashier-card">
         <div class="bc-note">Админы хяналтын самбар. Нэвтрэлт, Firebase эрх, CHIP-ийн үндсэн бүртгэл, кассын хэрэглэгчийн үйлдэл болон серверийн нууц тохиргоонд хүрэхгүй.</div>
         <button class="bc-action" onclick="openAccountSection('adminUsers')">♟ ТОГЛОГЧИЙН УДИРДЛАГА · ПРОФАЙЛ / BLOCK</button>
+        <button class="bc-action" onclick="openAccountSection('adminUsers')">🏦 ТОГЛОГЧИЙН БҮРТГЭЛТЭЙ ДАНС УДИРДАХ</button>
         <button class="bc-action" onclick="openAccountSection('adminTables')">♧ LIVE ШИРЭЭ · ТОГЛОЛТЫН ТӨЛӨВ</button>
         <button class="bc-action" onclick="openAccountSection('adminHands')">🂠 ДУУССАН ГАР · ХӨЗРИЙН АУДИТ</button>
         <button class="bc-action" onclick="openAccountSection('adminBots')">🤖 БОТЫН ТОХИРГОО</button>
@@ -2149,7 +2181,7 @@ async function submitWithdraw() {
   } catch(e) { showMessage("withdrawMessage", e.message); }
 }
 async function saveProfile() {
-  try { const payload = { displayName: $("profileDisplayName").value.trim(), bankName: $("profileBankName").value.trim(), bankAccount: $("profileBankAccount").value.trim(), bankHolder: $("profileBankHolder").value.trim() };
+  try { const payload = { displayName: $("profileDisplayName").value.trim() };
     const r = await api("/api/profile/update", payload); user = r.user || user; updateHeader(); showMessage("profileMessage", r.message || "Мэдээлэл хадгалагдлаа.");
   } catch(e) { showMessage("profileMessage", e.message); }
 }
@@ -2202,10 +2234,25 @@ function renderAdminUsers(users) {
     const username = String(u.username || "-");
     return `<div class="admin-user-card" data-uid="${escapeHtml(uid)}">
       <div class="admin-user-top"><div><div class="admin-user-name">${escapeHtml(name)} ${u.isAdmin ? "· ADMIN" : ""}</div><div class="admin-user-meta">@${escapeHtml(username)}<br>ID: ${escapeHtml(uid)}</div></div><div class="bc-status">${u.isAdmin ? 'АДМИН' : (u.blocked ? 'BLOCKED' : 'ИДЭВХТЭЙ')}</div></div>
-      ${u.isAdmin ? '<div class="bc-note">Админ бүртгэл · хамгаалалттай</div>' : `<div class="admin-chip-controls"><button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button><button class="admin-chip-remove" onclick="setChatMuted('${escapeHtml(uid)}',${u.chatMuted ? 'false' : 'true'})">${u.chatMuted ? 'ЧАТ НЭЭХ' : 'ЧАТ MUTE'}</button></div>`}
+      <div class="admin-user-bank"><strong>Банк:</strong> ${escapeHtml(u.bankName || 'Бүртгээгүй')} · <strong>Данс:</strong> ${escapeHtml(u.bankAccount || '—')}<br><strong>Эзэмшигч:</strong> ${escapeHtml(u.bankHolder || '—')}</div>
+      <div class="admin-chip-controls"><button class="admin-bank-edit" onclick="changeUserBank('${escapeHtml(uid)}')">🏦 ДАНС СОЛИХ</button>${u.isAdmin ? '<span class="bc-note">Админ бүртгэл · хамгаалалттай</span>' : `<button class="admin-chip-remove" onclick="setAdminUserBlocked('${escapeHtml(uid)}',${u.blocked ? 'false' : 'true'})">${u.blocked ? 'БЛОК ЦУЦЛАХ' : 'ACCOUNT BLOCK'}</button><button class="admin-chip-remove" onclick="setChatMuted('${escapeHtml(uid)}',${u.chatMuted ? 'false' : 'true'})">${u.chatMuted ? 'ЧАТ НЭЭХ' : 'ЧАТ MUTE'}</button>`}</div>
       ${u.blocked ? '<div class="bc-status">BLOCKED · НЭВТРЭХ ЭРХ ХААЛТТАЙ</div>' : ''}
     </div>`;
   }).join("");
+}
+
+async function changeUserBank(uid){
+  if(!user?.isAdmin){alert("Админ эрх шаардлагатай.");return;}
+  const target=cachedAdminUsers.find(x=>String(x.uid||x.id||"")===String(uid));
+  if(!target){alert("Хэрэглэгч олдсонгүй.");return;}
+  const banks=["Хаан банк","Худалдаа хөгжлийн банк","ХасБанк","Төрийн банк","Голомт банк","Капитрон банк","M Bank","Богд банк"];
+  const bankName=prompt("Банкны нэр\n"+banks.join(" / "),target.bankName||banks[0]); if(bankName===null)return;
+  if(!banks.includes(bankName.trim())){alert("Банкны жагсаалтаас зөв нэр сонгоно уу.");return;}
+  const bankAccount=prompt("Шинэ дансны дугаар (6-20 орон)",target.bankAccount||""); if(bankAccount===null)return;
+  const bankHolder=prompt("Данс эзэмшигчийн нэр",target.bankHolder||""); if(bankHolder===null)return;
+  if(!confirm(`${target.displayName||target.username||"Тоглогч"}-ийн бүртгэлтэй дансыг\n${bankName} · ${bankAccount}\n${bankHolder}\nболгон солих уу?`))return;
+  try{const r=await api("/api/admin/users/bank",{uid,bankName:bankName.trim(),bankAccount:bankAccount.trim(),bankHolder:bankHolder.trim()});alert(r.message||"Данс шинэчлэгдлээ.");await loadAdminUsers();}
+  catch(e){alert(e.message||"Данс солиход алдаа гарлаа.");}
 }
 
 async function setChatMuted(uid, muted){ try{await api("/api/admin/chat/mute",{uid,muted}); alert(muted?"Хэрэглэгчийн чат хаагдлаа.":"Хэрэглэгчийн чат нээгдлээ."); await loadAdminUsers();}catch(e){alert(e.message);} }
@@ -2760,7 +2807,7 @@ function renderSeat(player, seatIndex, table = {}, playerIndex = -1) {
   const isMe = (player.uid || player.id || player.userId) === myUid || player.username === user?.username;
   const turnPlayer = (table.players || [])[Number(table.currentTurn)];
   const isTurn = !!table.handStarted && !!turnPlayer && (turnPlayer.uid || turnPlayer.id) === (player.uid || player.id);
-  seat.className = "seat seat-" + (seatIndex + 1) + (isTurn ? " is-turn" : "") + (isMe ? " is-me" : "");
+  seat.className = "seat seat-" + (seatIndex + 1) + (isTurn ? " is-turn" : "") + (isMe ? " is-me" : "") + (player.folded ? " is-folded" : "");
   const timer = isTurn && table.turnDeadline ? `<small class="turn-clock" data-turn-clock="1">${Math.max(0,Math.ceil((Number(table.turnDeadline)-Date.now())/1000))}s</small>` : "";
   seat.innerHTML = `
     ${playerPocketHtml(player, table, isMe)}
@@ -2860,7 +2907,7 @@ function renderTable(state) {
     if(pos>=0 && pos<maxSeats) seatPlayers[pos]=player;
   });
   seatPlayers.forEach((player,index)=>renderSeat(player,index,table,player ? players.indexOf(player) : -1));
-  const isMyTurn = !!table.handStarted && !!turnPlayer && ((turnPlayer.uid || turnPlayer.id || turnPlayer.userId) === myUidForActions || turnPlayer.username === user?.username);
+  const isMyTurn = !!table.handStarted && !!turnPlayer && !me?.folded && !me?.allIn && ((turnPlayer.uid || turnPlayer.id || turnPlayer.userId) === myUidForActions || turnPlayer.username === user?.username);
   const actionButtons = document.querySelectorAll(".actions button");
   actionButtons.forEach(button => { button.disabled = !isMyTurn; });
   updateTurnCountdown();

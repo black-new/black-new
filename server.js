@@ -615,9 +615,6 @@ app.get("/api/me", authUser, (req, res) => {
 app.post("/api/profile/update", authUser, async (req, res) => {
   try {
     const displayName = String(req.body.displayName || "").trim();
-    const bankName = String(req.body.bankName || "").trim();
-    const bankAccount = String(req.body.bankAccount || "").trim();
-    const bankHolder = String(req.body.bankHolder || "").trim();
 
     if (displayName.length > 40) {
       return res.status(400).json({
@@ -625,11 +622,10 @@ app.post("/api/profile/update", authUser, async (req, res) => {
       });
     }
 
+    // Банкны мэдээллийг хэрэглэгчийн профайлаас өөрчлөхийг зориуд хориглоно.
+    // Данс солих тусгай endpoint нь зөвхөн authAdmin эрхээр нэвтэрнэ.
     await req.userRef.update({
-      displayName: displayName || req.user.username,
-      bankName,
-      bankAccount,
-      bankHolder
+      displayName: displayName || req.user.username
     });
 
     const snap = await req.userRef.get();
@@ -1039,6 +1035,34 @@ app.get("/api/admin/users", authUser, authAdmin, async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: "Хэрэглэгчдийн мэдээлэл ачааллахад алдаа гарлаа." });
+  }
+});
+
+// ADMIN ONLY: change a player's registered bank account. Every change is audited.
+app.post("/api/admin/users/bank", authUser, authAdmin, async (req, res) => {
+  try {
+    const uid = String(req.body.uid || "").trim();
+    const bankName = String(req.body.bankName || "").trim();
+    const bankAccount = String(req.body.bankAccount || "").trim();
+    const bankHolder = String(req.body.bankHolder || "").trim();
+    if (!uid) return res.status(400).json({ message: "Хэрэглэгчийн UID дутуу байна." });
+    if (!ALLOWED_BANKS.includes(bankName)) return res.status(400).json({ message: "Банкны нэр буруу байна." });
+    if (!/^[0-9]{6,20}$/.test(bankAccount)) return res.status(400).json({ message: "Дансны дугаар 6-20 оронтой байх ёстой." });
+    if (bankHolder.length < 2 || bankHolder.length > 60) return res.status(400).json({ message: "Данс эзэмшигчийн нэр буруу байна." });
+    const ref = db.collection("users").doc(uid);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ message: "Хэрэглэгч олдсонгүй." });
+    const before = snap.data() || {};
+    await ref.update({ bankName, bankAccount, bankHolder, bankUpdatedAt: FieldValue.serverTimestamp(), bankUpdatedBy: req.user.uid });
+    await db.collection("adminAudit").add({
+      actorUid: req.user.uid, targetUid: uid, action: "change_user_bank",
+      before: { bankName: before.bankName || "", bankAccount: before.bankAccount || "", bankHolder: before.bankHolder || "" },
+      after: { bankName, bankAccount, bankHolder }, createdAt: FieldValue.serverTimestamp()
+    });
+    res.json({ success: true, message: "Тоглогчийн бүртгэлтэй банкны данс шинэчлэгдлээ." });
+  } catch (error) {
+    console.error("ADMIN USER BANK UPDATE:", error);
+    res.status(500).json({ message: "Банкны данс шинэчлэхэд алдаа гарлаа." });
   }
 });
 
