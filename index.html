@@ -1618,55 +1618,6 @@ body:has(#authScreen:not([style*="display: none"])) {
 @media(max-height:620px){.auth-box:has(#registerForm[style*="display: block"]){padding:8px 18px}.auth-box:has(#registerForm[style*="display: block"]) .auth-crown{display:none}.auth-box:has(#registerForm[style*="display: block"]) .register-form{max-height:calc(100dvh - 100px);}}
 </style>
 
-<style id="blackclub-registration-admin-final-fix">
-/* Registration form: reserve a fixed viewport-sized dialog and scroll the form itself. */
-@media (max-height: 900px), (max-width: 700px) {
-  .auth-box:has(#registerForm[style*="display: block"]) {
-    width: min(430px, 100%);
-    height: calc(100dvh - 20px);
-    max-height: calc(100dvh - 20px);
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 12px 20px 10px;
-  }
-  .auth-box:has(#registerForm[style*="display: block"]) .auth-register-note { display:none; }
-  .auth-box:has(#registerForm[style*="display: block"]) .register-form {
-    display: block !important;
-    flex: 1 1 0;
-    height: 0;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding: 0 8px 16px;
-    scrollbar-width: thin;
-  }
-}
-/* Keep the compact admin panel inside the screen; its contents can scroll independently. */
-.account-box:has(.admin-dashboard) {
-  width: min(760px, 100%);
-  height: auto;
-  max-height: calc(100dvh - 24px);
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-.admin-dashboard { gap: 7px; }
-.admin-group { padding: 8px; }
-.admin-menu-grid { gap: 5px; }
-.admin-menu-tile { min-height: 44px; padding: 6px 8px; }
-@media(max-width:520px) {
-  .account-section { padding: 8px; align-items: flex-start; }
-  .account-box:has(.admin-dashboard) { max-height: calc(100dvh - 16px); padding: 10px; }
-  .admin-menu-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .admin-menu-tile { grid-template-columns: 20px minmax(0,1fr); }
-  .admin-menu-tile b { font-size: 10px; }
-  .admin-menu-tile small { font-size: 8px; }
-}
-</style>
 </head>
 
 <body>
@@ -1692,6 +1643,10 @@ body:has(#authScreen:not([style*="display: none"])) {
       <div class="auth-input-wrap"><span>♙</span><input id="regUsername" placeholder="3-20 тэмдэгт" autocomplete="username"></div>
       <label class="auth-label" for="regPassword">НУУЦ ҮГ</label>
       <div class="auth-input-wrap"><span>◆</span><input id="regPassword" type="password" placeholder="Дор хаяж 6 тэмдэгт" autocomplete="new-password"></div>
+      <label class="auth-label" for="regLastName">ОВОГ</label>
+      <div class="auth-input-wrap"><span>♙</span><input id="regLastName" maxlength="40" placeholder="Овгоо оруулна уу" autocomplete="family-name"></div>
+      <label class="auth-label" for="regFirstName">НЭР</label>
+      <div class="auth-input-wrap"><span>♙</span><input id="regFirstName" maxlength="40" placeholder="Нэрээ оруулна уу" autocomplete="given-name"></div>
       <label class="auth-label" for="regBankName">БАНК СОНГОХ</label>
       <div class="auth-input-wrap"><span>▣</span><select id="regBankName" aria-label="Банк сонгох">
         <option value="">Банк сонгоно уу</option>
@@ -1708,7 +1663,7 @@ body:has(#authScreen:not([style*="display: none"])) {
       <div class="auth-input-wrap"><span>♙</span><input id="regBankHolder" placeholder="Овог нэр"></div>
       <label class="age-confirm"><input id="regAgeConfirmed" type="checkbox"><span>Би 18 нас хүрсэн гэдгээ баталгаажуулж байна.</span></label>
       <button class="gold-btn" id="completeRegisterBtn" onclick="register()">БҮРТГЭЛ ҮҮСГЭХ →</button>
-      <button class="secondary-btn register-back" onclick="hideRegisterForm()">БУЦАХ</button>
+      <button class="secondary-btn register-back" onclick="hideRegisterForm()">← НЭВТРЭХ ХЭСЭГ РҮҮ БУЦАХ</button>
       <div class="message" id="registerMessage"></div>
       <div class="auth-foot">18+ <b>•</b> PRIVATE POKER CLUB</div>
     </div>
@@ -2219,10 +2174,6 @@ function openAccountSection(section) {
     loadSecondaryAdmins();
   }
 
-  if (section === "adminCashier") {
-    title.textContent = "АДМИН КАСС";
-    content.innerHTML = '<div class="bc-note">Энэ хуучин админ кассын хэсгийг үндсэн цэснээс хассан.</div>';
-  }
 
   if (section === "adminTables") {
     if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
@@ -2577,13 +2528,13 @@ async function login() {
 
 function showRegisterForm() {
   $("registerForm").style.display = "block";
+  requestAnimationFrame(()=>{ const f=$("registerForm"); if(f) f.scrollTop=0; });
   $("registerBtn").style.display = "none";
   $("loginBtn").style.display = "none";
   $("authMessage").textContent = "";
   $("regUsername").value = $("authUsername").value.trim();
   $("regPassword").value = $("authPassword").value;
-  $("registerForm").scrollTop = 0;
-  $("regUsername").focus({ preventScroll: true });
+  $("regUsername").focus();
 }
 
 function hideRegisterForm() {
@@ -2591,18 +2542,21 @@ function hideRegisterForm() {
   $("registerBtn").style.display = "block";
   $("loginBtn").style.display = "block";
   $("registerMessage").textContent = "";
+  $("authUsername").focus({preventScroll:true});
 }
 
 async function register() {
   const username = $("regUsername").value.trim();
   const password = $("regPassword").value;
+  const lastName = $("regLastName").value.trim();
+  const firstName = $("regFirstName").value.trim();
   const bankName = $("regBankName").value;
   const bankAccount = $("regBankAccount").value.trim();
   const bankHolder = $("regBankHolder").value.trim();
   const ageConfirmed = $("regAgeConfirmed").checked;
 
-  if (!username || !password || !bankName || !bankAccount || !bankHolder) {
-    $("registerMessage").textContent = "Бүх талбарыг бөглөнө үү.";
+  if (!username || !password || !lastName || !firstName || !bankName || !bankAccount || !bankHolder) {
+    $("registerMessage").textContent = "Бүх талбарыг бөглөнө үү. Овог, нэрээ оруулна уу.";
     return;
   }
   if (!ageConfirmed) {
@@ -2615,7 +2569,9 @@ async function register() {
     $("completeRegisterBtn").disabled = true;
     const result = await api("/api/register", {
       username,
-      displayName: username,
+      displayName: `${lastName} ${firstName}`,
+      lastName,
+      firstName,
       password,
       bankName,
       bankAccount,

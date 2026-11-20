@@ -104,6 +104,8 @@ function cleanUser(data, uid) {
     uid: uid || data.uid,
     username: data.username || "",
     displayName: data.displayName || data.username || "",
+    lastName: data.lastName || "",
+    firstName: data.firstName || "",
     chips: Number(data.chips || 0),
     role: data.role || "user",
     isAdmin: data.role === "admin" || !!data.isAdmin || ADMIN_UIDS.includes(String(uid || data.uid || "")),
@@ -421,6 +423,8 @@ app.post("/api/register", async (req, res) => {
   try {
     const username = normalizeUsername(req.body.username);
     const displayName = String(req.body.displayName || username).trim();
+    const lastName = String(req.body.lastName || "").trim();
+    const firstName = String(req.body.firstName || "").trim();
     const password = String(req.body.password || "");
     const bankName = String(req.body.bankName || "").trim();
     const bankAccount = String(req.body.bankAccount || "").trim();
@@ -437,6 +441,10 @@ app.post("/api/register", async (req, res) => {
       return res.status(400).json({
         message: "Нууц үг дор хаяж 6 тэмдэгт байх ёстой."
       });
+    }
+
+    if (lastName.length < 1 || lastName.length > 40 || firstName.length < 1 || firstName.length > 40) {
+      return res.status(400).json({ message: "Овог болон нэрээ зөв оруулна уу." });
     }
 
     if (!ALLOWED_BANKS.includes(bankName)) {
@@ -485,7 +493,9 @@ app.post("/api/register", async (req, res) => {
 
     const userData = {
       username,
-      displayName: displayName || username,
+      displayName: displayName || `${lastName} ${firstName}`,
+      lastName,
+      firstName,
       chips: 0,
       role: "user",
       isAdmin: false,
