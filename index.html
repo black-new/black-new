@@ -1560,6 +1560,113 @@ body:has(#authScreen:not([style*="display: none"])) {
 @media(max-width:900px){.seat{width:108px!important;height:57px!important;min-height:57px!important;padding-top:17px!important}.seat.is-me{width:120px!important;height:64px!important;min-height:64px!important;padding-top:19px!important}}
 @media(max-width:650px){.poker-table{background:radial-gradient(ellipse at 50% 44%,#1760a7 0%,#0b4788 56%,#05264d 100%)!important}.seat{width:clamp(68px,18vw,80px)!important;height:57px!important;min-height:57px!important;padding:17px 2px 2px!important}.seat .avatar{width:32px!important;height:32px!important;top:-12px!important}.seat-info{padding:2px 2px!important}.seat strong{font-size:clamp(7px,2vw,9px)!important}.seat .chip-display{font-size:clamp(6px,1.8vw,8px)!important}.seat.is-me{width:clamp(78px,21vw,90px)!important;height:65px!important;min-height:65px!important;padding-top:19px!important}.seat.is-me .avatar{width:36px!important;height:36px!important;top:-14px!important}}
 </style>
+
+<style id="blackclub-admin-and-register-layout">
+/* Admin dashboard: compact grouped tiles; existing actions remain unchanged. */
+.account-box:has(.admin-dashboard){width:min(760px,100%);max-height:calc(100dvh - 28px);padding:14px 16px;}
+.account-box:has(.admin-dashboard) .account-box-head{margin-bottom:9px;}
+.account-box:has(.admin-dashboard) .account-box-head h2{font-size:16px;}
+.admin-dashboard{display:grid;gap:9px;}
+.admin-dashboard-note{font-size:10px;color:#92a2b4;padding:7px 9px;background:#0a1420;border:1px solid #26384d;border-radius:7px;}
+.admin-group{border:1px solid #26394e;border-radius:9px;padding:9px;background:#0a1420;}
+.admin-group h3{margin:0 0 7px;color:#d9b66e;font-size:10px;letter-spacing:1.1px;}
+.admin-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.admin-menu-tile{display:grid;grid-template-columns:25px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:1px 7px;text-align:left;min-height:48px;padding:7px 9px;border:1px solid #2b4058;border-radius:7px;background:#101e2d;color:#e9edf2;}
+.admin-menu-tile>span{grid-row:1/3;font-size:17px;color:#dfba70;text-align:center;}
+.admin-menu-tile b{font-size:11px;line-height:1.2;}
+.admin-menu-tile small{font-size:9px;color:#8fa0b2;line-height:1.2;}
+.admin-menu-tile small i{font-style:normal;color:#f2d28a;margin-left:4px;}
+.admin-menu-tile:hover{border-color:#c39a51;background:#17283a;}
+.admin-menu-chip{border-color:#876735;background:linear-gradient(110deg,#211c12,#132033);}
+.admin-inline-settings{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.admin-inline-settings .cashier-card{margin:0;padding:9px;}
+.admin-inline-settings h3{font-size:10px;margin:0 0 6px;}
+.admin-dashboard>.bc-action{padding:8px 10px;font-size:10px;margin:0;}
+.admin-chip-panel{padding:10px;}
+.admin-chip-user{padding:9px 0;border-bottom:1px solid #26384d;}
+.admin-chip-user:last-child{border-bottom:0;}
+.admin-chip-user-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.admin-chip-user-head strong{display:block;color:#f0d18a;font-size:12px;}
+.admin-chip-user-head small{display:block;color:#91a2b5;font-size:10px;margin-top:2px;}
+.admin-chip-user-head>b{font-size:12px;color:#e8bd62;white-space:nowrap;}
+.admin-chip-adjust{display:grid;grid-template-columns:105px minmax(120px,1fr) auto auto;gap:5px;margin-top:7px;}
+.admin-chip-adjust input{min-width:0;width:100%;padding:7px 8px;background:#101f30;color:#fff;border:1px solid #354a60;border-radius:6px;font-size:11px;}
+.admin-chip-adjust button{border:0;border-radius:6px;padding:7px 9px;font-size:10px;font-weight:800;white-space:nowrap;}
+.admin-audit-head{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.admin-audit-head h3{margin:0;color:#e8bd62;font-size:11px;}
+.admin-mini-refresh{border:1px solid #42566b;background:#142338;color:#d9bd83;border-radius:6px;padding:5px 8px;font-size:10px;}
+.admin-chip-log{padding:8px 0;border-bottom:1px solid #26384d;font-size:11px;}
+.admin-chip-log>div{display:flex;justify-content:space-between;gap:8px;}
+.admin-chip-log strong{color:#f0d18a;}
+.admin-chip-log small{display:block;color:#91a2b5;font-size:9px;}
+.admin-chip-log b{white-space:nowrap;}
+.admin-chip-log .is-add{color:#55d49a;}.admin-chip-log .is-remove{color:#ff8c8c;}
+.admin-chip-log p{margin:4px 0;color:#c5cfdb;}
+/* Registration: the form gets its own scroll area inside the viewport. */
+.auth-box:has(#registerForm[style*="display: block"]){display:flex;flex-direction:column;max-height:calc(100dvh - 20px);padding:14px 24px 12px;}
+.auth-box:has(#registerForm[style*="display: block"]) .auth-crown{width:38px;height:38px;font-size:21px;margin-bottom:4px;}
+.auth-box:has(#registerForm[style*="display: block"]) .auth-brand{font-size:23px;letter-spacing:3px;}
+.auth-box:has(#registerForm[style*="display: block"]) .auth-subtitle{margin-top:2px;font-size:8px;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form{flex:1 1 auto;min-height:0;max-height:calc(100dvh - 150px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:0 7px 10px;scrollbar-width:thin;scrollbar-color:#8b6b38 #101923;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form .auth-divider{margin:7px 0 8px;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form .auth-label{margin:6px 0 3px;font-size:9px;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form .auth-input-wrap{height:36px;min-height:36px;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form .age-confirm{margin:9px 0 5px;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form #completeRegisterBtn,.auth-box:has(#registerForm[style*="display: block"]) .register-form .register-back{height:36px;margin-top:6px;}
+.auth-box:has(#registerForm[style*="display: block"]) .register-form .auth-foot{margin-top:8px;padding-top:7px;}
+@media(max-width:620px){.admin-inline-settings{grid-template-columns:1fr}.admin-chip-adjust{grid-template-columns:95px minmax(90px,1fr);}.admin-chip-adjust button{min-height:31px}.admin-menu-grid{gap:5px}.admin-menu-tile{padding:7px;}}
+@media(max-height:620px){.auth-box:has(#registerForm[style*="display: block"]){padding:8px 18px}.auth-box:has(#registerForm[style*="display: block"]) .auth-crown{display:none}.auth-box:has(#registerForm[style*="display: block"]) .register-form{max-height:calc(100dvh - 100px);}}
+</style>
+
+<style id="blackclub-registration-admin-final-fix">
+/* Registration form: reserve a fixed viewport-sized dialog and scroll the form itself. */
+@media (max-height: 900px), (max-width: 700px) {
+  .auth-box:has(#registerForm[style*="display: block"]) {
+    width: min(430px, 100%);
+    height: calc(100dvh - 20px);
+    max-height: calc(100dvh - 20px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 12px 20px 10px;
+  }
+  .auth-box:has(#registerForm[style*="display: block"]) .auth-register-note { display:none; }
+  .auth-box:has(#registerForm[style*="display: block"]) .register-form {
+    display: block !important;
+    flex: 1 1 0;
+    height: 0;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 0 8px 16px;
+    scrollbar-width: thin;
+  }
+}
+/* Keep the compact admin panel inside the screen; its contents can scroll independently. */
+.account-box:has(.admin-dashboard) {
+  width: min(760px, 100%);
+  height: auto;
+  max-height: calc(100dvh - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.admin-dashboard { gap: 7px; }
+.admin-group { padding: 8px; }
+.admin-menu-grid { gap: 5px; }
+.admin-menu-tile { min-height: 44px; padding: 6px 8px; }
+@media(max-width:520px) {
+  .account-section { padding: 8px; align-items: flex-start; }
+  .account-box:has(.admin-dashboard) { max-height: calc(100dvh - 16px); padding: 10px; }
+  .admin-menu-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .admin-menu-tile { grid-template-columns: 20px minmax(0,1fr); }
+  .admin-menu-tile b { font-size: 10px; }
+  .admin-menu-tile small { font-size: 8px; }
+}
+</style>
 </head>
 
 <body>
@@ -2031,21 +2138,27 @@ function openAccountSection(section) {
     if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
     title.textContent = "АДМИН ТОХИРГОО";
     content.innerHTML = `
-      <div class="cashier-card">
-        <div class="bc-note">Админы хяналтын самбар. Нэвтрэлт, Firebase эрх, CHIP-ийн үндсэн бүртгэл, кассын хэрэглэгчийн үйлдэл болон серверийн нууц тохиргоонд хүрэхгүй.</div>
-        <button class="bc-action" onclick="openAccountSection('adminUsers')">♟ ТОГЛОГЧИЙН УДИРДЛАГА · ПРОФАЙЛ / BLOCK</button>
-        <button class="bc-action" onclick="openAccountSection('adminUsers')">🏦 ТОГЛОГЧИЙН БҮРТГЭЛТЭЙ ДАНС УДИРДАХ</button>
-        <button class="bc-action" onclick="openAccountSection('adminCashier')">🔔 КАССЫН ХҮСЭЛТ · ЦЭНЭГЛЭЛТ / ТАТАЛТ <span id="adminCashierBadge" class="bc-status" style="margin-left:8px">0</span></button>
-        <button class="bc-action" onclick="openAccountSection('adminTables')">♧ LIVE ШИРЭЭ · ТОГЛОЛТЫН ТӨЛӨВ</button>
-        <button class="bc-action" onclick="openAccountSection('adminHands')">🂠 ДУУССАН ГАР · ХӨЗРИЙН АУДИТ</button>
-        <button class="bc-action" onclick="openAccountSection('adminBots')">🤖 БОТЫН ТОХИРГОО</button>
-        <button class="bc-action" onclick="openAccountSection('adminProfile')">♛ АДМИНЫ МЭДЭЭЛЭЛ</button>
-        <button class="bc-action" onclick="openAccountSection('adminBanks')">🏦 ХҮЛЭЭН АВАХ ДАНСНУУД</button>
-        <button class="bc-action" onclick="openAccountSection('adminAdmins')">🛡 ДЭД АДМИН УДИРДЛАГА · ҮНДСЭН АДМИН</button>
-        <button class="bc-action" onclick="openAccountSection('adminSystem')">⚙ СИСТЕМИЙН ТӨЛӨВ / ТАЙЛАН</button>
-        <div class="cashier-card"><h3>ЧАТНЫ УДИРДЛАГА</h3><div id="adminChatSettings">Ачаалж байна...</div></div>
-        <div class="cashier-card"><h3>RAKE / JACKPOT УДИРДЛАГА</h3><div id="adminCasinoSettings">Ачаалж байна...</div><div id="adminCasinoReport" class="bc-note"></div></div>
-        <button class="bc-action bc-secondary" onclick="closeAccountSection()">ӨӨРӨӨ ШИРЭЭНД СУУХ · LOBBY</button>
+      <div class="admin-dashboard">
+        <div class="admin-dashboard-note">Админ удирдлагын цэс · Одоо байгаа тохиргоо, эрх, тоглолтын систем өөрчлөгдөхгүй.</div>
+        <section class="admin-group"><h3>ТОГЛОГЧ / CHIP</h3><div class="admin-menu-grid">
+          <button class="admin-menu-tile" onclick="openAccountSection('adminUsers')"><span>♟</span><b>Тоглогчийн удирдлага</b><small>Профайл · банк · block</small></button>
+          <button class="admin-menu-tile admin-menu-chip" onclick="openAccountSection('adminChips')"><span>◉</span><b>CHIP удирдлага</b><small>Нэмэх · хасах · түүх</small></button>
+        </div></section>
+        <section class="admin-group"><h3>КАСС / ШИРЭЭ</h3><div class="admin-menu-grid">
+          <button class="admin-menu-tile" onclick="openAccountSection('adminCashier')"><span>🔔</span><b>Кассын хүсэлт</b><small>Цэнэглэлт · таталт <i id="adminCashierBadge">0</i></small></button>
+          <button class="admin-menu-tile" onclick="openAccountSection('adminTables')"><span>♧</span><b>Live ширээ</b><small>Тоглолтын төлөв</small></button>
+          <button class="admin-menu-tile" onclick="openAccountSection('adminHands')"><span>🂠</span><b>Гарын аудит</b><small>Дууссан гар · хөзөр</small></button>
+          <button class="admin-menu-tile" onclick="openAccountSection('adminBots')"><span>🤖</span><b>Ботын тохиргоо</b><small>Тоглох хэв маяг</small></button>
+        </div></section>
+        <section class="admin-group"><h3>СИСТЕМ / ТОХИРГОО</h3><div class="admin-menu-grid">
+          <button class="admin-menu-tile" onclick="openAccountSection('adminBanks')"><span>🏦</span><b>Хүлээн авах данс</b><small>Банкны дансны жагсаалт</small></button>
+          <button class="admin-menu-tile" onclick="openAccountSection('adminAdmins')"><span>🛡</span><b>Дэд админ</b><small>Үндсэн админы эрх</small></button>
+          <button class="admin-menu-tile" onclick="openAccountSection('adminSystem')"><span>⚙</span><b>Систем / тайлан</b><small>Төлөв · тайлан</small></button>
+          <button class="admin-menu-tile" onclick="openAccountSection('adminProfile')"><span>♛</span><b>Админ мэдээлэл</b><small>Нэвтэрсэн админ</small></button>
+        </div></section>
+        <div class="admin-inline-settings"><section class="cashier-card"><h3>ЧАТНЫ УДИРДЛАГА</h3><div id="adminChatSettings">Ачаалж байна...</div></section>
+        <section class="cashier-card"><h3>RAKE / JACKPOT УДИРДЛАГА</h3><div id="adminCasinoSettings">Ачаалж байна...</div><div id="adminCasinoReport" class="bc-note"></div></section></div>
+        <button class="bc-action bc-secondary" onclick="closeAccountSection()">LOBBY РУУ БУЦАХ</button>
       </div>`;
     setTimeout(()=>{renderChatAdmin();renderCasinoAdmin();loadAdminCashierBadge();}, 0);
   }
@@ -2055,6 +2168,14 @@ function openAccountSection(section) {
     title.textContent = "КАССЫН ХҮСЭЛТ · ЦЭНЭГЛЭЛТ / ТАТАЛТ";
     content.innerHTML = `<div class="cashier-card"><div class="bc-note">Тоглогчдын цэнэглэлт болон CHIP таталтын хүсэлтүүд энд харагдана. Таталтын хүсэлтэд тоглогчийн бүртгэлтэй банк, дансны мэдээлэл хавсарна. Зөвшөөрөх эсвэл татгалзах шийдвэр сервер дээр админ эрхээр баталгаажна.</div><button class="bc-action" onclick="loadAdminCashier()">↻ ХҮСЭЛТ ШИНЭЧЛЭХ</button><div id="adminCashierSummary" class="bc-note">Хүсэлт ачаалж байна...</div><div id="adminCashierList">Хүсэлт ачаалж байна...</div></div>`;
     loadAdminCashier();
+  }
+
+  if (section === "adminChips") {
+    if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
+    title.textContent = "CHIP УДИРДЛАГА";
+    content.innerHTML = `<div class="cashier-card admin-chip-panel"><div class="bc-note">Тоглогчийг нэр эсвэл username-аар хайж, одоогийн үлдэгдлийг шалгана. Нэмэх / хасах бүрт админ, тоглогч, дүн, шалтгаан, огноо аудитад хадгалагдана.</div><input class="admin-users-search" id="adminChipSearch" placeholder="Тоглогч хайх..." oninput="filterAdminChipUsers()"><div id="adminChipUsers">Тоглогчид ачаалж байна...</div></div><div class="cashier-card"><div class="admin-audit-head"><h3>CHIP ӨӨРЧИЛСӨН ТҮҮХ</h3><button class="admin-mini-refresh" onclick="loadAdminChipHistory()">↻ ШИНЭЧЛЭХ</button></div><div id="adminChipHistory">Түүх ачаалж байна...</div></div>`;
+    loadAdminChipUsers();
+    loadAdminChipHistory();
   }
 
   if (section === "adminHands") {
@@ -2324,6 +2445,50 @@ async function saveAdminBotSettings() {
   try { const r = await api("/api/admin/bots/settings", payload); showMessage("botSettingsMessage", r.message || "Тохиргоо хадгалагдлаа."); } catch(e) { showMessage("botSettingsMessage", e.message); }
 }
 
+async function loadAdminChipUsers() {
+  const target = $("adminChipUsers");
+  if (!target || !user?.isAdmin) return;
+  try {
+    const data = await apiGet("/api/admin/users");
+    cachedAdminUsers = Array.isArray(data.users) ? data.users : [];
+    renderAdminChipUsers(cachedAdminUsers);
+  } catch (error) { target.textContent = error.message; }
+}
+
+function renderAdminChipUsers(users) {
+  const target = $("adminChipUsers");
+  if (!target) return;
+  if (!users.length) { target.innerHTML = '<div class="bc-note">Тоглогч олдсонгүй.</div>'; return; }
+  target.innerHTML = users.map(u => {
+    const uid = String(u.uid || u.id || "");
+    const name = String(u.displayName || u.username || "Нэргүй");
+    return `<div class="admin-chip-user" data-uid="${escapeHtml(uid)}">
+      <div class="admin-chip-user-head"><div><strong>${escapeHtml(name)}</strong><small>@${escapeHtml(u.username || "-")}</small></div><b>${Number(u.chips || 0).toLocaleString("en-US")} CHIP</b></div>
+      <div class="admin-chip-adjust"><input class="admin-chip-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="CHIP дүн"><input class="admin-chip-reason" maxlength="160" placeholder="Шалтгаан / тайлбар"><button class="admin-chip-add" onclick="changeAdminChips(this,'add')">+ НЭМЭХ</button><button class="admin-chip-remove" onclick="changeAdminChips(this,'remove')">− ХАСАХ</button></div>
+    </div>`;
+  }).join("");
+}
+
+function filterAdminChipUsers() {
+  const query = String($("adminChipSearch")?.value || "").trim().toLowerCase();
+  const filtered = cachedAdminUsers.filter(u => `${u.username || ""} ${u.displayName || ""} ${u.uid || u.id || ""}`.toLowerCase().includes(query));
+  renderAdminChipUsers(filtered);
+}
+
+async function loadAdminChipHistory() {
+  const target = $("adminChipHistory");
+  if (!target || !user?.isAdmin) return;
+  try {
+    const data = await apiGet("/api/admin/chips/history");
+    const rows = data.logs || [];
+    target.innerHTML = rows.length ? rows.map(x => {
+      const when = x.createdAt?new Date(x.createdAt._seconds ? x.createdAt._seconds*1000 : x.createdAt).toLocaleString("mn-MN"):"Огноо тодорхойгүй";
+      const sign = x.action === "add" ? "+" : "−";
+      return `<div class="admin-chip-log"><div><strong>${escapeHtml(x.targetName || x.targetUsername || x.targetUid || "Тоглогч")}</strong><small>${escapeHtml(when)} · Админ: ${escapeHtml(x.adminName || x.adminUid || "-")}</small></div><b class="${x.action === "add" ? "is-add" : "is-remove"}">${sign}${Number(x.amount || 0).toLocaleString("en-US")} CHIP</b><p>${escapeHtml(x.reason || "Шалтгаан тэмдэглээгүй")}</p><small>Өмнө: ${Number(x.before || 0).toLocaleString()} · Дараа: ${Number(x.after || 0).toLocaleString()}</small></div>`;
+    }).join("") : '<div class="bc-note">CHIP өөрчилсөн түүх одоогоор алга.</div>';
+  } catch (error) { target.textContent = error.message; }
+}
+
 function filterAdminUsers() {
   const query = String($("adminUsersSearch")?.value || "").trim().toLowerCase();
   const filtered = cachedAdminUsers.filter(u => `${u.username || ""} ${u.displayName || ""} ${u.uid || u.id || ""}`.toLowerCase().includes(query));
@@ -2332,17 +2497,20 @@ function filterAdminUsers() {
 
 async function changeAdminChips(button, action) {
   if (!user?.isAdmin) { alert("Админ эрх шаардлагатай."); return; }
-  const card = button?.closest(".admin-user-card");
+  const card = button?.closest(".admin-chip-user");
   const uid = card?.dataset.uid || "";
   const amount = Number(card?.querySelector(".admin-chip-amount")?.value);
+  const reason = String(card?.querySelector(".admin-chip-reason")?.value || "").trim();
   if (!uid) { alert("Хэрэглэгчийн ID олдсонгүй."); return; }
   if (!Number.isSafeInteger(amount) || amount <= 0) { alert("1-ээс их бүхэл CHIP дүн оруулна уу."); return; }
+  if (reason.length < 3) { alert("Шалтгааныг дор хаяж 3 тэмдэгтээр бичнэ үү."); return; }
   const verb = action === "add" ? "нэмэх" : "хасах";
-  if (!confirm(`${amount.toLocaleString("en-US")} CHIP ${verb} үү?`)) return;
+  if (!confirm(`${amount.toLocaleString("en-US")} CHIP ${verb} үү?\nШалтгаан: ${reason}`)) return;
   try {
-    const result = await api("/api/admin/chips", { uid, amount, action });
+    const result = await api("/api/admin/chips", { uid, amount, action, reason });
     alert(result.message || "CHIP шинэчлэгдлээ.");
-    await loadAdminUsers();
+    await loadAdminChipUsers();
+    await loadAdminChipHistory();
     await refreshMe();
   } catch (error) { alert(error.message); }
 }
@@ -2414,7 +2582,8 @@ function showRegisterForm() {
   $("authMessage").textContent = "";
   $("regUsername").value = $("authUsername").value.trim();
   $("regPassword").value = $("authPassword").value;
-  $("regUsername").focus();
+  $("registerForm").scrollTop = 0;
+  $("regUsername").focus({ preventScroll: true });
 }
 
 function hideRegisterForm() {
